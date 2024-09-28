@@ -190,7 +190,7 @@ main :: () {
 
         Simp.swap_buffers(window);
 
-        sleep_milliseconds(20);
+        // sleep_milliseconds(20);
         reset_temporary_storage();
     }
     
