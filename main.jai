@@ -130,16 +130,12 @@ main :: () {
         defer free(text);
 
         if key_left && cursor_pos != 0 {
-            // print("left\n");
             cursor_pos -= 1;
         }
 
         if key_right && cursor_pos < text.count {
             cursor_pos += 1;
-            // print("> %", << glyph_data);
         }
-
-        // print("cursor_pos: %\n", cursor_pos);
 
         ml :: 5.0;
 
@@ -157,8 +153,8 @@ main :: () {
                 t := text;
                 t.count = cursor_pos;
                 left_pos += xx Simp.prepare_text(my_font, t);
-                glyph_data := Simp.find_or_create_glyph_utf8(my_font, text.data+cursor_pos);
-                last_char_width = glyph_data.width;
+                // glyph_data := Simp.find_or_create_glyph_utf8(my_font, text.data+cursor_pos);
+                // last_char_width = glyph_data.width;
             }
             
             Simp.immediate_quad(left_pos, window_height - top - 3, left_pos+last_char_width, window_height - top, .{.9, .2, .3, 1.0});
