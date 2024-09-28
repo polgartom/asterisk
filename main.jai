@@ -3,7 +3,7 @@ window_height := 600;
 
 should_quit := false;
 
-background_color : Vector4 = .{.0, .155, .125, 1};
+// background_color : Vector4 = .{.0, .155, .125, 1};
 my_font: *Simp.Dynamic_Font;
 
 cursor_pos := 0;
@@ -17,8 +17,13 @@ key_up: u32;
 key_backspace: u32;
 key_shift: u32;
 
+font_width: s64;
 
 d :: print;
+
+bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
+text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
+ml :: 5.0; // margin left
 
 main :: () {
     print("\n--------------\n\n");
@@ -31,18 +36,15 @@ main :: () {
 
     builder: String_Builder;
     init_string_builder(*builder);
-    append(*builder, "|main :: () {|\n\n\n|} |");
+    append(*builder, "|main :: () {|\na := 21;\nb: s32;\n\n|} |");
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
 
     last_time = seconds_since_init();
-    // d("> %\n", last_time);
 
     while !should_quit {
-        // d("new frame\n");
         last_time = seconds_since_init();
-        // d("> %\n", last_time);
 
         update_window_events();
 
@@ -60,7 +62,7 @@ main :: () {
             }
         }
 
-        c := background_color;
+        c := bg_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
 
         // if events_this_frame.count d(">> %\n", events_this_frame.count);
@@ -129,15 +131,42 @@ main :: () {
         text := builder_to_string(*builder, do_reset = false);
         defer free(text);
 
+        // Handle caret movement
         if key_left && cursor_pos != 0 {
             cursor_pos -= 1;
+            if cursor_pos != 0 {
+                ch := get_char_at_string_index(text, cursor_pos);
+                // print("> ci: % ; ch: %\n", cursor_pos, ch);
+            }
         }
 
         if key_right && cursor_pos < text.count {
             cursor_pos += 1;
+            if cursor_pos < text.count {
+                ch := get_char_at_string_index(text, cursor_pos);
+                // print("> ci: % ; ch: %\n", cursor_pos, ch);
+            }
         }
 
-        ml :: 5.0;
+        // Draw caret
+        {
+            row := get_cursor_row(text);
+            // col := get_cursor_col(text);
+            cx  := get_cursor_x(text);
+            // print("cursor: r: % ; c: % ; x: %\n", row, col, cx);
+
+            Simp.set_shader_for_color();
+
+            top := 20.0 * row;
+            left_pos := ml;
+            last_char_width := 9;
+            _i := "("; // @Todo: find the largest character of the glyphs
+            glyph_data := Simp.find_or_create_glyph_utf8(my_font, _i.data);
+            // print("%\n\n", <<glyph_data);
+            h := glyph_data.height;
+
+            Simp.immediate_quad(cx+ml, window_height - top + (h-h*0.1), cx+ml+last_char_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
+        }
 
         // Draw text
         if text.count {
@@ -151,26 +180,12 @@ main :: () {
                 if i != -1 temp.count = i;
                 text_w := Simp.prepare_text(my_font, temp);
                 bottom := xx window_height-(20.0*row);
-                Simp.draw_prepared_text(my_font, xx ml, xx bottom, .{.8, .8, .8, 1});
+                Simp.draw_prepared_text(my_font, xx ml, xx bottom, text_color /*.{.8, .8, .8, 1}*/);
 
-                if i != -1 row += 1; advance(*t, i+1);
+                if i != -1 {
+                    row += 1; advance(*t, i+1);
+                }
             }
-        }
-
-        // Draw caret
-        {
-            row := get_cursor_row(text);
-            col := get_cursor_col(text);
-            cx  := get_cursor_x(text);
-            // print("cursor: r: % ; c: % ; x: %\n", row, col, cx);
-
-            Simp.set_shader_for_color();
-
-            top := 24.0 * row;
-            left_pos := ml;
-            last_char_width := 9;
-
-            Simp.immediate_quad(cx+ml, window_height - top - 3, cx+ml+last_char_width, window_height - top, .{.9, .2, .3, 1.0});
         }
 
         Simp.swap_buffers(window);
@@ -181,67 +196,65 @@ main :: () {
     
 }
 
+get_char_at_string_index :: (t: string, index: s64) -> string {
+    assert(index < t.count);
+    c := advance(t, index);
+    c.count = 1;
+    return c;
+}
+
 get_cursor_row :: (text: string) -> s64 {
+    if cursor_pos == 0 return 1;
+
     row := 1;
+
+    ln := false;
     for 0..text.count-1 {
         c := text.data[it];
-        if c == #char "\n" then row += 1;
-        if it == cursor_pos return row;
+
+        defer { if ln row += 1; }
+        if it == cursor_pos {
+            // if ln row += 1;
+            // print("ln: % ; row: %\n", ln, row);
+            return row;      
+        }
+
+        ln = c == #char "\n";
     }
 
-    // assert(false);
+    // print("row: %\n", row);
     return row;
 }
 
 get_cursor_col :: (text: string) -> s64 {
     col := 0;
+    ln := false;
     for 0..text.count-1 {
         c := text.data[it];
-        if c == #char "\n" then col = 0;
+        if ln then col = 0;
         if it == cursor_pos return col;
+        ln = c == #char "\n";
         col += 1;
     }
 
-    // assert(false);
     return col;
 }
 
+ranges: [..] s64;
+
 get_cursor_x :: (text: string) -> s64 {
-    
-    cursor_row := get_cursor_row(text);
-    cursor_col := get_cursor_col(text);
-
-    row := 1;
+    if cursor_pos == 0 return 0;
     col := 0;
+    ln := false;
+    for 0..cursor_pos {
+        defer { if it < cursor_pos then col += 1; };
 
-    while text.count {
-        c := text.data[col];
-        if !c break;
-
-        if c == #char "\n" {
-            if !(col+1 >= text.count) advance(*text, col+1);
-            else if text.count advance(*text, 1);
-            row += 1;
-            col = 0;
-        }
-
-        // print("> % % ; % % ; [%]\n", cursor_row, cursor_col, row, col, c);
-        if cursor_row == row && cursor_col == col {
-            break;
-        }
-
-        if c != #char "\n" {
-            col += 1;
-        }
+        c := text.data[it];
+        if ln col = 0;
+        ln = c == #char "\n";
     }
 
-    if col == 0 return 0;
-
-    t := text;
-    t.count = col;
-    x := Simp.prepare_text(my_font, t);
-
-    return x;
+    return col * current_font_width();
 }
 
 append_char :: (b: *String_Builder, key: Key_Code) {
@@ -283,7 +296,13 @@ my_init_fonts :: () {
     pixel_height := window_height / 40;
 
     my_font = Simp.get_font_at_size("data", "FiraCode-Retina.ttf", pixel_height);
+    // print("%\n\n", my_font);
     assert(my_font != null);
+}
+
+current_font_width :: () -> s64 {
+    assert(my_font != null);
+    return my_font.em_width;
 }
 
 #import "System";

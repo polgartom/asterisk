@@ -1,8 +1,9 @@
-*.vscode
+.vs
+.vscode
 
 *.exe
 *.pdb
 
 .build
 
-data/*.ttf
+main.sln
