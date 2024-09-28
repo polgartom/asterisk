@@ -15,6 +15,8 @@ key_right: u32;
 key_down: u32;
 key_up: u32;
 key_backspace: u32;
+key_shift: u32;
+
 
 d :: print;
 
@@ -61,13 +63,16 @@ main :: () {
         c := background_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
 
-        if events_this_frame.count d(">> %\n", events_this_frame.count);
+        // if events_this_frame.count d(">> %\n", events_this_frame.count);
 
         key_left = 0;
         key_right = 0;
         key_down = 0;
         key_up = 0;
         key_backspace = 0;
+        key_shift = 0;
+
+        // print("%\n", events_this_frame);
 
         for event : events_this_frame { 
             if event.type == .QUIT {
@@ -83,10 +88,8 @@ main :: () {
             if event.type == .KEYBOARD {
                 key := event.key_code;
 
-                // if key == .SHIFT shoot_button_down = cast(bool) event.key_pressed;
-
                 if event.key_pressed {
-                    if last_pressed_key != key || (last_pressed_key_time > 1.0) {
+                    if 1 || last_pressed_key != key {
                         last_pressed_key = key;
 
                         if key == .ARROW_LEFT   key_left  = event.key_pressed;
@@ -109,7 +112,10 @@ main :: () {
                             }
                         }
 
-                        if (key > 32 && key < 127) || key == .SPACEBAR {
+                        if key > 32 && key < 127 {
+                            if !key_shift key += 32; // to lowercase, not be confused, it is reversed
+                            append_char(*builder, key);
+                        } else if key == .SPACEBAR {
                             append_char(*builder, key);
                         }
                     }
@@ -124,29 +130,43 @@ main :: () {
         defer free(text);
 
         if key_left && cursor_pos != 0 {
-            print("left\n");
+            // print("left\n");
             cursor_pos -= 1;
         }
+
         if key_right && cursor_pos < text.count {
-            print("% %\n", cursor_pos, text.count);
             cursor_pos += 1;
+            // print("> %", << glyph_data);
         }
 
         // print("cursor_pos: %\n", cursor_pos);
+
+        ml :: 5.0;
 
         // Draw cursor
         {
             Simp.set_shader_for_color();
 
-            pos := 5.0 + (cursor_pos * 10);
             width := 8;
             top := 24.0;
-            Simp.immediate_quad(pos, window_height - top - 3, pos+width, window_height - top, .{.9, .2, .3, 1.0});
+
+            left_pos := ml;
+            last_char_width := 9;
+
+            if text.count {
+                t := text;
+                t.count = cursor_pos;
+                left_pos += xx Simp.prepare_text(my_font, t);
+                glyph_data := Simp.find_or_create_glyph_utf8(my_font, text.data+cursor_pos);
+                last_char_width = glyph_data.width;
+            }
+            
+            Simp.immediate_quad(left_pos, window_height - top - 3, left_pos+last_char_width, window_height - top, .{.9, .2, .3, 1.0});
         }
 
         {
             text_w := Simp.prepare_text(my_font, text);
-            Simp.draw_prepared_text(my_font, xx 5, xx window_height-20, .{.8, .8, .8, 1});
+            Simp.draw_prepared_text(my_font, xx ml, xx window_height-20, .{.8, .8, .8, 1});
         }
 
         Simp.swap_buffers(window);
@@ -174,9 +194,8 @@ append_char :: (b: *String_Builder, key: Key_Code) {
     if key == .SPACEBAR {
         append(b, #char " ");
     }
-    else if (key > 32 && key < 127) { // @todo: handle shift
-        lowercase_key := key+32; // uppercase to lowercase if shit isn't pressed 
-        c := map_key_to_string(lowercase_key);
+    else if (key > 32 && key < 127) {
+        c := map_key_to_string(key);
         defer free(c);
         append(b, c);
     }
