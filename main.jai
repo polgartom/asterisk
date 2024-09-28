@@ -31,7 +31,7 @@ main :: () {
 
     builder: String_Builder;
     init_string_builder(*builder);
-    append(*builder, "main :: () {} ");
+    append(*builder, "|main :: () {|\n\n\n|} |");
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
@@ -115,7 +115,7 @@ main :: () {
                         if key > 32 && key < 127 {
                             if !key_shift key += 32; // to lowercase, not be confused, it is reversed
                             append_char(*builder, key);
-                        } else if key == .SPACEBAR {
+                        } else if key == .SPACEBAR || key == .ENTER {
                             append_char(*builder, key);
                         }
                     }
@@ -139,30 +139,38 @@ main :: () {
 
         ml :: 5.0;
 
-        // Draw cursor
+        // Draw text
+        if text.count {
+            t := text;
+            i: s64 = 0;
+            row := 1;
+            while i != -1 {
+                i = find_index_from_left(t, #char "\n");
+
+                temp := t;
+                if i != -1 temp.count = i;
+                text_w := Simp.prepare_text(my_font, temp);
+                bottom := xx window_height-(20.0*row);
+                Simp.draw_prepared_text(my_font, xx ml, xx bottom, .{.8, .8, .8, 1});
+
+                if i != -1 row += 1; advance(*t, i+1);
+            }
+        }
+
+        // Draw caret
         {
+            row := get_cursor_row(text);
+            col := get_cursor_col(text);
+            cx  := get_cursor_x(text);
+            // print("cursor: r: % ; c: % ; x: %\n", row, col, cx);
+
             Simp.set_shader_for_color();
 
-            width := 8;
-            top := 24.0;
-
+            top := 24.0 * row;
             left_pos := ml;
             last_char_width := 9;
 
-            if text.count {
-                t := text;
-                t.count = cursor_pos;
-                left_pos += xx Simp.prepare_text(my_font, t);
-                // glyph_data := Simp.find_or_create_glyph_utf8(my_font, text.data+cursor_pos);
-                // last_char_width = glyph_data.width;
-            }
-            
-            Simp.immediate_quad(left_pos, window_height - top - 3, left_pos+last_char_width, window_height - top, .{.9, .2, .3, 1.0});
-        }
-
-        {
-            text_w := Simp.prepare_text(my_font, text);
-            Simp.draw_prepared_text(my_font, xx ml, xx window_height-20, .{.8, .8, .8, 1});
+            Simp.immediate_quad(cx+ml, window_height - top - 3, cx+ml+last_char_width, window_height - top, .{.9, .2, .3, 1.0});
         }
 
         Simp.swap_buffers(window);
@@ -171,6 +179,69 @@ main :: () {
         reset_temporary_storage();
     }
     
+}
+
+get_cursor_row :: (text: string) -> s64 {
+    row := 1;
+    for 0..text.count-1 {
+        c := text.data[it];
+        if c == #char "\n" then row += 1;
+        if it == cursor_pos return row;
+    }
+
+    // assert(false);
+    return row;
+}
+
+get_cursor_col :: (text: string) -> s64 {
+    col := 0;
+    for 0..text.count-1 {
+        c := text.data[it];
+        if c == #char "\n" then col = 0;
+        if it == cursor_pos return col;
+        col += 1;
+    }
+
+    // assert(false);
+    return col;
+}
+
+get_cursor_x :: (text: string) -> s64 {
+    
+    cursor_row := get_cursor_row(text);
+    cursor_col := get_cursor_col(text);
+
+    row := 1;
+    col := 0;
+
+    while text.count {
+        c := text.data[col];
+        if !c break;
+
+        if c == #char "\n" {
+            if !(col+1 >= text.count) advance(*text, col+1);
+            else if text.count advance(*text, 1);
+            row += 1;
+            col = 0;
+        }
+
+        // print("> % % ; % % ; [%]\n", cursor_row, cursor_col, row, col, c);
+        if cursor_row == row && cursor_col == col {
+            break;
+        }
+
+        if c != #char "\n" {
+            col += 1;
+        }
+    }
+
+    if col == 0 return 0;
+
+    t := text;
+    t.count = col;
+    x := Simp.prepare_text(my_font, t);
+
+    return x;
 }
 
 append_char :: (b: *String_Builder, key: Key_Code) {
@@ -189,8 +260,9 @@ append_char :: (b: *String_Builder, key: Key_Code) {
 
     if key == .SPACEBAR {
         append(b, #char " ");
-    }
-    else if (key > 32 && key < 127) {
+    } else if key == .ENTER {
+        append(b, #char "\n");
+    } else if (key > 32 && key < 127) {
         c := map_key_to_string(key);
         defer free(c);
         append(b, c);
