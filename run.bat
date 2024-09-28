@@ -1,0 +1,1 @@
+jai .\main.jai -x64 && .\main.exe

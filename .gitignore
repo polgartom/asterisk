@@ -1,0 +1,8 @@
+*.vscode
+
+*.exe
+*.pdb
+
+.build
+
+data/*.ttf
