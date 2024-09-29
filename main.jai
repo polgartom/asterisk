@@ -36,7 +36,7 @@ main :: () {
 
     builder: String_Builder;
     init_string_builder(*builder);
-    append(*builder, "|main :: () {|\na := 21;\nb: s32;\n\n|} |");
+    append(*builder, "main :: () {\na := 21;\nb: s32;\n\n}");
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
@@ -121,6 +121,7 @@ main :: () {
                         }
 
                         if key == .ENTER append_text(*builder, "\n");
+                        if key == .TAB   append_text(*builder, "    ");
                     }
 
                     last_pressed_key_time = last_time - last_pressed_key_time;
@@ -149,6 +150,50 @@ main :: () {
             }
         }
 
+        if key_up {
+            t := text;
+            t.count = cursor_pos;
+            index := find_index_from_right(t, #char "\n");
+            if index != -1 {
+                // go to above row end
+                cols := t.count-index;
+                t.count = index;
+
+                cursor_pos = index;
+
+                // search for the first col index in upper row
+                index = find_index_from_right(t, #char "\n");
+                if index != -1 {
+                    cursor_pos = index + cols;
+
+                    // it's double end line so we should "up jump" by one
+                    if t.count-index == 1 {
+                        cursor_pos -= 1;
+                    }
+                } else {
+                    // its the first row
+                    cursor_pos = ifx cols-1 > -1 then cols-1 else 0;
+                }
+            }
+        }
+
+        if key_down {
+            // Move cursor down
+            cursor_col := get_cursor_col(text);
+            i := find_index_from_left(text, #char "\n", start_index=cursor_pos);
+            if i != -1 {
+                cursor_pos = i+1;
+                col := 0;
+                for i+1..text.count-1 {
+                    if col == cursor_col || text.data[it] == #char "\n" {
+                        break;
+                    }
+                    col += 1;
+                }
+                cursor_pos += col;
+            }
+        }
+
         // Draw caret
         {
             row := get_cursor_row(text);
@@ -161,7 +206,7 @@ main :: () {
             top := 20.0 * row;
             left_pos := ml;
             last_char_width := 9;
-            _i := "("; // @Todo: find the largest character of the glyphs
+            _i := "("; // @Todo: find the highest character in the glyphs list
             glyph_data := Simp.find_or_create_glyph_utf8(my_font, _i.data);
             // print("%\n\n", <<glyph_data);
             h := glyph_data.height;
@@ -271,21 +316,11 @@ append_text :: (b: *String_Builder, t: string) {
     }
 
     append(b, t);
-
-    // if key == .SPACEBAR {
-    //     append(b, #char " ");
-    // } else if key == .ENTER {
-    //     append(b, #char "\n");
-    // } else if (key > 32 && key < 127) {
-    //     c := map_key_to_string(key);
-    //     defer free(c);
-    //     append(b, c);
-    // }
     
     a := advance(text, cursor_pos);
     append(b, a);
 
-    cursor_pos += 1;
+    cursor_pos += t.count;
 }
 
 my_init_fonts :: () {
