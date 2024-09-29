@@ -160,14 +160,18 @@ main :: () {
                 t.count = index;
 
                 cursor_pos = index;
+                a := index;
 
                 // search for the first col index in upper row
                 index = find_index_from_right(t, #char "\n");
                 if index != -1 {
                     cursor_pos = index + cols;
 
-                    // it's double end line so we should "up jump" by one
-                    if t.count-index == 1 {
+                    // it's double end line so we should jump up by one
+                    // also this "ln" check should be prevent the weird double jump up if 
+                    // 2 line breaks are presents together
+                    ln := get_char_at_string_index(text, cursor_pos) == "\n";
+                    if t.count-index == 1 && !ln {
                         cursor_pos -= 1;
                     }
                 } else {
@@ -175,6 +179,7 @@ main :: () {
                     cursor_pos = ifx cols-1 > -1 then cols-1 else 0;
                 }
             }
+
         }
 
         if key_down {
