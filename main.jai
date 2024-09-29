@@ -87,7 +87,12 @@ main :: () {
                 if event.key_pressed should_quit = true;
             }
 
-            if event.type == .KEYBOARD {
+            if event.type == .TEXT_INPUT {
+                utf8_text := character_utf32_to_utf8(event.utf32);
+                defer free(utf8_text);
+                append_text(*builder, utf8_text);
+
+            } else if event.type == .KEYBOARD {
                 key := event.key_code;
 
                 if event.key_pressed {
@@ -98,7 +103,8 @@ main :: () {
                         if key == .ARROW_RIGHT  key_right = event.key_pressed;
                         if key == .ARROW_DOWN   key_down  = event.key_pressed;
                         if key == .ARROW_UP     key_up    = event.key_pressed;
-                        
+
+                        // Delete a char from right
                         if key == .BACKSPACE {
                             key_backspace = event.key_pressed;
 
@@ -114,12 +120,7 @@ main :: () {
                             }
                         }
 
-                        if key > 32 && key < 127 {
-                            if !key_shift key += 32; // to lowercase, not be confused, it is reversed
-                            append_char(*builder, key);
-                        } else if key == .SPACEBAR || key == .ENTER {
-                            append_char(*builder, key);
-                        }
+                        if key == .ENTER append_text(*builder, "\n");
                     }
 
                     last_pressed_key_time = last_time - last_pressed_key_time;
@@ -257,13 +258,11 @@ get_cursor_x :: (text: string) -> s64 {
     return col * current_font_width();
 }
 
-append_char :: (b: *String_Builder, key: Key_Code) {
+append_text :: (b: *String_Builder, t: string) {
     buf := get_current_buffer(b);
 
     text := builder_to_string(b, do_reset = true);
     defer free(text);
-
-    should_free := false;
 
     if cursor_pos {
         a := text;
@@ -271,15 +270,17 @@ append_char :: (b: *String_Builder, key: Key_Code) {
         append(b, a);
     }
 
-    if key == .SPACEBAR {
-        append(b, #char " ");
-    } else if key == .ENTER {
-        append(b, #char "\n");
-    } else if (key > 32 && key < 127) {
-        c := map_key_to_string(key);
-        defer free(c);
-        append(b, c);
-    }
+    append(b, t);
+
+    // if key == .SPACEBAR {
+    //     append(b, #char " ");
+    // } else if key == .ENTER {
+    //     append(b, #char "\n");
+    // } else if (key > 32 && key < 127) {
+    //     c := map_key_to_string(key);
+    //     defer free(c);
+    //     append(b, c);
+    // }
     
     a := advance(text, cursor_pos);
     append(b, a);
@@ -313,5 +314,7 @@ current_font_width :: () -> s64 {
 #import "Window_Creation";
 #import "Input";
 #import "Keymap";
+#import "Unicode";
 // #import "GetRect";
+#import "Unicode";
 Simp    :: #import "Simp";
