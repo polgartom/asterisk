@@ -1,5 +1,5 @@
 window_width := 850;
-window_height := 600;
+window_height := 650;
 
 should_quit := false;
 
@@ -24,6 +24,7 @@ d :: print;
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
 ml :: 5.0; // margin left
+line_height :: 0.0;//5.0; // what is this metric, px?
 
 main :: () {
     print("\n--------------\n\n");
@@ -33,7 +34,11 @@ main :: () {
     Simp.set_render_target(window);
 
     my_init_fonts();
-    print("%\n", <<my_font);
+    
+    {
+        f := <<my_font;
+        print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
+    }
 
     builder: String_Builder;
     init_string_builder(*builder);
@@ -217,15 +222,15 @@ main :: () {
 
             Simp.set_shader_for_color();
 
-            top := 20.0 * row;
+            top := (my_font.default_line_spacing+line_height) * row;
             left_pos := ml;
-            last_char_width := 9;
-            _i := "("; // @Todo: find the highest character in the glyphs list
-            glyph_data := Simp.find_or_create_glyph_utf8(my_font, _i.data);
-            // print("%\n\n", <<glyph_data);
-            h := glyph_data.height;
+            // _i := "("; // @Todo: find the highest character in the glyphs list
+            // glyph_data := Simp.find_or_create_glyph_utf8(my_font, _i.data);
+            // // print("%\n\n", <<glyph_data);
+            // h := glyph_data.height;
+            h := my_font.character_height;
 
-            Simp.immediate_quad(cx+ml, window_height - top + (h-h*0.1), cx+ml+last_char_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
+            Simp.immediate_quad(cx+ml, window_height - top + (h-h*0.1), cx+ml+my_font.em_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
         }
 
         // Draw text
@@ -239,7 +244,7 @@ main :: () {
                 temp := t;
                 if i != -1 temp.count = i;
                 text_w := Simp.prepare_text(my_font, temp);
-                bottom := xx window_height-(20.0*row);
+                bottom := xx window_height - ((my_font.default_line_spacing+line_height) * row);
                 Simp.draw_prepared_text(my_font, xx ml, xx bottom, text_color /*.{.8, .8, .8, 1}*/);
 
                 if i != -1 {
@@ -343,7 +348,7 @@ my_init_fonts :: () {
     path := path_strip_filename(get_path_of_running_executable());
 
     set_working_directory(path);
-    pixel_height := window_height/40;
+    pixel_height := 16; // print(">>> %\n", window_height/40);
 
     my_font = Simp.get_font_at_size("data", "FiraCode-Retina.ttf", pixel_height);
     // print("%\n\n", my_font);
