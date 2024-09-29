@@ -33,10 +33,11 @@ main :: () {
     Simp.set_render_target(window);
 
     my_init_fonts();
+    print("%\n", <<my_font);
 
     builder: String_Builder;
     init_string_builder(*builder);
-    append(*builder, "main :: () {\na := 21;\nb: s32;\n\n}");
+    append(*builder, "main :: () {\na := 21;\nb: s32;\nkacsax\n\npolgartom\n}");
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
@@ -160,24 +161,32 @@ main :: () {
                 t.count = index;
 
                 cursor_pos = index;
-                a := index;
 
-                // search for the first col index in upper row
-                index = find_index_from_right(t, #char "\n");
-                if index != -1 {
-                    cursor_pos = index + cols;
+                if !(cursor_pos > 0 && text.data[cursor_pos-1] == #char "\n") {
+                    // search for the first col index in upper row
+                    index = find_index_from_right(t, #char "\n");
+                    if index != -1 {
+                        above_row_cols := cursor_pos - index;
+                        if above_row_cols < cols {
+                            cursor_pos = index + above_row_cols;
+                        } else {
+                            cursor_pos = index + cols;
+                        }
 
-                    // it's double end line so we should jump up by one
-                    // also this "ln" check should be prevent the weird double jump up if 
-                    // 2 line breaks are presents together
-                    ln := get_char_at_string_index(text, cursor_pos) == "\n";
-                    if t.count-index == 1 && !ln {
-                        cursor_pos -= 1;
+                        // it's double end line so we should jump up by one
+                        // also this "ln" check should be prevent the weird double jump up if 
+                        // 2 line breaks are presents together
+                        ln := get_char_at_string_index(text, cursor_pos) == "\n";
+                        if t.count-index == 1 && !ln {
+                            cursor_pos -= 1;
+                        }
+                    } else {
+                        // its the first row
+                        cursor_pos = ifx cols-1 > -1 then cols-1 else 0;
                     }
-                } else {
-                    // its the first row
-                    cursor_pos = ifx cols-1 > -1 then cols-1 else 0;
                 }
+
+
             }
 
         }
@@ -334,7 +343,7 @@ my_init_fonts :: () {
     path := path_strip_filename(get_path_of_running_executable());
 
     set_working_directory(path);
-    pixel_height := window_height / 40;
+    pixel_height := window_height/40;
 
     my_font = Simp.get_font_at_size("data", "FiraCode-Retina.ttf", pixel_height);
     // print("%\n\n", my_font);
