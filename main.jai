@@ -350,7 +350,7 @@ my_init_fonts :: () {
     set_working_directory(path);
     pixel_height := 16; // print(">>> %\n", window_height/40);
 
-    my_font = Simp.get_font_at_size("data", "FiraCode-Retina.ttf", pixel_height);
+    my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // print("%\n\n", my_font);
     assert(my_font != null);
 }
