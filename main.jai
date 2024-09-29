@@ -25,6 +25,10 @@ bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
 ml :: 5.0; // margin left
 line_height :: 0.0;//5.0; // what is this metric, px?
+font_size :: 15;
+
+top_offset := 0.0;
+left_offset := 0.0;
 
 main :: () {
     print("\n--------------\n\n");
@@ -42,7 +46,12 @@ main :: () {
 
     builder: String_Builder;
     init_string_builder(*builder);
-    append(*builder, "main :: () {\na := 21;\nb: s32;\nkacsax\n\npolgartom\n}");
+    
+    sample := read_entire_file("main.jai");
+    append(*builder, sample);
+    // print("-- %\n", code.count);
+    // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
+
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
@@ -213,6 +222,21 @@ main :: () {
             }
         }
 
+        cx := get_cursor_x(text);
+        if cx + my_font.em_width*2 > window_width {
+            left_offset = xx (cx - window_width + (my_font.em_width*2));
+        } else {
+            left_offset = 0.0;
+        }
+
+        cy := get_cursor_y(text);
+        if cy < 0 {
+            top_offset = xx (cy-ml-ml);
+            print("top_offset: %\n", top_offset);
+        } else {
+            top_offset = 0.0;
+        }
+
         // Draw caret
         {
             row := get_cursor_row(text);
@@ -222,15 +246,11 @@ main :: () {
 
             Simp.set_shader_for_color();
 
-            top := (my_font.default_line_spacing+line_height) * row;
+            top := ((my_font.default_line_spacing+line_height) * row) + (top_offset + ml);
             left_pos := ml;
-            // _i := "("; // @Todo: find the highest character in the glyphs list
-            // glyph_data := Simp.find_or_create_glyph_utf8(my_font, _i.data);
-            // // print("%\n\n", <<glyph_data);
-            // h := glyph_data.height;
             h := my_font.character_height;
 
-            Simp.immediate_quad(cx+ml, window_height - top + (h-h*0.1), cx+ml+my_font.em_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
+            Simp.immediate_quad(cx+ml-left_offset, window_height - top + (h-h*0.1), cx+ml-left_offset+my_font.em_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
         }
 
         // Draw text
@@ -245,7 +265,7 @@ main :: () {
                 if i != -1 temp.count = i;
                 text_w := Simp.prepare_text(my_font, temp);
                 bottom := xx window_height - ((my_font.default_line_spacing+line_height) * row);
-                Simp.draw_prepared_text(my_font, xx ml, xx bottom, text_color /*.{.8, .8, .8, 1}*/);
+                Simp.draw_prepared_text(my_font, xx (ml-left_offset), xx (bottom-top_offset-ml), text_color /*.{.8, .8, .8, 1}*/);
 
                 if i != -1 {
                     row += 1; advance(*t, i+1);
@@ -322,6 +342,14 @@ get_cursor_x :: (text: string) -> s64 {
     return col * current_font_width();
 }
 
+get_cursor_y :: (text: string) -> s64 {
+    if cursor_pos == 0 return window_height;
+
+    row := get_cursor_row(text);
+    top := (my_font.default_line_spacing+line_height) * row;
+    return window_height - xx top;
+}
+
 append_text :: (b: *String_Builder, t: string) {
     buf := get_current_buffer(b);
 
@@ -348,7 +376,7 @@ my_init_fonts :: () {
     path := path_strip_filename(get_path_of_running_executable());
 
     set_working_directory(path);
-    pixel_height := 16; // print(">>> %\n", window_height/40);
+    pixel_height := font_size; // print(">>> %\n", window_height/40);
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // print("%\n\n", my_font);
@@ -362,6 +390,7 @@ current_font_width :: () -> s64 {
 
 #import "System";
 #import "Basic";
+#import "File";
 #import "String";
 // #import "String_Builder";
 #import "Math";
