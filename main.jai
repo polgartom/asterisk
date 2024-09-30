@@ -222,7 +222,6 @@ main :: () {
             }
 
             cy := get_cursor_y(text);
-            // abs_y := cy - y_cursor_scroll_treshold;
             rel_y := get_cursor_rel_y(text);
             h := my_font.default_line_spacing + line_height;
 
@@ -255,17 +254,15 @@ main :: () {
             }
 
             cy := get_cursor_y(text);
-            abs_y := cy - y_cursor_scroll_treshold;
-            // rel_y := get_cursor_rel_y(text);
-            if abs_y < 0 {
-                top_offset = xx (cy - y_cursor_scroll_treshold);
-                // print("top_offset: %\n", top_offset);
-            } else {
-                top_offset = 0.0;
+            rel_y := get_cursor_rel_y(text);
+            h := my_font.default_line_spacing + line_height;
+
+            if cy - h < 0 {
+                if (rel_y-h-ml) < 0 {
+                    top_offset = xx (cy-ml-ml-h);
+                }
             }
         }
-
-        // print("top_offset 2: %\n", top_offset);
 
         cx := get_cursor_x(text);
         if cx + x_cursor_scroll_treshold + my_font.em_width*2 > window_width {
