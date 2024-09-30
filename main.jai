@@ -1,5 +1,5 @@
-window_width := 850;
-window_height := 650;
+window_width := 850*2;
+window_height := 650*2;
 
 should_quit := false;
 
@@ -32,8 +32,11 @@ font_size :: 15;
 top_offset := 0.0;
 left_offset := 0.0;
 
-x_cursor_scroll_treshhold := 30;
-y_cursor_scroll_treshold  := 30;
+x_cursor_scroll_treshold := 30;
+y_cursor_scroll_treshold := 30;
+
+show_debug_info := true;
+debug_infos: [..] string;
 
 main :: () {
     print("\n--------------\n\n");
@@ -52,12 +55,11 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    // sample := read_entire_file("main.jai");
-    sample := read_entire_file("sample.txt");
+    sample := read_entire_file("main.jai");
+    // sample := read_entire_file("sample.txt");
     append(*builder, sample);
     // print("-- %\n", code.count);
     // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
-
 
     last_pressed_key : Key_Code = .UNKNOWN;
     last_pressed_key_time : float64;
@@ -95,9 +97,8 @@ main :: () {
         key_backspace = 0;
         key_shift = 0;
 
-        // print("%\n", events_this_frame);
-
-        for event : events_this_frame { 
+        for event : events_this_frame {
+            
             if event.type == .QUIT {
                 // print("quit!\n");
                 should_quit = true;
@@ -108,6 +109,8 @@ main :: () {
                 if event.key_pressed should_quit = true;
             }
 
+            // print("%\n", event.key_code);
+
             if event.type == .TEXT_INPUT {
                 utf8_text := character_utf32_to_utf8(event.utf32);
                 defer free(utf8_text);
@@ -117,6 +120,17 @@ main :: () {
                 key := event.key_code;
 
                 if event.key_pressed {
+
+                    // {
+                    //     s := sprint("input | %", );    
+                    //     array_add(*debug_infos, s);
+                    // }
+
+                    if event.key_code == .F1 {
+                        show_debug_info = !show_debug_info;
+                    }
+
+
                     if 1 || last_pressed_key != key {
                         last_pressed_key = key;
 
@@ -229,8 +243,8 @@ main :: () {
         }
 
         cx := get_cursor_x(text);
-        if cx + x_cursor_scroll_treshhold + my_font.em_width*2 > window_width {
-            left_offset = xx (cx - window_width + x_cursor_scroll_treshhold + (my_font.em_width*2));
+        if cx + x_cursor_scroll_treshold + my_font.em_width*2 > window_width {
+            left_offset = xx (cx - window_width + x_cursor_scroll_treshold + (my_font.em_width*2));
         } else {
             left_offset = 0.0;
         }
@@ -257,6 +271,10 @@ main :: () {
             h := my_font.character_height;
 
             Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), cursor_color);
+
+            ch := get_char_at_string_index(text, cursor_pos);
+            s := sprint("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
+            array_add(*debug_infos, s);
         }
 
         // Draw text
@@ -279,6 +297,26 @@ main :: () {
                     row += 1; advance(*t, i+1);
                 }
             }
+        }
+
+        // Draw debug info
+        if show_debug_info {
+            row := 1;
+            for debug_infos {
+                s := it;
+                ln := s[s.count-1] == #char "\n";
+                if ln then s.count -= 1;
+
+                w := Simp.prepare_text(my_font, s);
+                top := ((my_font.default_line_spacing+line_height) * row);
+                Simp.draw_prepared_text(my_font, xx (window_width - w*1.1), xx (window_height-top), .{.8, .8, .8, 1});
+
+                if ln then row += 1;
+
+                free(it);
+            }
+
+            array_reset(*debug_infos);
         }
 
         Simp.swap_buffers(window);
