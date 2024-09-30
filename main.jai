@@ -23,12 +23,17 @@ d :: print;
 
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
+cursor_color :: Vector4.{.9, .0, .0, 1.0};
+
 ml :: 5.0; // margin left
 line_height :: 0.0;//5.0; // what is this metric, px?
 font_size :: 15;
 
 top_offset := 0.0;
 left_offset := 0.0;
+
+x_cursor_scroll_treshhold := 30;
+y_cursor_scroll_treshold  := 30;
 
 main :: () {
     print("\n--------------\n\n");
@@ -47,7 +52,8 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    sample := read_entire_file("main.jai");
+    // sample := read_entire_file("main.jai");
+    sample := read_entire_file("sample.txt");
     append(*builder, sample);
     // print("-- %\n", code.count);
     // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
@@ -223,21 +229,21 @@ main :: () {
         }
 
         cx := get_cursor_x(text);
-        if cx + my_font.em_width*2 > window_width {
-            left_offset = xx (cx - window_width + (my_font.em_width*2));
+        if cx + x_cursor_scroll_treshhold + my_font.em_width*2 > window_width {
+            left_offset = xx (cx - window_width + x_cursor_scroll_treshhold + (my_font.em_width*2));
         } else {
             left_offset = 0.0;
         }
 
         cy := get_cursor_y(text);
-        if cy < 0 {
-            top_offset = xx (cy-ml-ml);
-            print("top_offset: %\n", top_offset);
+        if cy - y_cursor_scroll_treshold < 0 {
+            top_offset = xx (cy-ml-ml - y_cursor_scroll_treshold);
+            // print("top_offset: %\n", top_offset);
         } else {
             top_offset = 0.0;
         }
 
-        // Draw caret
+        // Draw cursor
         {
             row := get_cursor_row(text);
             // col := get_cursor_col(text);
@@ -246,11 +252,11 @@ main :: () {
 
             Simp.set_shader_for_color();
 
-            top := ((my_font.default_line_spacing+line_height) * row) + (top_offset + ml);
-            left_pos := ml;
+            top  := window_height - (((my_font.default_line_spacing+line_height) * row) + (top_offset + ml));
+            left := cx + ml - left_offset;
             h := my_font.character_height;
 
-            Simp.immediate_quad(cx+ml-left_offset, window_height - top + (h-h*0.1), cx+ml-left_offset+my_font.em_width, window_height - top - (h/2-(h*0.2)), .{.9, .0, .0, 1.0});
+            Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), cursor_color);
         }
 
         // Draw text
@@ -264,8 +270,10 @@ main :: () {
                 temp := t;
                 if i != -1 temp.count = i;
                 text_w := Simp.prepare_text(my_font, temp);
-                bottom := xx window_height - ((my_font.default_line_spacing+line_height) * row);
-                Simp.draw_prepared_text(my_font, xx (ml-left_offset), xx (bottom-top_offset-ml), text_color /*.{.8, .8, .8, 1}*/);
+                
+                bottom := window_height - ((my_font.default_line_spacing+line_height) * row) - (top_offset + ml);
+
+                Simp.draw_prepared_text(my_font, xx (ml-left_offset), xx bottom, text_color /*.{.8, .8, .8, 1}*/);
 
                 if i != -1 {
                     row += 1; advance(*t, i+1);
@@ -346,7 +354,7 @@ get_cursor_y :: (text: string) -> s64 {
     if cursor_pos == 0 return window_height;
 
     row := get_cursor_row(text);
-    top := (my_font.default_line_spacing+line_height) * row;
+    top := (my_font.default_line_spacing + line_height) * row;
     return window_height - xx top;
 }
 
