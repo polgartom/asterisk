@@ -16,7 +16,7 @@
 [x] Add a small threshold for screen scrolling
 [] Backspace should delete 4 spaces at once (if it's a tab character). This should work only if the current line contains only whitespaces or if the caret is at the first non-whitespace character of the line
 [] Display frame debug info on the screen instead of the console
-[] Scroll up or left only if the cursor is at the top or left (like other editors)
+[] Scroll up or left only if the cursor is at the top or left
 [] Parse tab characters
 [] Add UTF-32 character support
 [] Open a file

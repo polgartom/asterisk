@@ -1,5 +1,5 @@
-window_width := 850*2;
-window_height := 650*2;
+window_width := 1650;
+window_height := 450;
 
 should_quit := false;
 
@@ -16,7 +16,6 @@ key_down: u32;
 key_up: u32;
 key_backspace: u32;
 key_shift: u32;
-
 font_width: s64;
 
 d :: print;
@@ -220,9 +219,23 @@ main :: () {
                     }
                 }
 
-
             }
 
+            cy := get_cursor_y(text);
+            // abs_y := cy - y_cursor_scroll_treshold;
+            rel_y := get_cursor_rel_y(text);
+            h := my_font.default_line_spacing + line_height;
+
+            if cy-window_height < 0 {
+                if xx (rel_y+h+ml) > window_height {
+                    top_offset = xx (cy+ml+ml-window_height + h);
+                }
+            } else {
+                remainer := xx (cy+ml+ml-window_height + h);
+                if (remainer*-1) < h {
+                    top_offset = 0.0;
+                }
+            }
         }
 
         if key_down {
@@ -240,21 +253,25 @@ main :: () {
                 }
                 cursor_pos += col;
             }
+
+            cy := get_cursor_y(text);
+            abs_y := cy - y_cursor_scroll_treshold;
+            // rel_y := get_cursor_rel_y(text);
+            if abs_y < 0 {
+                top_offset = xx (cy - y_cursor_scroll_treshold);
+                // print("top_offset: %\n", top_offset);
+            } else {
+                top_offset = 0.0;
+            }
         }
+
+        // print("top_offset 2: %\n", top_offset);
 
         cx := get_cursor_x(text);
         if cx + x_cursor_scroll_treshold + my_font.em_width*2 > window_width {
             left_offset = xx (cx - window_width + x_cursor_scroll_treshold + (my_font.em_width*2));
         } else {
             left_offset = 0.0;
-        }
-
-        cy := get_cursor_y(text);
-        if cy - y_cursor_scroll_treshold < 0 {
-            top_offset = xx (cy-ml-ml - y_cursor_scroll_treshold);
-            // print("top_offset: %\n", top_offset);
-        } else {
-            top_offset = 0.0;
         }
 
         // Draw cursor
@@ -273,8 +290,7 @@ main :: () {
             Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), cursor_color);
 
             ch := get_char_at_string_index(text, cursor_pos);
-            s := sprint("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
-            array_add(*debug_infos, s);
+            PrintDev("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
         }
 
         // Draw text
@@ -313,7 +329,7 @@ main :: () {
 
                 if ln then row += 1;
 
-                free(it);
+                free(it.data);
             }
 
             array_reset(*debug_infos);
@@ -325,6 +341,11 @@ main :: () {
         reset_temporary_storage();
     }
     
+}
+
+PrintDev :: (fmt: string, args: .. Any) #expand {
+    s := sprint(fmt, ..args); // Switch to tprint @Todo
+    array_add(*debug_infos, s);  // can we use temporary allocator for dynamic arrays?
 }
 
 get_char_at_string_index :: (t: string, index: s64) -> string {
@@ -386,6 +407,12 @@ get_cursor_x :: (text: string) -> s64 {
     }
 
     return col * current_font_width();
+}
+
+get_cursor_rel_y :: inline (text: string) -> s64 {
+    row := get_cursor_row(text);
+    top := window_height - (((my_font.default_line_spacing+line_height) * row) + (top_offset + ml));
+    return xx top;
 }
 
 get_cursor_y :: (text: string) -> s64 {
