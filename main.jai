@@ -67,10 +67,10 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    sample := read_entire_file("main.jai");
+    // sample := read_entire_file("main.jai");
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
-    append(*builder, sample);
+    // append(*builder, sample);
 
     // print("-- %\n", code.count);
     // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
@@ -197,7 +197,37 @@ main :: () {
                             }
                         }
 
-                        if key == .ENTER append_text(*builder, "\n");
+                        if key == .ENTER {
+                            text := builder_to_string(*builder, do_reset = false);
+                            defer free(text);
+
+                            if cursor_pos-1 > -1 && text.data[cursor_pos] == #char "\n" {
+                                // A basic smart indent count characters in the current row until the first non-space character.
+
+                                start := cursor_pos-1;
+                                index := 0;
+                                for < start..0 {
+                                    if text.data[it] == #char "\n" {
+                                        index = it;
+                                        break;
+                                    }
+                                }
+
+                                index += 1;
+                                index2 := find_index_from_left_until_not(text, #char " ", index);
+                                spaces := index2 - index;
+                                
+                                append_text(*builder, "\n");
+
+                                while spaces != 0 {
+                                    append_text(*builder, " ");
+                                    spaces -= 1;
+                                }
+                            } else {
+                                append_text(*builder, "\n");
+                            }
+                        
+                        }
                         
                         if key == .TAB {
                             text := builder_to_string(*builder, do_reset = false);
@@ -530,12 +560,24 @@ increase_cursor_pos :: inline (by: s64) {
 }
 
 find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
-    assert(start_index < s.count);
+    assert(start_index > -1 && start_index < s.count);
 
     cursor := start_index;
     while cursor >= 0 {
         if s[cursor] != byte return cursor;
         cursor -= 1;
+    }
+
+    return -1;
+}
+
+find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
+    assert(start_index > -1 && start_index < s.count);
+
+    cursor := start_index;
+    while cursor < s.count {
+        if s[cursor] != byte return cursor;
+        cursor += 1;
     }
 
     return -1;
