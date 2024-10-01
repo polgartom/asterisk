@@ -7,6 +7,7 @@ should_quit := false;
 my_font: *Simp.Dynamic_Font;
 
 cursor_pos := 0;
+cursor_moved := false;
 
 last_time : float64;
 
@@ -150,7 +151,8 @@ main :: () {
                                         append(*builder, text[it]);
                                     }
                                 }
-                                cursor_pos -= 1;
+
+                                increase_cursor_pos(-1);
                             }
                         }
 
@@ -167,8 +169,6 @@ main :: () {
         text := builder_to_string(*builder, do_reset = false);
         defer free(text);
 
-        cursor_moved := false;
-
         // Handle cursor movement
         if key_left && cursor_pos != 0 {
             cursor_moved = true;
@@ -177,14 +177,10 @@ main :: () {
         }
 
         if key_right && cursor_pos < text.count {
-            cursor_moved = true;
-
-            cursor_pos += 1;
+            increase_cursor_pos(1);
         }
 
         if key_up {
-            cursor_moved = true;
-
             t := text;
             t.count = cursor_pos;
             index := find_index_from_right(t, #char "\n");
@@ -193,32 +189,33 @@ main :: () {
                 cols := t.count-index;
                 t.count = index;
 
-                cursor_pos = index;
+                new_pos := index;
 
-                if !(cursor_pos > 0 && text.data[cursor_pos-1] == #char "\n") {
+                if !(new_pos > 0 && text.data[new_pos-1] == #char "\n") {
                     // search for the first col index in upper row
                     index = find_index_from_right(t, #char "\n");
                     if index != -1 {
-                        above_row_cols := cursor_pos - index;
+                        above_row_cols := new_pos - index;
                         if above_row_cols < cols {
-                            cursor_pos = index + above_row_cols;
+                            new_pos = index + above_row_cols;
                         } else {
-                            cursor_pos = index + cols;
+                            new_pos = index + cols;
                         }
 
                         // it's double end line so we should jump up by one
                         // also this "ln" check should be prevent the weird double jump up if 
                         // 2 line breaks are presents together
-                        ln := get_char_at_string_index(text, cursor_pos) == "\n";
+                        ln := get_char_at_string_index(text, new_pos) == "\n";
                         if t.count-index == 1 && !ln {
-                            cursor_pos -= 1;
+                            new_pos -= 1;
                         }
                     } else {
                         // its the first row
-                        cursor_pos = ifx cols-1 > -1 then cols-1 else 0;
+                        new_pos = ifx cols-1 > -1 then cols-1 else 0;
                     }
                 }
 
+                set_cursor_pos(new_pos);
             }
         }
 
@@ -228,7 +225,7 @@ main :: () {
             cursor_col := get_cursor_col(text);
             i := find_index_from_left(text, #char "\n", start_index=cursor_pos);
             if i != -1 {
-                cursor_pos = i+1;
+                new_pos := i+1;
                 col := 0;
                 for i+1..text.count-1 {
                     if col == cursor_col || text.data[it] == #char "\n" {
@@ -236,9 +233,10 @@ main :: () {
                     }
                     col += 1;
                 }
-                cursor_pos += col;
-            }
+                new_pos += col;
 
+                set_cursor_pos(new_pos);
+            }
         }
 
         if cursor_moved {
@@ -257,12 +255,8 @@ main :: () {
             }
         }
 
-        // PrintDev("x: % | w: %\n", get_cursor_rel_x(text), window_width);
-        // PrintDev("y: % | h: %\n", get_cursor_rel_y(text), window_height);
-
-        ////////////////
-        /// Draw
-
+        /////////////////////
+        /// Draw frame
 
         // Draw cursor
         {
@@ -435,7 +429,19 @@ append_text :: (b: *String_Builder, t: string) {
     a := advance(text, cursor_pos);
     append(b, a);
 
-    cursor_pos += t.count;
+    increase_cursor_pos(t.count);
+}
+
+set_cursor_pos :: inline (index: s64) {
+    // @Todo: check overflow, use clamp() proc
+    if index < 0 then index = 0;
+    cursor_pos = index;
+
+    cursor_moved = true;
+}
+
+increase_cursor_pos :: inline (by: s64) {
+    set_cursor_pos(cursor_pos + by);
 }
 
 my_init_fonts :: () {
