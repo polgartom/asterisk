@@ -67,10 +67,11 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    // sample := read_entire_file("main.jai");
-    sample := read_entire_file("TODO");
+    sample := read_entire_file("main.jai");
+    // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
     append(*builder, sample);
+
     // print("-- %\n", code.count);
     // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
 
@@ -184,7 +185,7 @@ main :: () {
                                     }
                                 }
 
-                                print("r: %\n", r);
+                                // print("r: %\n", r);
                                 i := cursor_pos - r;
                                 if i > -1 {
                                     append(*builder, text.data, i);
@@ -197,7 +198,22 @@ main :: () {
                         }
 
                         if key == .ENTER append_text(*builder, "\n");
-                        if key == .TAB   append_text(*builder, TAB_SPACE_CHARS);
+                        
+                        if key == .TAB {
+                            text := builder_to_string(*builder, do_reset = false);
+                            defer free(text);
+
+                            if cursor_pos != text.count {
+                                ch := text.data[cursor_pos];
+                                // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
+                                // ok, sc := surround_chars(text, cursor_pos);
+                                // if ok print("surround_chars: |%|\n", sc);
+                                // else print("failed to get the surround_chars!\n");
+                            }
+
+                            append_text(*builder, TAB_SPACE_CHARS);
+                        }
+
                     }
 
                     last_pressed_key_time = last_time - last_pressed_key_time;
@@ -295,7 +311,7 @@ main :: () {
             }
         }
 
-        if 1||draw_tabs {
+        if draw_tabs {
             spaces := 0;
             for 0..text.count-1 {
                 ch := text.data[it];
@@ -313,6 +329,10 @@ main :: () {
                 }
             }
         }
+
+        PrintDev("F1 toggle dev | F2 show tabs\n", text.count);
+        PrintDev("ci: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
+        PrintDev("col: % row: % chars: %\n", get_cursor_col(text), get_cursor_row(text)-1, text.count);
 
         /////////////////////
         /// Draw frame
@@ -361,14 +381,20 @@ main :: () {
         // Draw debug info
         if show_debug_info {
             row := 1;
+
+            max := 0;
+            for debug_infos if it.count > max then max = it.count;
             for debug_infos {
                 s := it;
                 ln := s[s.count-1] == #char "\n";
                 if ln then s.count -= 1;
 
+                // roffset := max - it.count;
+                rmargin := 10;
+
                 w := Simp.prepare_text(my_font, s);
                 top := ((my_font.default_line_spacing+line_height) * row);
-                Simp.draw_prepared_text(my_font, xx (window_width - w*1.1), xx (window_height-top), .{.8, .8, .8, 1});
+                Simp.draw_prepared_text(my_font, xx (window_width - w - rmargin), xx (window_height-top), .{.8, .8, .8, 1});
 
                 if ln then row += 1;
 
@@ -501,6 +527,29 @@ set_cursor_pos :: inline (index: s64) {
 
 increase_cursor_pos :: inline (by: s64) {
     set_cursor_pos(cursor_pos + by);
+}
+
+find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
+    assert(start_index < s.count);
+
+    cursor := start_index;
+    while cursor >= 0 {
+        if s[cursor] != byte return cursor;
+        cursor -= 1;
+    }
+
+    return -1;
+}
+
+surround_chars :: (s: string, index: s64) -> bool, string {
+    if s.count == 0    return false, s;
+    if index > s.count return false, s;
+
+    r := s;
+    if index+1 <= s.count then r.count = index+1;
+    if index-1 > -1      then advance(*r, index-1);
+
+    return true, r;
 }
 
 my_init_fonts :: () {

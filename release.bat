@@ -1,0 +1,1 @@
+jai .\main.jai - release
