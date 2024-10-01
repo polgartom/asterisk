@@ -1,5 +1,5 @@
-window_width := 1650;
-window_height := 450;
+window_width := 800;
+window_height := 650;
 
 should_quit := false;
 
@@ -24,7 +24,7 @@ bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
 cursor_color :: Vector4.{.9, .0, .0, 1.0};
 
-ml :: 5.0; // margin left
+// ml :: 5.0; // margin left
 line_height :: 0.0;//5.0; // what is this metric, px?
 font_size :: 15;
 
@@ -167,24 +167,24 @@ main :: () {
         text := builder_to_string(*builder, do_reset = false);
         defer free(text);
 
-        // Handle caret movement
+        cursor_moved := false;
+
+        // Handle cursor movement
         if key_left && cursor_pos != 0 {
+            cursor_moved = true;
+
             cursor_pos -= 1;
-            if cursor_pos != 0 {
-                ch := get_char_at_string_index(text, cursor_pos);
-                // print("> ci: % ; ch: %\n", cursor_pos, ch);
-            }
         }
 
         if key_right && cursor_pos < text.count {
+            cursor_moved = true;
+
             cursor_pos += 1;
-            if cursor_pos < text.count {
-                ch := get_char_at_string_index(text, cursor_pos);
-                // print("> ci: % ; ch: %\n", cursor_pos, ch);
-            }
         }
 
         if key_up {
+            cursor_moved = true;
+
             t := text;
             t.count = cursor_pos;
             index := find_index_from_right(t, #char "\n");
@@ -220,25 +220,11 @@ main :: () {
                 }
 
             }
-
-            cy := get_cursor_y(text);
-            rel_y := get_cursor_rel_y(text);
-            h := my_font.default_line_spacing + line_height;
-
-            if cy-window_height < 0 {
-                if xx (rel_y+h+ml) > window_height {
-                    top_offset = xx (cy+ml+ml-window_height + h);
-                }
-            } else {
-                remainer := xx (cy+ml+ml-window_height + h);
-                if (remainer*-1) < h {
-                    top_offset = 0.0;
-                }
-            }
         }
 
         if key_down {
-            // Move cursor down
+            cursor_moved = true;
+
             cursor_col := get_cursor_col(text);
             i := find_index_from_left(text, #char "\n", start_index=cursor_pos);
             if i != -1 {
@@ -253,23 +239,30 @@ main :: () {
                 cursor_pos += col;
             }
 
-            cy := get_cursor_y(text);
-            rel_y := get_cursor_rel_y(text);
-            h := my_font.default_line_spacing + line_height;
+        }
 
-            if cy - h < 0 {
-                if (rel_y-h-ml) < 0 {
-                    top_offset = xx (cy-ml-ml-h);
-                }
+        if cursor_moved {
+            rel_x := get_cursor_rel_x(text);
+            if rel_x - window_width >= 0 {
+                left_offset += rel_x - window_width;
+            } else if rel_x-my_font.em_width < 0 {
+                left_offset -= (rel_x * -1) + my_font.em_width;
+            }
+
+            rel_y := get_cursor_rel_y(text);            
+            if rel_y < 0 {
+                top_offset += abs(rel_y);
+            } else if rel_y + my_font.character_height > window_height {
+                top_offset -= rel_y + my_font.character_height - window_height;
             }
         }
 
-        cx := get_cursor_x(text);
-        if cx + x_cursor_scroll_treshold + my_font.em_width*2 > window_width {
-            left_offset = xx (cx - window_width + x_cursor_scroll_treshold + (my_font.em_width*2));
-        } else {
-            left_offset = 0.0;
-        }
+        // PrintDev("x: % | w: %\n", get_cursor_rel_x(text), window_width);
+        // PrintDev("y: % | h: %\n", get_cursor_rel_y(text), window_height);
+
+        ////////////////
+        /// Draw
+
 
         // Draw cursor
         {
@@ -280,14 +273,14 @@ main :: () {
 
             Simp.set_shader_for_color();
 
-            top  := window_height - (((my_font.default_line_spacing+line_height) * row) + (top_offset + ml));
-            left := cx + ml - left_offset;
+            top  := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
+            left := cx - left_offset;
             h := my_font.character_height;
 
             Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), cursor_color);
 
-            ch := get_char_at_string_index(text, cursor_pos);
-            PrintDev("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
+            // ch := get_char_at_string_index(text, cursor_pos);
+            // PrintDev("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
         }
 
         // Draw text
@@ -302,9 +295,9 @@ main :: () {
                 if i != -1 temp.count = i;
                 text_w := Simp.prepare_text(my_font, temp);
                 
-                bottom := window_height - ((my_font.default_line_spacing+line_height) * row) - (top_offset + ml);
+                bottom := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
 
-                Simp.draw_prepared_text(my_font, xx (ml-left_offset), xx bottom, text_color /*.{.8, .8, .8, 1}*/);
+                Simp.draw_prepared_text(my_font, xx (-left_offset), xx bottom, text_color /*.{.8, .8, .8, 1}*/);
 
                 if i != -1 {
                     row += 1; advance(*t, i+1);
@@ -334,7 +327,7 @@ main :: () {
 
         Simp.swap_buffers(window);
 
-        // sleep_milliseconds(20);
+        // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
     }
     
@@ -391,6 +384,17 @@ get_cursor_col :: (text: string) -> s64 {
 
 ranges: [..] s64;
 
+get_cursor_rel_y :: inline (text: string) -> s64 {
+    row := get_cursor_row(text);
+    top := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
+    return xx top;
+}
+
+get_cursor_rel_x :: inline (text: string) -> s64 {
+    x := get_cursor_x(text);
+    return xx (x - left_offset + my_font.em_width);
+}
+
 get_cursor_x :: (text: string) -> s64 {
     if cursor_pos == 0 return 0;
     col := 0;
@@ -404,12 +408,6 @@ get_cursor_x :: (text: string) -> s64 {
     }
 
     return col * current_font_width();
-}
-
-get_cursor_rel_y :: inline (text: string) -> s64 {
-    row := get_cursor_row(text);
-    top := window_height - (((my_font.default_line_spacing+line_height) * row) + (top_offset + ml));
-    return xx top;
 }
 
 get_cursor_y :: (text: string) -> s64 {
