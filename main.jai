@@ -166,7 +166,7 @@ main :: () {
                                     i := 0;
                                     spaces := 1;
                                     for < cursor_pos-1..0 {
-                                        print("ch: |%|\n", get_char_at_string_index(text, it));
+                                        // print("ch: |%|\n", get_char_at_string_index(text, it));
                                         if text.data[it] == #char " " {
                                             spaces += 1;
                                             if spaces == TAB_SIZE_IN_SPACES {
