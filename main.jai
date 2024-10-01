@@ -243,7 +243,7 @@ main :: () {
             rel_x := get_cursor_rel_x(text);
             if rel_x - window_width >= 0 {
                 left_offset += rel_x - window_width;
-            } else if rel_x-my_font.em_width < 0 {
+            } else if rel_x - my_font.em_width < 0 {
                 left_offset -= (rel_x * -1) + my_font.em_width;
             }
 
