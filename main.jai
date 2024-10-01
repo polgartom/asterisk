@@ -67,10 +67,10 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    // sample := read_entire_file("main.jai");
+    sample := read_entire_file("main.jai");
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
-    // append(*builder, sample);
+    append(*builder, sample);
 
     // print("-- %\n", code.count);
     // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
@@ -201,7 +201,7 @@ main :: () {
                             text := builder_to_string(*builder, do_reset = false);
                             defer free(text);
 
-                            if cursor_pos-1 > -1 && text.data[cursor_pos] == #char "\n" {
+                            if cursor_pos-1 > -1 {
                                 // A basic smart indent count characters in the current row until the first non-space character.
 
                                 start := cursor_pos-1;
@@ -217,12 +217,18 @@ main :: () {
                                 index2 := find_index_from_left_until_not(text, #char " ", index);
                                 spaces := index2 - index;
                                 
+                                if cursor_pos >= index && cursor_pos < index2 {
+                                    // We're in the first n empty space range
+                                    set_cursor_pos(index2); // jump to the first non-whitespace char in the row
+                                }
+
                                 append_text(*builder, "\n");
 
                                 while spaces != 0 {
                                     append_text(*builder, " ");
                                     spaces -= 1;
                                 }
+
                             } else {
                                 append_text(*builder, "\n");
                             }
@@ -363,6 +369,7 @@ main :: () {
         PrintDev("F1 toggle dev | F2 show tabs\n", text.count);
         PrintDev("ci: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
         PrintDev("col: % row: % chars: %\n", get_cursor_col(text), get_cursor_row(text)-1, text.count);
+        PrintDev("font:\n");
 
         /////////////////////
         /// Draw frame
@@ -603,7 +610,7 @@ my_init_fonts :: () {
     pixel_height := font_size; // print(">>> %\n", window_height/40);
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-    // print("%\n\n", my_font);
+    print("%\n\n", <<my_font);
     assert(my_font != null);
 }
 
