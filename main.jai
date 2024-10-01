@@ -1,5 +1,5 @@
-window_width := 800;
-window_height := 650;
+window_width := 900;
+window_height := 720;
 
 should_quit := false;
 
@@ -29,6 +29,16 @@ cursor_color :: Vector4.{.9, .0, .0, 1.0};
 line_height :: 0.0;//5.0; // what is this metric, px?
 font_size :: 15;
 
+TAB_SIZE_IN_SPACES :: 4;
+TAB_SPACE_CHARS :: #run -> string {
+    builder: String_Builder;
+    builder.allocator = __temporary_allocator;
+    for 0..TAB_SIZE_IN_SPACES-1 {
+        append(*builder, " ");
+    }
+    return builder_to_string(*builder,, allocator = __temporary_allocator);
+}
+
 top_offset := 0.0;
 left_offset := 0.0;
 
@@ -55,7 +65,8 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    sample := read_entire_file("main.jai");
+    // sample := read_entire_file("main.jai");
+    sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
     append(*builder, sample);
     // print("-- %\n", code.count);
@@ -139,25 +150,46 @@ main :: () {
                         if key == .ARROW_DOWN   key_down  = event.key_pressed;
                         if key == .ARROW_UP     key_up    = event.key_pressed;
 
-                        // Delete a char from right
                         if key == .BACKSPACE {
                             key_backspace = event.key_pressed;
 
-                            if cursor_pos != 0 {
+                            // Delete from right
+                            if cursor_pos-1 > -1 {
                                 text := builder_to_string(*builder, do_reset = true);
                                 defer free(text);
-                                for 0..text.count-1 {
-                                    if it != cursor_pos-1 {
-                                        append(*builder, text[it]);
+
+                                r := 1;
+
+                                // Check if we would delete a tab
+                                ch := text.data[cursor_pos-1];
+                                if ch == #char " " {
+                                    i := 0;
+                                    spaces := 1;
+                                    for < cursor_pos-1..0 {
+                                        print("ch: |%|\n", get_char_at_string_index(text, it));
+                                        if text.data[it] == #char " " {
+                                            spaces += 1;
+                                            if spaces == TAB_SIZE_IN_SPACES {
+                                                r = TAB_SIZE_IN_SPACES;
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
 
-                                increase_cursor_pos(-1);
+                                i := cursor_pos - r;
+                                if i > -1 {
+                                    append(*builder, text.data, i);
+                                    t := advance(text, cursor_pos);
+                                    append(*builder, t);
+                                    set_cursor_pos(cursor_pos-r);
+                                }
+
                             }
                         }
 
                         if key == .ENTER append_text(*builder, "\n");
-                        if key == .TAB   append_text(*builder, "    ");
+                        if key == .TAB   append_text(*builder, TAB_SPACE_CHARS);
                     }
 
                     last_pressed_key_time = last_time - last_pressed_key_time;

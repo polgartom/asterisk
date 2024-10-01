@@ -14,11 +14,17 @@
 [x] Scale the text properly when resizing the window
 [x] Implement screen scrolling
 [x] Add a small threshold for screen scrolling
-[] Backspace should delete 4 spaces at once (if it's a tab character). This should work only if the current line contains only whitespaces or if the caret is at the first non-whitespace character of the line
+[x] Delete tabs from right
 [] Draw tabulators (4 spaces)
+[] Draw spaces, use a dot  ascii char or smth
 [x] Display frame debug info on the screen instead of the console
 [x] Scroll up or left only if the cursor is at the top or left
 [] Parse tab characters (replace them with 4 spaces)
 [] Add UTF-32 character support
 [] Open a file
 [] Save the buffer
+[] PageUp, PageDown
+[] Delete char from left
+[] Smart indent
+[] Smart movement check { } positions, also we should check the current language
+[] Add a little padding
