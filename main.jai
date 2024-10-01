@@ -39,6 +39,8 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
+draw_tabs := false;
+
 top_offset := 0.0;
 left_offset := 0.0;
 
@@ -141,6 +143,9 @@ main :: () {
                         show_debug_info = !show_debug_info;
                     }
 
+                    if event.key_code == .F2 {
+                        draw_tabs = !draw_tabs;
+                    }
 
                     if 1 || last_pressed_key != key {
                         last_pressed_key = key;
@@ -173,10 +178,13 @@ main :: () {
                                                 r = TAB_SIZE_IN_SPACES;
                                                 break;
                                             }
+                                        } else {
+                                            break;
                                         }
                                     }
                                 }
 
+                                print("r: %\n", r);
                                 i := cursor_pos - r;
                                 if i > -1 {
                                     append(*builder, text.data, i);
@@ -284,6 +292,25 @@ main :: () {
                 top_offset += abs(rel_y);
             } else if rel_y + my_font.character_height > window_height {
                 top_offset -= rel_y + my_font.character_height - window_height;
+            }
+        }
+
+        if 1||draw_tabs {
+            spaces := 0;
+            for 0..text.count-1 {
+                ch := text.data[it];
+                if ch == #char " " {
+                    spaces += 1;
+                    if spaces == TAB_SIZE_IN_SPACES {
+                        tab := slice(text, it-spaces+1, it);
+                        for j: it-spaces+1..it {
+                            text.data[j] = #char "~";
+                        }
+                        spaces = 0;
+                    }
+                } else {
+                    spaces = 0;
+                }
             }
         }
 
