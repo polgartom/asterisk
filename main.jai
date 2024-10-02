@@ -1,4 +1,4 @@
-window_width := 900;
+window_width := 1280;
 window_height := 720;
 
 should_quit := false;
@@ -39,7 +39,7 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
-draw_tabs := false;
+draw_special_chars := false;
 
 top_offset := 0.0;
 left_offset := 0.0;
@@ -67,20 +67,18 @@ main :: () {
     builder: String_Builder;
     init_string_builder(*builder);
     
-    sample := read_entire_file("main.jai");
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
+
+    sample := read_entire_file("main.jai");
     append(*builder, sample);
-
-    // print("-- %\n", code.count);
-    // append(*builder, "main :: () {\na := 21;\nb: s32;\n}");
-
-    last_pressed_key : Key_Code = .UNKNOWN;
-    last_pressed_key_time : float64;
+    should_rebuild_row_table = true;
 
     last_time = seconds_since_init();
 
     while !should_quit {
+        WaitMessage();
+
         last_time = seconds_since_init();
 
         update_window_events();
@@ -135,87 +133,85 @@ main :: () {
 
                 if event.key_pressed {
 
-                    // {
-                    //     s := sprint("input | %", );    
-                    //     array_add(*debug_infos, s);
-                    // }
-
+                    // Dev hotkeys (for now)
                     if event.key_code == .F1 {
                         show_debug_info = !show_debug_info;
                     }
-
                     if event.key_code == .F2 {
-                        draw_tabs = !draw_tabs;
+                        draw_special_chars = !draw_special_chars;
+                    }
+                    if event.key_code == .F3 {
+                        draw_row_table = !draw_row_table;
                     }
 
-                    if 1 || last_pressed_key != key {
-                        last_pressed_key = key;
+                    if key == .ARROW_LEFT   key_left  = event.key_pressed;
+                    if key == .ARROW_RIGHT  key_right = event.key_pressed;
+                    if key == .ARROW_DOWN   key_down  = event.key_pressed;
+                    if key == .ARROW_UP     key_up    = event.key_pressed;
 
-                        if key == .ARROW_LEFT   key_left  = event.key_pressed;
-                        if key == .ARROW_RIGHT  key_right = event.key_pressed;
-                        if key == .ARROW_DOWN   key_down  = event.key_pressed;
-                        if key == .ARROW_UP     key_up    = event.key_pressed;
+                    if key == .BACKSPACE {
+                        key_backspace = event.key_pressed;
 
-                        if key == .BACKSPACE {
-                            key_backspace = event.key_pressed;
-
-                            // Delete from right
-                            if cursor_pos-1 > -1 {
-                                text := builder_to_string(*builder, do_reset = true);
-                                defer free(text);
-
-                                r := 1;
-
-                                // Check if we would delete a tab
-                                ch := text.data[cursor_pos-1];
-                                if ch == #char " " {
-                                    i := 0;
-                                    spaces := 1;
-                                    for < cursor_pos-1..0 {
-                                        // print("ch: |%|\n", get_char_at_string_index(text, it));
-                                        if text.data[it] == #char " " {
-                                            spaces += 1;
-                                            if spaces == TAB_SIZE_IN_SPACES {
-                                                r = TAB_SIZE_IN_SPACES;
-                                                break;
-                                            }
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                // print("r: %\n", r);
-                                i := cursor_pos - r;
-                                if i > -1 {
-                                    append(*builder, text.data, i);
-                                    t := advance(text, cursor_pos);
-                                    append(*builder, t);
-                                    set_cursor_pos(cursor_pos-r);
-                                }
-
-                            }
-                        }
-
-                        if key == .ENTER {
-                            text := builder_to_string(*builder, do_reset = false);
+                        // Delete from right
+                        if cursor_pos-1 > -1 {
+                            text := builder_to_string(*builder, do_reset = true);
                             defer free(text);
 
-                            if cursor_pos-1 > -1 {
-                                // A basic smart indent count characters in the current row until the first non-space character.
+                            r := 1;
 
-                                start := cursor_pos-1;
-                                index := 0;
-                                for < start..0 {
-                                    if text.data[it] == #char "\n" {
-                                        index = it;
+                            // Check if we would delete a tab
+                            ch := text.data[cursor_pos-1];
+                            if ch == #char " " {
+                                i := 0;
+                                spaces := 1;
+                                for < cursor_pos-1..0 {
+                                    // print("ch: |%|\n", get_char_at_string_index(text, it));
+                                    if text.data[it] == #char " " {
+                                        spaces += 1;
+                                        if spaces == TAB_SIZE_IN_SPACES {
+                                            r = TAB_SIZE_IN_SPACES;
+                                            break;
+                                        }
+                                    } else {
                                         break;
                                     }
                                 }
+                            }
 
+                            // print("r: %\n", r);
+                            i := cursor_pos - r;
+                            if i > -1 {
+                                append(*builder, text.data, i); // @Todo replace with append_text()
+                                t := advance(text, cursor_pos);
+                                append(*builder, t);
+                                set_cursor_pos(cursor_pos-r);
+                                should_rebuild_row_table = true;
+                            }
+
+                        }
+                    }
+
+                    if key == .ENTER {
+                        text := builder_to_string(*builder, do_reset = false);
+                        defer free(text);
+
+                        if cursor_pos-1 > -1 {
+                            // A basic smart indent count characters in the current row until the first non-space character.
+
+                            start := cursor_pos-1;
+                            index := -1;
+                            for < start..0 {
+                                if text.data[it] == #char "\n" {
+                                    index = it;
+                                    break;
+                                }
+                            }
+
+                            if index+1 < text.count {
                                 index += 1;
                                 index2 := find_index_from_left_until_not(text, #char " ", index);
                                 spaces := index2 - index;
+                                // print("spaces: % ; index-1: %\n", spaces, index-1);
                                 
                                 if cursor_pos >= index && cursor_pos < index2 {
                                     // We're in the first n empty space range
@@ -228,31 +224,32 @@ main :: () {
                                     append_text(*builder, " ");
                                     spaces -= 1;
                                 }
-
                             } else {
                                 append_text(*builder, "\n");
                             }
-                        
+
+
+                        } else {
+                            append_text(*builder, "\n");
                         }
-                        
-                        if key == .TAB {
-                            text := builder_to_string(*builder, do_reset = false);
-                            defer free(text);
-
-                            if cursor_pos != text.count {
-                                ch := text.data[cursor_pos];
-                                // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
-                                // ok, sc := surround_chars(text, cursor_pos);
-                                // if ok print("surround_chars: |%|\n", sc);
-                                // else print("failed to get the surround_chars!\n");
-                            }
-
-                            append_text(*builder, TAB_SPACE_CHARS);
-                        }
-
                     }
 
-                    last_pressed_key_time = last_time - last_pressed_key_time;
+                    if key == .TAB {
+                        // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
+                        
+                        // text := builder_to_string(*builder, do_reset = false);
+                        // defer free(text);
+
+                        // if cursor_pos != text.count {
+                        //     ch := text.data[cursor_pos];
+                        //     // ok, sc := surround_chars(text, cursor_pos);
+                        //     // if ok print("surround_chars: |%|\n", sc);
+                        //     // else print("failed to get the surround_chars!\n");
+                        // }
+
+                        append_text(*builder, TAB_SPACE_CHARS);
+                    }
+
                 }
 
             }
@@ -261,11 +258,20 @@ main :: () {
         text := builder_to_string(*builder, do_reset = false);
         defer free(text);
 
+        if should_rebuild_row_table {
+            rebuild_row_table(text);
+
+            // if draw_row_table {
+            //     print("\n----------------\nrow_table | rows: %\n", row_table.count);
+            //     for row_table {
+            //         print("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
+            //     }
+            // }
+        }
+
         // Handle cursor movement
         if key_left && cursor_pos != 0 {
-            cursor_moved = true;
-
-            cursor_pos -= 1;
+            increase_cursor_pos(-1);
         }
 
         if key_right && cursor_pos < text.count {
@@ -312,8 +318,6 @@ main :: () {
         }
 
         if key_down {
-            cursor_moved = true;
-
             cursor_col := get_cursor_col(text);
             i := find_index_from_left(text, #char "\n", start_index=cursor_pos);
             if i != -1 {
@@ -347,7 +351,8 @@ main :: () {
             }
         }
 
-        if draw_tabs {
+        if draw_special_chars {
+            // Tabs
             spaces := 0;
             for 0..text.count-1 {
                 ch := text.data[it];
@@ -366,10 +371,36 @@ main :: () {
             }
         }
 
-        PrintDev("F1 toggle dev | F2 show tabs\n", text.count);
-        PrintDev("ci: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
-        PrintDev("col: % row: % chars: %\n", get_cursor_col(text), get_cursor_row(text)-1, text.count);
-        PrintDev("font:\n");
+        if show_debug_info {
+            PrintDev("F1 toggle dev | F2 show tabs\n");
+            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
+            
+            // Row table debug
+            // PrintDev("---------------\n");
+            // new_row := 0;
+            // new_col := 0;
+            // for row_table {
+            //     if cursor_pos <= it.pos {
+            //         PrintDev("!FOUND! -> rt.pos: % ; rt.row: % ; rt.cols: %\n", it.pos, it_index, it.cols);
+            //         new_row = it_index;
+            //         new_col = it.cols - (it.pos-cursor_pos);
+            //         break;
+            //     }
+            //     PrintDev("skip -> rt.pos: % ; rt.row: % ; rt.cols: %\n", it.pos, it_index, it.cols);
+            // }
+            // PrintDev("---------------\n");
+            // PrintDev(
+            //     "col: % % | row: % % | (rowtable: %ms) | chars: %\n", 
+            //     get_cursor_col(text),
+            //     new_col,
+            //     get_cursor_row(text)-1, 
+            //     new_row, 
+            //     formatFloat(row_table_recalc_time, trailing_width=2),
+            //     text.count
+            // );
+            // kacsa
+        }        
 
         /////////////////////
         /// Draw frame
@@ -395,24 +426,25 @@ main :: () {
 
         // Draw text
         if text.count {
-            t := text;
-            i: s64 = 0;
-            row := 1;
-            while i != -1 {
-                i = find_index_from_left(t, #char "\n");
+            rendered_rows := 0;
 
-                temp := t;
-                if i != -1 temp.count = i;
-                text_w := Simp.prepare_text(my_font, temp);
-                
-                bottom := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
+            for row_table {
+                row := it_index+1;
+                l := get_line_height();
+                bottom := window_height - (l*row) + top_offset;
+                if bottom < 0 break;
+                if xx (bottom) > window_height continue;
 
-                Simp.draw_prepared_text(my_font, xx (-left_offset), xx bottom, text_color /*.{.8, .8, .8, 1}*/);
+                // if it.pos-it.cols == 0 continue;
 
-                if i != -1 {
-                    row += 1; advance(*t, i+1);
-                }
+                left := -left_offset;
+                t := slice(text, it.pos-it.cols, it.cols);
+                left += draw_text(t, xx left, xx bottom, text_color);
+
+                rendered_rows += 1;
             }
+
+            PrintDev("rendered rows/total: %/%", rendered_rows, row_table.count);
         }
 
         // Draw debug info
@@ -452,7 +484,7 @@ main :: () {
 PrintDev :: (fmt: string, args: .. Any) #expand {
     s := sprint(fmt, ..args); // Switch to tprint @Todo
     array_add(*debug_infos, s);  // can we use temporary allocator for dynamic arrays?
-}
+} @PrintLike
 
 get_char_at_string_index :: (t: string, index: s64) -> string {
     assert(index < t.count);
@@ -462,43 +494,59 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
 }
 
 get_cursor_row :: (text: string) -> s64 {
-    if cursor_pos == 0 return 1;
+    assert(row_table.count != 0);
+    // if cursor_pos == 0 return 1;
 
-    row := 1;
-
-    ln := false;
-    for 0..text.count-1 {
-        c := text.data[it];
-
-        defer { if ln row += 1; }
-        if it == cursor_pos {
-            // if ln row += 1;
-            // print("ln: % ; row: %\n", ln, row);
-            return row;      
+    for row_table {
+        if cursor_pos <= it.pos {
+            return it_index+1;
         }
-
-        ln = c == #char "\n";
     }
 
-    // print("row: %\n", row);
-    return row;
+    return row_table.count; // @Investigate: we will get here if we on the last char
+
+    // row := 1;
+    // ln := false;
+    // for 0..text.count-1 {
+    //     c := text.data[it];
+
+    //     defer { if ln row += 1; }
+    //     if it == cursor_pos {
+    //         // if ln row += 1;
+    //         // print("ln: % ; row: %\n", ln, row);
+    //         return row;      
+    //     }
+
+    //     ln = c == #char "\n";
+    // }
+
+    // // print("row: %\n", row);
+    // return row;
 }
 
 get_cursor_col :: (text: string) -> s64 {
-    col := 0;
-    ln := false;
-    for 0..text.count-1 {
-        c := text.data[it];
-        if ln then col = 0;
-        if it == cursor_pos return col;
-        ln = c == #char "\n";
-        col += 1;
+    assert(row_table.count != 0);
+    // if cursor_pos == 0 return 0;
+    for row_table {
+        if cursor_pos <= it.pos {
+            return it.cols - (it.pos - cursor_pos);
+        }
     }
 
-    return col;
-}
+    return 0; // @Investigate: we will get here if we on the last char
 
-ranges: [..] s64;
+    // col := 0;
+    // ln := false;
+    // for 0..text.count-1 {
+    //     c := text.data[it];
+    //     if ln then col = 0;
+    //     if it == cursor_pos return col;
+    //     ln = c == #char "\n";
+    //     col += 1;
+    // }
+
+    // return col;
+}
 
 get_cursor_rel_y :: inline (text: string) -> s64 {
     row := get_cursor_row(text);
@@ -552,6 +600,8 @@ append_text :: (b: *String_Builder, t: string) {
     append(b, a);
 
     increase_cursor_pos(t.count);
+
+    should_rebuild_row_table = true;
 }
 
 set_cursor_pos :: inline (index: s64) {
@@ -579,7 +629,8 @@ find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -
 }
 
 find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
-    assert(start_index > -1 && start_index < s.count);
+    assert(start_index > -1);
+    assert(start_index < s.count);
 
     cursor := start_index;
     while cursor < s.count {
@@ -610,7 +661,7 @@ my_init_fonts :: () {
     pixel_height := font_size; // print(">>> %\n", window_height/40);
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-    print("%\n\n", <<my_font);
+    // print("%\n\n", <<my_font);
     assert(my_font != null);
 }
 
@@ -618,6 +669,65 @@ current_font_width :: () -> s64 {
     assert(my_font != null);
     return my_font.em_width;
 }
+
+// @REWRITE OMG!!!!!!!!
+rebuild_row_table :: (s: string) {
+    // kacsa
+    row_table_recalc_time = seconds_since_init()*1000;
+    should_rebuild_row_table = false;
+
+    array_reset(*row_table);
+
+    f := true; // first row flag
+    pos := 0;
+    ln_index := -1;
+    while s.count {
+        defer f = false;
+        ln_index = find_index_from_left(s, #char "\n");
+        if ln_index == -1 {
+            array_add(*row_table, .{pos=pos, cols=s.count});
+            break;
+        } 
+
+        advance(*s, ln_index+1);
+        
+        if ln_index == 0 {
+            if !f pos += 1; // why??
+            array_add(*row_table, .{pos=pos, cols=0});
+            continue;
+        }
+
+        cols := (pos + ln_index) - pos;
+        if !f pos += 1; // why??
+        pos += ln_index;
+        array_add(*row_table, .{pos=pos, cols=cols});
+    }
+
+    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
+}
+
+draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
+    w := Simp.prepare_text(my_font, s);
+    Simp.draw_prepared_text(my_font, left, bottom, color);
+    return w;
+}
+
+get_line_height :: inline (row: s64 = 1) -> float32 {
+    return (my_font.default_line_spacing+line_height)*row;
+}
+
+row_table_recalc_time: float64 = 0.0;
+draw_row_table := false;
+should_rebuild_row_table := false;
+row_table: [..] Row_Info;
+
+Row_Info :: struct {
+    pos:  s64; // row end index
+    cols: s64;
+}
+
+user32 :: #system_library "user32";
+WaitMessage :: () -> s32 #foreign user32;
 
 #import "System";
 #import "Basic";

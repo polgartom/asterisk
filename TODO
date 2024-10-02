@@ -18,6 +18,7 @@
 [x] Draw tabulators (4 spaces) (debug)
 [x] Display frame debug info on the screen instead of the console
 [x] Scroll up or left only if the cursor is at the top or left
+[x] Use WaitMessage() because of the cputime
 [] Fix the last char problem by adding an extra space
 [] Draw spaces (debug)
 [] Parse tab characters (replace them with 4 spaces) when loading a file
@@ -26,7 +27,6 @@
 [] Save the buffer
 [] PageUp, PageDown
 [] Delete char from left
-[] Smart indent
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
 [] Draw right, bottom scrollbar
