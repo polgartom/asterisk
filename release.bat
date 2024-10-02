@@ -1,2 +1,2 @@
-del .\main.exe
-jai .\main.jai - release
+del .\asterisk.exe
+jai .\first.jai - release

@@ -19,10 +19,11 @@
 [x] Display frame debug info on the screen instead of the console
 [x] Scroll up or left only if the cursor is at the top or left
 [x] Use WaitMessage() because of the cputime
+[] Fix the first chars problem (its caused by the new rendering thing and the row_table)
 [] Fix the last char problem by adding an extra space
 [] Draw spaces (debug)
 [] Parse tab characters (replace them with 4 spaces) when loading a file
-[] Add UTF-32 character support
+[] Add UTF-32 (multibyte) character support
 [] Open a file
 [] Save the buffer
 [] PageUp, PageDown
@@ -30,3 +31,9 @@
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
 [] Draw right, bottom scrollbar
+[] Word stepping (Ctrl+{arrow})
+[] Search forward (Ctrl+?)
+[] Search backward (Ctrl+:)
+[] Search from the top (Ctrl+F)
+[] Range selection
+[] Copy / paste (we should do the multibyte task first)
