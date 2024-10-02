@@ -236,7 +236,7 @@ main :: () {
 
                     if key == .TAB {
                         // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
-                        
+
                         // text := builder_to_string(*builder, do_reset = false);
                         // defer free(text);
 
@@ -435,8 +435,6 @@ main :: () {
                 if bottom < 0 break;
                 if xx (bottom) > window_height continue;
 
-                // if it.pos-it.cols == 0 continue;
-
                 left := -left_offset;
                 t := slice(text, it.pos-it.cols, it.cols);
                 left += draw_text(t, xx left, xx bottom, text_color);
@@ -494,9 +492,9 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
 }
 
 get_cursor_row :: (text: string) -> s64 {
-    assert(row_table.count != 0);
-    // if cursor_pos == 0 return 1;
+    if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 
+    assert(row_table.count != 0);
     for row_table {
         if cursor_pos <= it.pos {
             return it_index+1;
@@ -504,29 +502,12 @@ get_cursor_row :: (text: string) -> s64 {
     }
 
     return row_table.count; // @Investigate: we will get here if we on the last char
-
-    // row := 1;
-    // ln := false;
-    // for 0..text.count-1 {
-    //     c := text.data[it];
-
-    //     defer { if ln row += 1; }
-    //     if it == cursor_pos {
-    //         // if ln row += 1;
-    //         // print("ln: % ; row: %\n", ln, row);
-    //         return row;      
-    //     }
-
-    //     ln = c == #char "\n";
-    // }
-
-    // // print("row: %\n", row);
-    // return row;
 }
 
 get_cursor_col :: (text: string) -> s64 {
+    if cursor_pos == 0 return 0;
+
     assert(row_table.count != 0);
-    // if cursor_pos == 0 return 0;
     for row_table {
         if cursor_pos <= it.pos {
             return it.cols - (it.pos - cursor_pos);
@@ -534,24 +515,11 @@ get_cursor_col :: (text: string) -> s64 {
     }
 
     return 0; // @Investigate: we will get here if we on the last char
-
-    // col := 0;
-    // ln := false;
-    // for 0..text.count-1 {
-    //     c := text.data[it];
-    //     if ln then col = 0;
-    //     if it == cursor_pos return col;
-    //     ln = c == #char "\n";
-    //     col += 1;
-    // }
-
-    // return col;
 }
 
 get_cursor_rel_y :: inline (text: string) -> s64 {
     row := get_cursor_row(text);
-    top := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
-    return xx top;
+    return xx (window_height - get_line_height(row) + top_offset);
 }
 
 get_cursor_rel_x :: inline (text: string) -> s64 {
@@ -559,27 +527,15 @@ get_cursor_rel_x :: inline (text: string) -> s64 {
     return xx (x - left_offset + my_font.em_width);
 }
 
-get_cursor_x :: (text: string) -> s64 {
+get_cursor_x :: inline (text: string) -> s64 {
     if cursor_pos == 0 return 0;
-    col := 0;
-    ln := false;
-    for 0..cursor_pos {
-        defer { if it < cursor_pos then col += 1; };
-
-        c := text.data[it];
-        if ln col = 0;
-        ln = c == #char "\n";
-    }
-
-    return col * current_font_width();
+    return get_cursor_col(text) * current_font_width();
 }
 
 get_cursor_y :: (text: string) -> s64 {
     if cursor_pos == 0 return window_height;
-
     row := get_cursor_row(text);
-    top := (my_font.default_line_spacing + line_height) * row;
-    return window_height - xx top;
+    return window_height - xx get_line_height(row);
 }
 
 append_text :: (b: *String_Builder, t: string) {
