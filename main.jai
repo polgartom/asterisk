@@ -384,8 +384,17 @@ main :: () {
             }
         }
 
-        if show_debug_info {        
-            // Row table debug
+        if show_debug_info {
+            PrintDev("F1 toggle dev | F2 show tabs\n");
+            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
+
+            // PrintDev("rows: %\n", row_table.count);
+            // for row_table {
+            //     PrintDev("r: % ; s: % ; e: % ; c: %\n", it_index, it.pos-it.cols, it.pos, it.cols);
+            // }
+
+            // Row
             // PrintDev("---------------\n");
             // new_row := 0;
             // new_col := 0;
@@ -417,9 +426,9 @@ main :: () {
         // Draw cursor
         {
             row := get_cursor_row(text);
-            // col := get_cursor_col(text);
+            col := get_cursor_col(text);
             cx  := get_cursor_x(text);
-            // print("cursor: r: % ; c: % ; x: %\n", row, col, cx);
+            PrintDev("row: % ; col: % ; cx: %\n", row, col, cx);
 
             Simp.set_shader_for_color();
 
@@ -438,6 +447,7 @@ main :: () {
             rendered_rows := 0;
 
             for row_table {
+                if it.cols == 0 continue;
                 row := it_index+1;
                 l := get_line_height();
                 bottom := window_height - (l*row) + top_offset;
@@ -448,6 +458,11 @@ main :: () {
                 t := slice(text, it.pos-it.cols, it.cols);
                 left += draw_text(t, xx left, xx bottom, text_color);
 
+                if draw_special_chars {
+                    s := tprint("¶");
+                    draw_text(s, xx left, xx bottom, .{1.0, 1.0, 1.0, .8});
+                }
+
                 rendered_rows += 1;
             }
 
@@ -456,20 +471,20 @@ main :: () {
 
         // Draw debug info
         if show_debug_info {
-            PrintDev("F1 toggle dev | F2 show tabs\n");
-            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
 
-            ct := seconds_since_init();
-            if second_elapsed {
-                frametime = (ct - last_time) * 1000; // frametime
-                fps       = 1000/frametime;
+            {
+                ct := seconds_since_init();
+                if second_elapsed {
+                    frametime = (ct - last_time) * 1000; // frametime
+                    fps       = 1000/frametime;
+                }
+
+                PrintDev("%fps %ms %sec\n", 
+                    formatFloat(fps, trailing_width=0), 
+                    formatFloat(frametime, trailing_width=2), 
+                    formatFloat(last_time, trailing_width=0)
+                );
             }
-            PrintDev("%fps %ms %sec\n", 
-                formatFloat(fps, trailing_width=0), 
-                formatFloat(frametime, trailing_width=2), 
-                formatFloat(last_time, trailing_width=0)
-            );
 
             row := 1;
             max := 0;
@@ -528,10 +543,8 @@ get_cursor_row :: (text: string) -> s64 {
 }
 
 get_cursor_col :: (text: string) -> s64 {
-    if cursor_pos == 0 return 0;
-
-    assert(row_table.count != 0);
     for row_table {
+        // print("> cp: % ; r: % %\n", cursor_pos, it.pos, it.cols);
         if cursor_pos <= it.pos {
             return it.cols - (it.pos - cursor_pos);
         }
@@ -649,39 +662,43 @@ current_font_width :: () -> s64 {
     return my_font.em_width;
 }
 
-// @REWRITE OMG!!!!!!!!
 rebuild_row_table :: (s: string) {
-    row_table_recalc_time = seconds_since_init()*1000;
     should_rebuild_row_table = false;
+    
+    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
+    defer { row_table_recalc_time = seconds_since_init()*1000; };
 
-    array_reset(*row_table);
+    array_reset(*row_table); // we should not do free, we can reuse the same memory
 
-    f := true; // first row flag
     pos := 0;
-    ln_index := -1;
-    while s.count {
-        defer f = false;
-        ln_index = find_index_from_left(s, #char "\n");
+    while true {
+        ln_index := find_index_from_left(s, #char "\n");
         if ln_index == -1 {
-            array_add(*row_table, .{pos=pos, cols=s.count});
+            array_add(*row_table, .{pos=pos+s.count, cols=s.count});
             break;
-        } 
-
-        advance(*s, ln_index+1);
-        
-        if ln_index == 0 {
-            if !f pos += 1; // why??
-            array_add(*row_table, .{pos=pos, cols=0});
-            continue;
         }
 
-        cols := (pos + ln_index) - pos;
-        if !f pos += 1; // why??
         pos += ln_index;
-        array_add(*row_table, .{pos=pos, cols=cols});
-    }
+        array_add(*row_table, .{pos=pos, cols=ln_index});
 
-    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
+        ln_index += 1;
+        advance(*s, ln_index);
+
+        pos += 1;
+    }
+}
+
+print_row :: inline (s: string, row_index: s64) {
+    assert(row_index > -1);
+
+    row := row_table[row_index];
+    start := row.pos-row.cols;
+    end := start+row.cols;
+    assert(start > -1);
+    assert(end <= s.count, "end: % ; s.count: %\n", end, s.count);
+
+    t := slice(s, start, row.cols);
+    print("(%,%,%)> |%|\n", row_index, row.pos, row.cols, t);
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {

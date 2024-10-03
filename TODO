@@ -38,3 +38,11 @@
 [] Range selection
 [] Copy / paste (we should do the multibyte task first)
 [] Markers, also do some visualization for them
+
+
+/* IDEAS */
+
+/* PHP */
+phpstan integration
+show errors besides the corresponding rows (maybe cols too)
+show the var types by pressing a key (can we use phpstan for this?)
