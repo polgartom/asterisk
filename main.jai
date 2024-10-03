@@ -83,7 +83,7 @@ main :: () {
 
     while !should_quit {
         #if OS == .WINDOWS {
-            WaitMessage();
+            // WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -112,8 +112,6 @@ main :: () {
 
         c := bg_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
-
-        // if events_this_frame.count d(">> %\n", events_this_frame.count);
 
         key_left = 0;
         key_right = 0;
@@ -178,7 +176,6 @@ main :: () {
                                 i := 0;
                                 spaces := 1;
                                 for < cursor_pos-1..0 {
-                                    // print("ch: |%|\n", get_char_at_string_index(text, it));
                                     if text.data[it] == #char " " {
                                         spaces += 1;
                                         if spaces == TAB_SIZE_IN_SPACES {
@@ -353,39 +350,17 @@ main :: () {
         }
 
         if show_debug_info {
-            PrintDev("F1 toggle dev | F2 show tabs\n");
+            PrintDev("F1 toggle dev | F2 hidden chars\n");
+            PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
+            
+            row := get_cursor_row(text);
+            col := get_cursor_col(text);
+            cx  := get_cursor_x(text);
+            cy  := get_cursor_y(text);
+            PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
 
-            // PrintDev("rows: %\n", row_table.count);
-            // for row_table {
-            //     PrintDev("r: % ; s: % ; e: % ; c: %\n", it_index, it.pos-it.cols, it.pos, it.cols);
-            // }
-
-            // Row
-            // PrintDev("---------------\n");
-            // new_row := 0;
-            // new_col := 0;
-            // for row_table {
-            //     if cursor_pos <= it.pos {
-            //         PrintDev("!FOUND! -> rt.pos: % ; rt.row: % ; rt.cols: %\n", it.pos, it_index, it.cols);
-            //         new_row = it_index;
-            //         new_col = it.cols - (it.pos-cursor_pos);
-            //         break;
-            //     }
-            //     PrintDev("skip -> rt.pos: % ; rt.row: % ; rt.cols: %\n", it.pos, it_index, it.cols);
-            // }
-            // PrintDev("---------------\n");
-            // PrintDev(
-            //     "col: % % | row: % % | (rowtable: %ms) | chars: %\n", 
-            //     get_cursor_col(text),
-            //     new_col,
-            //     get_cursor_row(text)-1, 
-            //     new_row, 
-            //     formatFloat(row_table_recalc_time, trailing_width=2),
-            //     text.count
-            // );
-
+            PrintDev("row_table: %ms\n", formatFloat(row_table_recalc_time, trailing_width=2));
         }        
 
         /////////////////////
@@ -394,9 +369,7 @@ main :: () {
         // Draw cursor
         {
             row := get_cursor_row(text);
-            col := get_cursor_col(text);
             cx  := get_cursor_x(text);
-            PrintDev("row: % ; col: % ; cx: %\n", row, col, cx);
 
             Simp.set_shader_for_color();
 
@@ -412,6 +385,7 @@ main :: () {
 
         // Draw lines
         if text.count {
+            avg_row_render_time: float64 = 0.0;
             rendered_rows := 0;
 
             for row_table {
@@ -422,19 +396,23 @@ main :: () {
                 if bottom < 0 break;
                 if xx (bottom) > window_height continue;
 
+                time := seconds_since_init()*1000;
+
                 left := -left_offset;
                 t := slice(text, it.pos-it.cols, it.cols);
                 left += draw_text(t, xx left, xx bottom, text_color);
 
                 if draw_special_chars {
                     s := tprint("¶");
-                    draw_text(s, xx left, xx bottom, .{1.0, 1.0, 1.0, .8});
+                    draw_text(s, xx left, xx bottom, .{1.0, 1.0, 1.0, .4});
                 }
 
+                avg_row_render_time += (seconds_since_init()*1000 - time);
                 rendered_rows += 1;
             }
 
-            PrintDev("rendered rows/total: %/%\n", rendered_rows, row_table.count);
+            avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
+            PrintDev("rendered rows/total: %/% ; avg/row: %ms\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
         }
 
         // Draw debug info
@@ -633,8 +611,7 @@ current_font_width :: () -> s64 {
 rebuild_row_table :: (s: string) {
     should_rebuild_row_table = false;
     
-    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
-    defer { row_table_recalc_time = seconds_since_init()*1000; };
+    row_table_recalc_time = seconds_since_init()*1000;
 
     array_reset(*row_table); // we should not do free, we can reuse the same memory
 
@@ -654,6 +631,8 @@ rebuild_row_table :: (s: string) {
 
         pos += 1;
     }
+
+    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
 }
 
 print_row :: inline (s: string, row_index: s64) {
@@ -668,15 +647,6 @@ print_row :: inline (s: string, row_index: s64) {
     t := slice(s, start, row.cols);
     print("(%,%,%)> |%|\n", row_index, row.pos, row.cols, t);
 }
-
-// get_first_row_col :: inline (s: string, row_index: s64) {
-//     assert(row_index < row_table.count && row_index > -1);
-
-//     row := row_table[row_index];
-//     end := start+row.cols;
-//     assert(end <= s.count, "end: % ; s.count: %\n", end, s.count);
-//     return end;
-// }
 
 first_row_col :: inline (row: Row_Info) -> s64 {
     return row.pos - row.cols;

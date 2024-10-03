@@ -21,6 +21,7 @@
 [x] Use WaitMessage() because of the cputime
 [x] Fix the first chars problem (its caused by the new rendering thing and the row_table)
 [x] Fix the last char problem by adding an extra space ??
+[] CRLF line ends?
 [] Draw spaces (debug)
 [] Parse tab characters (replace them with 4 spaces) when loading a file
 [] Add UTF-32 (multibyte) character support
