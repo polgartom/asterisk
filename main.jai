@@ -83,7 +83,7 @@ main :: () {
 
     while !should_quit {
         #if OS == .WINDOWS {
-            // WaitMessage();
+            WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -296,10 +296,7 @@ main :: () {
             for row_table {
                 if cursor_pos <= it.pos {
                     if it_index == 0 break; // no more row above
-                    prev_row_index := it_index-1;
-                    prev_row := row_table[prev_row_index];
-                    assert(prev_row.cols != 0);
-
+                    prev_row := row_table[it_index-1];
                     current_col := cursor_pos - first_row_col(it);
                     set_cursor_pos(first_row_col(prev_row) + min(prev_row.cols, current_col));
                     break;
@@ -308,20 +305,14 @@ main :: () {
         }
 
         if key_down {
-            cursor_col := get_cursor_col(text);
-            i := find_index_from_left(text, #char "\n", start_index=cursor_pos);
-            if i != -1 {
-                new_pos := i+1;
-                col := 0;
-                for i+1..text.count-1 {
-                    if col == cursor_col || text.data[it] == #char "\n" {
-                        break;
-                    }
-                    col += 1;
+            for row_table {
+                if cursor_pos <= it.pos {
+                    if it_index == row_table.count-1 break; // no more row below
+                    next_row := row_table[it_index+1];
+                    current_col := cursor_pos - first_row_col(it);
+                    set_cursor_pos(first_row_col(next_row) + min(next_row.cols, current_col));
+                    break;
                 }
-                new_pos += col;
-
-                set_cursor_pos(new_pos);
             }
         }
 
