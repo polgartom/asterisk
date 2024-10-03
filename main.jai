@@ -292,41 +292,18 @@ main :: () {
         }
 
         if key_up {
-            t := text;
-            t.count = cursor_pos;
-            index := find_index_from_right(t, #char "\n");
-            if index != -1 {
-                // go to above row end
-                cols := t.count-index;
-                t.count = index;
+            assert(row_table.count != 0);
+            for row_table {
+                if cursor_pos <= it.pos {
+                    if it_index == 0 break; // no more row above
+                    prev_row_index := it_index-1;
+                    prev_row := row_table[prev_row_index];
+                    assert(prev_row.cols != 0);
 
-                new_pos := index;
-
-                if !(new_pos > 0 && text.data[new_pos-1] == #char "\n") {
-                    // search for the first col index in upper row
-                    index = find_index_from_right(t, #char "\n");
-                    if index != -1 {
-                        above_row_cols := new_pos - index;
-                        if above_row_cols < cols {
-                            new_pos = index + above_row_cols;
-                        } else {
-                            new_pos = index + cols;
-                        }
-
-                        // it's double end line so we should jump up by one
-                        // also this "ln" check should be prevent the weird double jump up if 
-                        // 2 line breaks are presents together
-                        ln := get_char_at_string_index(text, new_pos) == "\n";
-                        if t.count-index == 1 && !ln {
-                            new_pos -= 1;
-                        }
-                    } else {
-                        // its the first row
-                        new_pos = ifx cols-1 > -1 then cols-1 else 0;
-                    }
+                    current_col := cursor_pos - first_row_col(it);
+                    set_cursor_pos(first_row_col(prev_row) + min(prev_row.cols, current_col));
+                    break;
                 }
-
-                set_cursor_pos(new_pos);
             }
         }
 
@@ -442,7 +419,7 @@ main :: () {
             // PrintDev("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
         }
 
-        // Draw text
+        // Draw lines
         if text.count {
             rendered_rows := 0;
 
@@ -699,6 +676,19 @@ print_row :: inline (s: string, row_index: s64) {
 
     t := slice(s, start, row.cols);
     print("(%,%,%)> |%|\n", row_index, row.pos, row.cols, t);
+}
+
+// get_first_row_col :: inline (s: string, row_index: s64) {
+//     assert(row_index < row_table.count && row_index > -1);
+
+//     row := row_table[row_index];
+//     end := start+row.cols;
+//     assert(end <= s.count, "end: % ; s.count: %\n", end, s.count);
+//     return end;
+// }
+
+first_row_col :: inline (row: Row_Info) -> s64 {
+    return row.pos - row.cols;
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
