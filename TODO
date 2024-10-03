@@ -37,3 +37,4 @@
 [] Search from the top (Ctrl+F)
 [] Range selection
 [] Copy / paste (we should do the multibyte task first)
+[] Markers, also do some visualization for them

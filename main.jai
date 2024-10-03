@@ -50,6 +50,9 @@ y_cursor_scroll_treshold := 30;
 show_debug_info := true;
 debug_infos: [..] string;
 
+fps: float64;
+frametime: float64;
+
 main :: () {
     print("\n--------------\n\n");
 
@@ -75,11 +78,21 @@ main :: () {
     should_rebuild_row_table = true;
 
     last_time = seconds_since_init();
+    last_second_time: float64 = 0.0;
+    second_elapsed := false;
 
     while !should_quit {
-        WaitMessage();
+        #if OS == .WINDOWS {
+            // WaitMessage();
+        }
 
         last_time = seconds_since_init();
+
+        second_elapsed = false;
+        if last_time - last_second_time > 1.0 {
+            last_second_time = last_time;
+            second_elapsed = true;
+        }
 
         update_window_events();
 
@@ -371,11 +384,7 @@ main :: () {
             }
         }
 
-        if show_debug_info {
-            PrintDev("F1 toggle dev | F2 show tabs\n");
-            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
-            
+        if show_debug_info {        
             // Row table debug
             // PrintDev("---------------\n");
             // new_row := 0;
@@ -399,7 +408,7 @@ main :: () {
             //     formatFloat(row_table_recalc_time, trailing_width=2),
             //     text.count
             // );
-            // kacsa
+
         }        
 
         /////////////////////
@@ -442,13 +451,27 @@ main :: () {
                 rendered_rows += 1;
             }
 
-            PrintDev("rendered rows/total: %/%", rendered_rows, row_table.count);
+            PrintDev("rendered rows/total: %/%\n", rendered_rows, row_table.count);
         }
 
         // Draw debug info
         if show_debug_info {
-            row := 1;
+            PrintDev("F1 toggle dev | F2 show tabs\n");
+            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+            PrintDev("cp: % abs: % % rel: % %\n", cursor_pos, get_cursor_x(text), get_cursor_y(text), get_cursor_rel_x(text), get_cursor_rel_y(text));
 
+            ct := seconds_since_init();
+            if second_elapsed {
+                frametime = (ct - last_time) * 1000; // frametime
+                fps       = 1000/frametime;
+            }
+            PrintDev("%fps %ms %sec\n", 
+                formatFloat(fps, trailing_width=0), 
+                formatFloat(frametime, trailing_width=2), 
+                formatFloat(last_time, trailing_width=0)
+            );
+
+            row := 1;
             max := 0;
             for debug_infos if it.count > max then max = it.count;
             for debug_infos {
@@ -628,7 +651,6 @@ current_font_width :: () -> s64 {
 
 // @REWRITE OMG!!!!!!!!
 rebuild_row_table :: (s: string) {
-    // kacsa
     row_table_recalc_time = seconds_since_init()*1000;
     should_rebuild_row_table = false;
 
@@ -682,19 +704,18 @@ Row_Info :: struct {
     cols: s64;
 }
 
-user32 :: #system_library "user32";
-WaitMessage :: () -> s32 #foreign user32;
+#if OS == .WINDOWS {
+    user32 :: #system_library "user32";
+    WaitMessage :: () -> s32 #foreign user32;
+}
 
 #import "System";
 #import "Basic";
 #import "File";
 #import "String";
-// #import "String_Builder";
 #import "Math";
 #import "Window_Creation";
 #import "Input";
 #import "Keymap";
-#import "Unicode";
-// #import "GetRect";
 #import "Unicode";
 Simp    :: #import "Simp";

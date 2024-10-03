@@ -26,7 +26,7 @@
         }
     }
 
-    set_build_options(options, w);
+set_build_options(options, w);
 
     if do_optimization {
         #if OS == .WINDOWS {
@@ -43,4 +43,3 @@
 
 #import "Compiler";
 #import "Basic";
-#import "Windows_Resources";
