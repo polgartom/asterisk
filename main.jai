@@ -88,7 +88,7 @@ main :: () {
 
     while !should_quit {
         #if OS == .WINDOWS {
-            WaitMessage();
+            // WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -418,18 +418,23 @@ main :: () {
             avg_row_render_time: float64 = 0.0;
             rendered_rows := 0;
 
-            for row_table {
-                if it.cols == 0 continue;
-                row := it_index+1;
-                l := get_line_height();
-                bottom := window_height - (l*row) + top_offset;
-                if bottom < 0 break;
-                if xx (bottom) > window_height continue;
+            line_height := get_line_height();
+
+            start_row: s64 = xx (top_offset / line_height); 
+            start_row = clamp(start_row - 1, 0, row_table.count-1);
+
+            end_row: s64 = xx ((top_offset + window_height) / line_height);
+            end_row = clamp(end_row + 1, end_row, row_table.count-1);
+
+            for row_index: start_row..end_row {
+                row := row_table[row_index];
+                if row.cols == 0 continue;
 
                 time := seconds_since_init()*1000;
 
+                bottom := window_height - (line_height*(row_index+1)) + top_offset;
                 left := -left_offset;
-                t := slice(text, it.pos-it.cols, it.cols);
+                t := slice(text, row.pos-row.cols, row.cols);
                 left += draw_text(t, xx left, xx bottom, text_color);
 
                 if draw_special_chars {
