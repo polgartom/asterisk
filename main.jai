@@ -73,12 +73,12 @@ main :: () {
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
 
-    // sample := read_entire_file("main.jai");
-    // append(*builder, sample);
-    // should_rebuild_row_table = true;
-
-    append(*builder, "áábc-abc\nüúáóüúpőúláél-aaa\nx");
+    sample := read_entire_file("main.jai");
+    append(*builder, sample);
     should_rebuild_row_table = true;
+
+    // append(*builder, "áábc-abc\nüúáóüúpőúláél-aaa\nx");
+    // should_rebuild_row_table = true;
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -170,40 +170,38 @@ main :: () {
 
                         // Delete from right
                         if cursor_pos-1 > -1 {
-                            // text := builder_to_string(*builder, do_reset = true);
-                            // defer free(text);
+                            // @Speed !!!!
+                            text := builder_to_string(*builder, do_reset = true);
+                            defer free(text);
 
-                            text := builder_to_string(*builder, do_reset = false);
-                            r := cursor_pos - prev_char_byte_index(text);
+                            bytes_to_del := cursor_pos - prev_char_byte_index(text);
+                            
+                            // Check if we should delete a "tab"
+                            ch := text.data[cursor_pos-1];
+                            if ch == #char " " {
+                                i := 0;
+                                spaces := 1;
+                                for < cursor_pos-1..0 {
+                                    if text.data[it] == #char " " {
+                                        spaces += 1;
+                                        if spaces == TAB_SIZE_IN_SPACES {
+                                            bytes_to_del = TAB_SIZE_IN_SPACES;
+                                            break;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
 
-                            // Check if we would delete a tab
-                            // ch := text.data[cursor_pos-1];
-                            // if ch == #char " " {
-                            //     i := 0;
-                            //     spaces := 1;
-                            //     for < cursor_pos-1..0 {
-                            //         if text.data[it] == #char " " {
-                            //             spaces += 1;
-                            //             if spaces == TAB_SIZE_IN_SPACES {
-                            //                 r = TAB_SIZE_IN_SPACES;
-                            //                 break;
-                            //             }
-                            //         } else {
-                            //             break;
-                            //         }
-                            //     }
-                            // }
-
-                            // print("r: %\n", r);
-                            // i := cursor_pos - r;
-                            // if i > -1 {
-                            //     append(*builder, text.data, i); // @Todo replace with append_text()
-                            //     t := advance(text, cursor_pos);
-                            //     append(*builder, t);
-                            //     set_cursor_pos(cursor_pos-r);
-                            //     should_rebuild_row_table = true;
-                            // }
-
+                            if bytes_to_del {
+                                before := slice(text, 0, cursor_pos-bytes_to_del); 
+                                after := slice(text, cursor_pos, text.count);
+                                append(*builder, before);
+                                append(*builder, after);
+                                set_cursor_pos(cursor_pos-bytes_to_del);
+                                should_rebuild_row_table = true;
+                            }
                         }
                     }
 
@@ -302,8 +300,19 @@ main :: () {
                 if cursor_pos <= it.pos {
                     if it_index == 0 break; // no more row above
                     prev_row := row_table[it_index-1];
-                    current_col := cursor_pos - first_row_col(it);
-                    set_cursor_pos(first_row_col(prev_row) + min(prev_row.cols, current_col));
+
+                    current_col := get_cursor_col(text);
+                    prev_row_cols := cols_in_the_row(text, prev_row);
+                    steps := min(prev_row_cols, current_col);
+                    pos := first_row_col(prev_row);
+                    while steps {
+                        byte := text[pos];
+                        bytes := 1 + trailingBytesForUTF8[byte];
+                        pos += bytes;
+                        steps -= 1;
+                    }
+
+                    set_cursor_pos(pos);
                     break;
                 }
             }
@@ -314,8 +323,19 @@ main :: () {
                 if cursor_pos <= it.pos {
                     if it_index == row_table.count-1 break; // no more row below
                     next_row := row_table[it_index+1];
-                    current_col := cursor_pos - first_row_col(it);
-                    set_cursor_pos(first_row_col(next_row) + min(next_row.cols, current_col));
+                    
+                    current_col := get_cursor_col(text);
+                    next_row_cols := cols_in_the_row(text, next_row);
+                    steps := min(next_row_cols, current_col);
+                    pos := first_row_col(next_row);
+                    while steps {
+                        byte := text[pos];
+                        bytes := 1 + trailingBytesForUTF8[byte];
+                        pos += bytes;
+                        steps -= 1;
+                    }
+
+                    set_cursor_pos(pos);
                     break;
                 }
             }
@@ -367,11 +387,10 @@ main :: () {
             cx  := get_cursor_x(text);
             cy  := get_cursor_y(text);
             PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
-            PrintDev("rows: % | %ms\n", row_table.count, formatFloat(row_table_recalc_time, trailing_width=2));
-            for row_table {
-                PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
-            }
-
+            PrintDev("rows: % ; gentime: %ms\n", row_table.count, formatFloat(row_table_recalc_time, trailing_width=2));
+            // for row_table {
+            //     PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
+            // }
         }        
 
         /////////////////////
@@ -544,6 +563,19 @@ prev_char_byte_index :: (text: string) -> s64 {
     return cursor_pos - last_char_in_bytes;
 }
 
+cols_in_the_row :: (s: string, row: Row_Info) -> s64 {
+    index := first_row_col(row);
+    end := row.pos;
+    chars := 0;
+    while index < end {
+        byte := s[index];
+        index += 1 + trailingBytesForUTF8[byte];
+        chars += 1;
+    }
+    return chars;
+}
+
+// source: https://github.com/focus-editor/focus
 safe_advance :: inline (s: *string, amount: s64 = 1) {
     // Doesn't crash if amount is incorrect for any reason
     amount = clamp(amount, 0, s.count);
@@ -573,6 +605,8 @@ get_cursor_y :: (text: string) -> s64 {
 }
 
 append_text :: (b: *String_Builder, t: string) {
+    // @Speed @Cleanup
+
     buf := get_current_buffer(b);
     text := builder_to_string(b, do_reset = true);
     defer free(text);
@@ -587,22 +621,6 @@ append_text :: (b: *String_Builder, t: string) {
     
     a := advance(text, cursor_pos);
     append(b, a);
-
-    // chars := 0;
-    // skips := 0;
-    // for 0..t.count-1 {
-    //     if skips {
-    //         skips -= 1;
-    //         continue;
-    //     }
-
-    //     c := t[it];
-    //     chars += 1;
-    //     if c <= 127 continue;
-    //     assert(c >= 192 && c <= 223, "u32 not supported"); // @Todo: 3, 4 byte
-    //     skips += 1;
-    // }
-    // increase_cursor_pos(chars);
 
     increase_cursor_pos(t.count);
 
