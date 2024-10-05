@@ -17,6 +17,9 @@ key_down: u32;
 key_up: u32;
 key_backspace: u32;
 key_shift: u32;
+key_pgup: u32;
+key_pgdn: u32;
+
 font_width: s64;
 
 d :: print;
@@ -88,7 +91,7 @@ main :: () {
 
     while !should_quit {
         #if OS == .WINDOWS {
-            // WaitMessage();
+            WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -124,6 +127,8 @@ main :: () {
         key_up = 0;
         key_backspace = 0;
         key_shift = 0;
+        key_pgup = 0;
+        key_pgdn = 0;
 
         for event : events_this_frame {
             
@@ -164,6 +169,9 @@ main :: () {
                     if key == .ARROW_RIGHT  key_right = event.key_pressed;
                     if key == .ARROW_DOWN   key_down  = event.key_pressed;
                     if key == .ARROW_UP     key_up    = event.key_pressed;
+
+                    if key == .PAGE_UP   key_pgup  = event.key_pressed;
+                    if key == .PAGE_DOWN key_pgdn  = event.key_pressed;
 
                     if key == .BACKSPACE {
                         key_backspace = event.key_pressed;
@@ -341,6 +349,28 @@ main :: () {
             }
         }
 
+        if key_pgup {
+            start := first_visible_row_index(text);
+            end := last_visible_row_index(text);
+            max_row := clamp(end-start, 0, row_table.count-1);
+            current_row := get_cursor_row(text)-1;
+            dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
+            dest_row := row_table[dest_row_index];
+            pos := first_row_col(dest_row);
+            set_cursor_pos(pos);
+        }
+
+        if key_pgdn {
+            start := first_visible_row_index(text);
+            end := last_visible_row_index(text);
+            max_row := clamp(end-start, 0, row_table.count-1);
+            current_row := get_cursor_row(text)-1;
+            dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
+            dest_row := row_table[dest_row_index];
+            pos := first_row_col(dest_row);
+            set_cursor_pos(pos);
+        }
+
         if cursor_moved {
             rel_x := get_cursor_rel_x(text);
             if rel_x - window_width >= 0 {
@@ -391,6 +421,12 @@ main :: () {
             // for row_table {
             //     PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
             // }
+
+            PrintDev("--------------last events--------------\n");
+            for events_this_frame {
+                PrintDev("% | pressed: %\n", it.key_code, it.key_pressed);
+            }
+            PrintDev("--------------rendering--------------\n");
         }        
 
         /////////////////////
@@ -736,6 +772,20 @@ rebuild_row_table :: (s: string) {
     }
 
     row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
+}
+
+first_visible_row_index :: inline (s: string) -> s64 {
+    line_height := get_line_height();
+    start_row: s64 = xx (top_offset / line_height); 
+    start_row = clamp(start_row - 1, 0, row_table.count-1);
+    return start_row;
+}
+
+last_visible_row_index :: inline (s: string) -> s64 {
+    line_height := get_line_height();
+    end_row: s64 = xx ((top_offset + window_height) / line_height);
+    end_row = clamp(end_row + 1, end_row, row_table.count-1);
+    return end_row;
 }
 
 print_row :: inline (s: string, row_index: s64) {
