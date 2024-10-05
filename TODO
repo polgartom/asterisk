@@ -24,7 +24,7 @@
 [] CRLF line ends?
 [] Draw spaces (debug)
 [] Parse tab characters (replace them with 4 spaces) when loading a file
-[] Proper UTF-8
+[x] Proper UTF-8
 [] Open a file
 [] Save the buffer
 [] PageUp, PageDown
