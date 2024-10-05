@@ -6,7 +6,7 @@ should_quit := false;
 // background_color : Vector4 = .{.0, .155, .125, 1};
 my_font: *Simp.Dynamic_Font;
 
-cursor_pos := 0;
+cursor_pos   := 0;
 cursor_moved := false;
 
 last_time : float64;
@@ -73,17 +73,22 @@ main :: () {
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
 
-    sample := read_entire_file("main.jai");
-    append(*builder, sample);
+    // sample := read_entire_file("main.jai");
+    // append(*builder, sample);
+    // should_rebuild_row_table = true;
+
+    append(*builder, "áábc-abc\nüúáóüúpőúláél-aaa\nx");
     should_rebuild_row_table = true;
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
     second_elapsed := false;
 
+    string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
+
     while !should_quit {
         #if OS == .WINDOWS {
-            // WaitMessage();
+            WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -135,9 +140,9 @@ main :: () {
             // print("%\n", event.key_code);
 
             if event.type == .TEXT_INPUT {
-                utf8_text := character_utf32_to_utf8(event.utf32);
-                defer free(utf8_text);
-                append_text(*builder, utf8_text);
+                memset(string_for_utf32_to_utf8.data, 0, 4);
+                character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
+                append_text(*builder, string_for_utf32_to_utf8);
 
             } else if event.type == .KEYBOARD {
                 key := event.key_code;
@@ -165,38 +170,39 @@ main :: () {
 
                         // Delete from right
                         if cursor_pos-1 > -1 {
-                            text := builder_to_string(*builder, do_reset = true);
-                            defer free(text);
+                            // text := builder_to_string(*builder, do_reset = true);
+                            // defer free(text);
 
-                            r := 1;
+                            text := builder_to_string(*builder, do_reset = false);
+                            r := cursor_pos - prev_char_byte_index(text);
 
                             // Check if we would delete a tab
-                            ch := text.data[cursor_pos-1];
-                            if ch == #char " " {
-                                i := 0;
-                                spaces := 1;
-                                for < cursor_pos-1..0 {
-                                    if text.data[it] == #char " " {
-                                        spaces += 1;
-                                        if spaces == TAB_SIZE_IN_SPACES {
-                                            r = TAB_SIZE_IN_SPACES;
-                                            break;
-                                        }
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
+                            // ch := text.data[cursor_pos-1];
+                            // if ch == #char " " {
+                            //     i := 0;
+                            //     spaces := 1;
+                            //     for < cursor_pos-1..0 {
+                            //         if text.data[it] == #char " " {
+                            //             spaces += 1;
+                            //             if spaces == TAB_SIZE_IN_SPACES {
+                            //                 r = TAB_SIZE_IN_SPACES;
+                            //                 break;
+                            //             }
+                            //         } else {
+                            //             break;
+                            //         }
+                            //     }
+                            // }
 
                             // print("r: %\n", r);
-                            i := cursor_pos - r;
-                            if i > -1 {
-                                append(*builder, text.data, i); // @Todo replace with append_text()
-                                t := advance(text, cursor_pos);
-                                append(*builder, t);
-                                set_cursor_pos(cursor_pos-r);
-                                should_rebuild_row_table = true;
-                            }
+                            // i := cursor_pos - r;
+                            // if i > -1 {
+                            //     append(*builder, text.data, i); // @Todo replace with append_text()
+                            //     t := advance(text, cursor_pos);
+                            //     append(*builder, t);
+                            //     set_cursor_pos(cursor_pos-r);
+                            //     should_rebuild_row_table = true;
+                            // }
 
                         }
                     }
@@ -281,15 +287,17 @@ main :: () {
 
         // Handle cursor movement
         if key_left && cursor_pos != 0 {
-            increase_cursor_pos(-1);
+            i := prev_char_byte_index(text);
+            set_cursor_pos(i);
         }
 
         if key_right && cursor_pos < text.count {
-            increase_cursor_pos(1);
+            byte := text[cursor_pos];
+            steps := 1 + trailingBytesForUTF8[byte];
+            increase_cursor_pos(steps);
         }
 
         if key_up {
-            assert(row_table.count != 0);
             for row_table {
                 if cursor_pos <= it.pos {
                     if it_index == 0 break; // no more row above
@@ -359,8 +367,11 @@ main :: () {
             cx  := get_cursor_x(text);
             cy  := get_cursor_y(text);
             PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
+            PrintDev("rows: % | %ms\n", row_table.count, formatFloat(row_table_recalc_time, trailing_width=2));
+            for row_table {
+                PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
+            }
 
-            PrintDev("row_table: %ms\n", formatFloat(row_table_recalc_time, trailing_width=2));
         }        
 
         /////////////////////
@@ -475,6 +486,10 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
     return c;
 }
 
+first_row_col :: inline (row: Row_Info) -> s64 {
+    return row.pos - row.cols;
+}
+
 get_cursor_row :: (text: string) -> s64 {
     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 
@@ -485,18 +500,55 @@ get_cursor_row :: (text: string) -> s64 {
         }
     }
 
-    return row_table.count; // @Investigate: we will get here if we on the last char
+    return row_table.count;
 }
 
 get_cursor_col :: (text: string) -> s64 {
     for row_table {
-        // print("> cp: % ; r: % %\n", cursor_pos, it.pos, it.cols);
         if cursor_pos <= it.pos {
-            return it.cols - (it.pos - cursor_pos);
+            row := it;
+            i := first_row_col(it);
+            cols := 0;
+            while i < cursor_pos {
+                byte := text[i];
+                i += 1 + trailingBytesForUTF8[byte];
+                cols += 1;
+            }
+            return cols;
         }
     }
 
-    return 0; // @Investigate: we will get here if we on the last char
+    return 0;
+}
+
+prev_char_byte_index :: (text: string) -> s64 {
+    if cursor_pos == 0 return 0;
+
+    row_index := get_cursor_row(text) - 1;
+    i := first_row_col(row_table[row_index]);
+    if i == cursor_pos {
+        // we on the first col of the row so we should check the above row last char
+        assert(row_index > 0); // sanity
+        if row_index == 0 return 0;
+        // step up by one row
+        row_index -= 1;
+        i = first_row_col(row_table[row_index]);
+    }
+
+    last_char_in_bytes := 0;
+    while i < cursor_pos {
+        byte := text[i];
+        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
+        i += last_char_in_bytes;
+    }
+    return cursor_pos - last_char_in_bytes;
+}
+
+safe_advance :: inline (s: *string, amount: s64 = 1) {
+    // Doesn't crash if amount is incorrect for any reason
+    amount = clamp(amount, 0, s.count);
+    s.count -= amount;
+    s.data  += amount;
 }
 
 get_cursor_rel_y :: inline (text: string) -> s64 {
@@ -522,7 +574,6 @@ get_cursor_y :: (text: string) -> s64 {
 
 append_text :: (b: *String_Builder, t: string) {
     buf := get_current_buffer(b);
-
     text := builder_to_string(b, do_reset = true);
     defer free(text);
 
@@ -536,6 +587,22 @@ append_text :: (b: *String_Builder, t: string) {
     
     a := advance(text, cursor_pos);
     append(b, a);
+
+    // chars := 0;
+    // skips := 0;
+    // for 0..t.count-1 {
+    //     if skips {
+    //         skips -= 1;
+    //         continue;
+    //     }
+
+    //     c := t[it];
+    //     chars += 1;
+    //     if c <= 127 continue;
+    //     assert(c >= 192 && c <= 223, "u32 not supported"); // @Todo: 3, 4 byte
+    //     skips += 1;
+    // }
+    // increase_cursor_pos(chars);
 
     increase_cursor_pos(t.count);
 
@@ -608,28 +675,41 @@ current_font_width :: () -> s64 {
     return my_font.em_width;
 }
 
+num_of_utf8_chars :: inline (s: string) -> s64 {
+    total := 0;
+    while s.count {
+        count := 1 + trailingBytesForUTF8[s[0]];
+        advance(*s, count);
+        total += count;
+    }
+    return total;
+}
+
 rebuild_row_table :: (s: string) {
     should_rebuild_row_table = false;
     
     row_table_recalc_time = seconds_since_init()*1000;
 
-    array_reset(*row_table); // we should not do free, we can reuse the same memory
+    array_reset(*row_table); // we can reuse the same memory
 
-    pos := 0;
+    pos  := 0;
+    posc := 0;
     while true {
         ln_index := find_index_from_left(s, #char "\n");
         if ln_index == -1 {
-            array_add(*row_table, .{pos=pos+s.count, cols=s.count});
+            chars := s.count;
+            array_add(*row_table, .{pos=pos+chars, cols=chars});
             break;
         }
-
-        pos += ln_index;
-        array_add(*row_table, .{pos=pos, cols=ln_index});
+        
+        chars := ln_index;
+        pos += chars;
+        array_add(*row_table, .{pos=pos, cols=chars});
 
         ln_index += 1;
         advance(*s, ln_index);
 
-        pos += 1;
+        pos += 1; // because of the line end
     }
 
     row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
@@ -648,10 +728,6 @@ print_row :: inline (s: string, row_index: s64) {
     print("(%,%,%)> |%|\n", row_index, row.pos, row.cols, t);
 }
 
-first_row_col :: inline (row: Row_Info) -> s64 {
-    return row.pos - row.cols;
-}
-
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(my_font, s);
     Simp.draw_prepared_text(my_font, left, bottom, color);
@@ -668,8 +744,15 @@ should_rebuild_row_table := false;
 row_table: [..] Row_Info;
 
 Row_Info :: struct {
-    pos:  s64; // row end index
+    // posb:  s64; // row end index in bytes @Todo: !!!!!!!
+    // posc: s64;  // row end index in chars @Todo: !!!!!!!
+    pos: s64; // in bytes
+    posc: s64;
     cols: s64;
+}
+
+Buffer :: struct {
+    data: [..] u16;
 }
 
 #if OS == .WINDOWS {

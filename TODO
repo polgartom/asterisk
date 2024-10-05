@@ -24,7 +24,7 @@
 [] CRLF line ends?
 [] Draw spaces (debug)
 [] Parse tab characters (replace them with 4 spaces) when loading a file
-[] Add UTF-32 (multibyte) character support
+[] Proper UTF-8
 [] Open a file
 [] Save the buffer
 [] PageUp, PageDown
@@ -38,7 +38,7 @@
 [] Search backward (Ctrl+:)
 [] Search from the top (Ctrl+F)
 [] Range selection
-[] Copy / paste (we should do the multibyte task first)
+[] Copy / paste
 [] Markers, also do some visualization for them
 
 
