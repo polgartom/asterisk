@@ -213,6 +213,21 @@ main :: () {
                         }
                     }
 
+                    if key == .DELETE && cursor_pos < builder_string_length(*builder) {
+                        // @Speed !!!!
+                        text := builder_to_string(*builder, do_reset = true);
+                        defer free(text);
+                        byte := text[cursor_pos];
+                        bytes_to_del := 1 + trailingBytesForUTF8[byte];
+                        assert(cursor_pos+bytes_to_del <= text.count);
+
+                        before := slice(text, 0, cursor_pos); 
+                        after := slice(text, cursor_pos+bytes_to_del, text.count);
+                        append(*builder, before);
+                        append(*builder, after);
+                        should_rebuild_row_table = true;
+                    }
+
                     if key == .ENTER {
                         text := builder_to_string(*builder, do_reset = false);
                         defer free(text);
@@ -422,10 +437,6 @@ main :: () {
             //     PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
             // }
 
-            PrintDev("--------------last events--------------\n");
-            for events_this_frame {
-                PrintDev("% | pressed: %\n", it.key_code, it.key_pressed);
-            }
             PrintDev("--------------rendering--------------\n");
         }        
 
@@ -581,6 +592,10 @@ get_cursor_col :: (text: string) -> s64 {
     return 0;
 }
 
+// next_char_byte_index :: (s: string) -> s64 {
+    
+// }
+
 prev_char_byte_index :: (text: string) -> s64 {
     if cursor_pos == 0 return 0;
 
@@ -601,7 +616,11 @@ prev_char_byte_index :: (text: string) -> s64 {
         last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
         i += last_char_in_bytes;
     }
-    return cursor_pos - last_char_in_bytes;
+
+    index := cursor_pos - last_char_in_bytes;
+    assert(index > -1);
+
+    return index;
 }
 
 cols_in_the_row :: (s: string, row: Row_Info) -> s64 {
