@@ -16,9 +16,11 @@ key_right: u32;
 key_down: u32;
 key_up: u32;
 key_backspace: u32;
-key_shift: u32;
 key_pgup: u32;
 key_pgdn: u32;
+
+key_shift: u32;
+key_ctrl: u32;
 
 font_width: s64;
 
@@ -56,6 +58,10 @@ debug_infos: [..] string;
 fps: float64;
 frametime: float64;
 
+builder: String_Builder;
+
+default_keymap: Keymap;
+
 main :: () {
     print("\n--------------\n\n");
 
@@ -70,7 +76,6 @@ main :: () {
         print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
     }
 
-    builder: String_Builder;
     init_string_builder(*builder);
     
     // sample := read_entire_file("TODO");
@@ -80,14 +85,14 @@ main :: () {
     append(*builder, sample);
     should_rebuild_row_table = true;
 
-    // append(*builder, "áábc-abc\nüúáóüúpőúláél-aaa\nx");
-    // should_rebuild_row_table = true;
-
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
     second_elapsed := false;
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
+
+    register_keymap_procedures();
+    reload_keymap(*default_keymap, "default", "default.keymap", false);
 
     while !should_quit {
         #if OS == .WINDOWS {
@@ -129,9 +134,9 @@ main :: () {
         key_shift = 0;
         key_pgup = 0;
         key_pgdn = 0;
+        key_ctrl = 0;
 
         for event : events_this_frame {
-            
             if event.type == .QUIT {
                 // print("quit!\n");
                 should_quit = true;
@@ -142,7 +147,13 @@ main :: () {
                 if event.key_pressed should_quit = true;
             }
 
-            // print("%\n", event.key_code);
+            if event.key_pressed {
+                if event.key_code != .CTRL {
+                    print("% % %\n", event.utf32, event.modifier_flags.ctrl_pressed, event.type);
+                }
+            }
+
+            keymap_handle_event(default_keymap, event);
 
             if event.type == .TEXT_INPUT {
                 memset(string_for_utf32_to_utf8.data, 0, 4);
@@ -830,21 +841,50 @@ get_line_height :: inline (row: s64 = 1) -> float32 {
     return (my_font.default_line_spacing+line_height)*row;
 }
 
+register_keymap_procedures :: () {
+    k := *default_keymap;
+
+    add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+}
+
+DeleteTheWholeLine :: () {
+    // @Speed !!!!
+    text := builder_to_string(*builder, do_reset = true);
+    defer free(text);
+
+    row_index := get_cursor_row(text) - 1;
+    row := row_table[row_index];
+    start := first_row_col(row);
+    end := row.pos;
+    
+    set_cursor_pos(start);
+
+    if row_index+1 < row_table.count {
+        next_row := row_table[row_index+1];
+        end = first_row_col(next_row);
+    }
+
+    before := slice(text, 0, start);
+    after := slice(text, end, text.count);
+
+    append(*builder, before);
+    append(*builder, after);
+
+    len := builder_string_length(*builder);
+    if cursor_pos > len set_cursor_pos(len);
+
+    should_rebuild_row_table = true;
+}
+
 row_table_recalc_time: float64 = 0.0;
 draw_row_table := false;
 should_rebuild_row_table := false;
 row_table: [..] Row_Info;
 
+// @Ambiguity
 Row_Info :: struct {
-    // posb:  s64; // row end index in bytes @Todo: !!!!!!!
-    // posc: s64;  // row end index in chars @Todo: !!!!!!!
-    pos: s64; // in bytes
-    posc: s64;
-    cols: s64;
-}
-
-Buffer :: struct {
-    data: [..] u16;
+    pos: s64;  // end byte index of the row
+    cols: s64; // bytes in the row
 }
 
 #if OS == .WINDOWS {
@@ -861,4 +901,4 @@ Buffer :: struct {
 #import "Input";
 #import "Keymap";
 #import "Unicode";
-Simp    :: #import "Simp";
+Simp :: #import "Simp";

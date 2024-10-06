@@ -29,7 +29,7 @@
 [] Save the buffer
 [x] PageUp, PageDown
 [x] Delete char from left
-[] Delete line
+[x] Delete line
 [] Delete whole word from right
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)  
 [] Smart movement check { } positions, also we should check the current language

@@ -1,0 +1,7 @@
+[1]         # Version number; do not delete!
+
+# A .ALT
+# S .SHIFT
+# C .CTRL
+
+A-x DeleteTheWholeLine
