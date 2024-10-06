@@ -5,3 +5,4 @@
 # C .CTRL
 
 A-x DeleteTheWholeLine
+C-k DeleteEverythingFromLeft

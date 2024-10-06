@@ -147,12 +147,6 @@ main :: () {
                 if event.key_pressed should_quit = true;
             }
 
-            if event.key_pressed {
-                if event.key_code != .CTRL {
-                    print("% % %\n", event.utf32, event.modifier_flags.ctrl_pressed, event.type);
-                }
-            }
-
             keymap_handle_event(default_keymap, event);
 
             if event.type == .TEXT_INPUT {
@@ -845,6 +839,7 @@ register_keymap_procedures :: () {
     k := *default_keymap;
 
     add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+    add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
 }
 
 DeleteTheWholeLine :: () {
@@ -872,6 +867,25 @@ DeleteTheWholeLine :: () {
 
     len := builder_string_length(*builder);
     if cursor_pos > len set_cursor_pos(len);
+
+    should_rebuild_row_table = true;
+}
+
+DeleteEverythingFromLeft :: () {
+    // @Speed !!!!
+    text := builder_to_string(*builder, do_reset = true);
+    defer free(text);
+
+    row_index := get_cursor_row(text) - 1;
+    row := row_table[row_index];
+    start := cursor_pos;
+    end := row.pos;
+
+    before := slice(text, 0, start);
+    after := slice(text, end, text.count);
+
+    append(*builder, before);
+    append(*builder, after);
 
     should_rebuild_row_table = true;
 }
