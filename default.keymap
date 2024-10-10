@@ -4,5 +4,10 @@
 # S .SHIFT
 # C .CTRL
 
-A-x DeleteTheWholeLine
+Backspace DeleteCharFromRight
+
+C-x DeleteTheWholeLine
 C-k DeleteEverythingFromLeft
+
+C-Backspace DeleteWordFromRight
+A-Backspace DeleteSubwordFromRight
