@@ -120,7 +120,7 @@ _delete_word_or_subword_from_right :: ($subword_mode: bool) {
         return;
     }
 
-    start := min(cursor_pos, text.count-1);
+    start := min(cursor_pos-1, text.count-1);
     for < index: start..0 {
         if is_separator_char(text[index], subword_mode) {
             index += 1; // 'cause we don't want to delete the separator char. We do handle that case above
