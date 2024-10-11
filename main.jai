@@ -81,14 +81,14 @@ main :: () {
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
 
-    // sample := read_entire_file("main.jai");
-    // append(*builder, sample);
-    // should_rebuild_row_table = true;
-
-    sample := "\"x$";
+    sample := read_entire_file("main.jai");
     append(*builder, sample);
     should_rebuild_row_table = true;
-    set_cursor_pos(sample.count);
+
+    // sample := "\"x$";
+    // append(*builder, sample);
+    // should_rebuild_row_table = true;
+    // set_cursor_pos(sample.count);
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;

@@ -114,13 +114,33 @@ _delete_word_or_subword_from_right :: ($subword_mode: bool) {
     defer free(text);
     should_rebuild_row_table = true;
 
+    assert(text.count > 0); // it should never happen, 'cause we already checked the cursor poistion above
+
+    start := min(cursor_pos-1, text.count-1); // pos of the next deletable char from right
+
+    #if !subword_mode {
+        // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
+        if text[start] == #char " " {
+            for < index: start..0 {
+                if text[index] != #char " " {
+                    index += 1;
+                    left := slice(text, 0, index);
+                    right := slice(text, cursor_pos, text.count);
+                    append(*builder, left);
+                    append(*builder, right);
+                    set_cursor_pos(index);
+                    return;
+                }
+            }
+        }
+    }
+
     if is_separator_char(text[cursor_pos-1], subword_mode) {
         append(*builder, text); // @Hacky
         DeleteCharFromRight();
         return;
     }
 
-    start := min(cursor_pos-1, text.count-1);
     for < index: start..0 {
         if is_separator_char(text[index], subword_mode) {
             index += 1; // 'cause we don't want to delete the separator char. We do handle that case above
