@@ -21,12 +21,6 @@
 [x] Use   WaitMessage() because of the cputime
 [x] Fix the first chars problem (its caused by the new rendering thing and the row_table)
 [x] Fix the last char problem by adding an extra space ??
-[] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
-[] Draw spaces (debug)
-[] Parse tab characters (replace them with 4 spaces) when loading a file
-[x] Proper UTF-8
-[] Open a file
-[] Save the buffer
 [x] PageUp, PageDown
 [x] Delete char from left
 [x] Delete line
@@ -34,20 +28,35 @@
 [x] Delete whole word from right
 [x] Delete subword from right
 [x] DeleteWordFromRight - Delete all the whitespace until we find a non-whitespace character
-[] Jump the first character and the last character of current the line
-[] Ctrl-Enter insert line below
+[x] Jump the first character and the last character of current the line
+[x] Ctrl-Enter insert line below
+[x] Proper UTF-8
+[] Show the current (opened) filename
+[] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
+[] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
+[] Draw spaces
+[] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
+[] Open a file
+[] Save the buffer
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)  
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
 [] Draw right, bottom scrollbar
 [] Word stepping (Ctrl+{arrow})
+[] Subword stepping (Alt+{arrow}) 
 [] Search forward (Ctrl+?)
 [] Search backward (Ctrl+:)
 [] Search from the top (Ctrl+F)
 [] Range selection
 [] Copy / paste
+[] Undo / Redo
 [] Markers, also do some visualization for them
 [] Multiple cursor support
+[] File browser
+[] Split editor (split screen)
+[] Separate input handling like if we open a file browser modal we should not handle editor events like insert text and so on
+[] More row_table rebuild proc improvements. Maybe mark the rebuild type like we should do a whole rebuild or a partial rebuild which starting from the last insert character-1
+[] Basic syntax highlighting
 
 /* IDEAS */
 
