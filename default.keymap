@@ -5,9 +5,12 @@
 # C .CTRL
 
 Backspace DeleteCharFromRight
+Delete DeleteCharFromLeft
 
 C-x DeleteTheWholeLine
 C-k DeleteEverythingFromLeft
 
 C-Backspace DeleteWordFromRight
 A-Backspace DeleteSubwordFromRight
+
+Tab InsertTab

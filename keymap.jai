@@ -3,11 +3,14 @@ register_keymap_procedures :: () {
 
     // Editor keymaps   
     add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
+    add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
+    
     add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
     add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
     add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
     add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
-    
+
+    add_proc(k, "InsertTab", InsertTab);
 }
 
 ///////////////////////////////
@@ -98,6 +101,24 @@ DeleteCharFromRight :: () {
     }
 }
 
+DeleteCharFromLeft :: () {
+    if !(cursor_pos < builder_string_length(*builder)) return;
+
+    // @Speed !!!!
+    text := builder_to_string(*builder, do_reset = true);
+    defer free(text);
+    should_rebuild_row_table = true;
+
+    byte := text[cursor_pos];
+    bytes_to_del := 1 + trailingBytesForUTF8[byte];
+    assert(cursor_pos+bytes_to_del <= text.count);
+
+    before := slice(text, 0, cursor_pos); 
+    after := slice(text, cursor_pos+bytes_to_del, text.count);
+    append(*builder, before);
+    append(*builder, after);
+}
+
 DeleteWordFromRight :: inline () {
     _delete_word_or_subword_from_right(subword_mode=false);
 }
@@ -161,6 +182,21 @@ _delete_word_or_subword_from_right :: ($subword_mode: bool) {
     }
 
     append(*builder, text); // @Hacky
+}
+
+InsertTab :: inline () {
+    // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
+    // text := builder_to_string(*builder, do_reset = false);
+    // defer free(text);
+
+    // if cursor_pos != text.count {
+    //     ch := text.data[cursor_pos];
+    //     // ok, sc := surround_chars(text, cursor_pos);
+    //     // if ok print("surround_chars: |%|\n", sc);
+    //     // else print("failed to get the surround_chars!\n");
+    // }
+
+    append_text(*builder, TAB_SPACE_CHARS);
 }
 
 init_keymaps :: () {
