@@ -518,7 +518,6 @@ find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -
 
 find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
     assert(start_index > -1);
-    assert(start_index < s.count);
 
     cursor := start_index;
     while cursor < s.count {

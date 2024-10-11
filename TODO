@@ -47,6 +47,8 @@
 [] Search forward (Ctrl+?)
 [] Search backward (Ctrl+:)
 [] Search from the top (Ctrl+F)
+[] Search and replace
+[] Goto line (Ctrl+G)
 [] Range selection
 [] Copy / paste
 [] Undo / Redo
