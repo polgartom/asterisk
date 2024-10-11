@@ -362,6 +362,10 @@ first_byte_pos :: inline (row: Row_Info) -> s64 {
     return row.pos - row.cols;
 }
 
+last_byte_pos :: inline (row: Row_Info) -> s64 {
+    return row.pos;
+}
+
 get_cursor_row :: (text: string) -> s64 {
     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 

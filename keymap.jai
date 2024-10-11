@@ -13,6 +13,9 @@ register_keymap_procedures :: () {
     add_proc(k, "InsertTab", InsertTab);
     add_proc(k, "InsertLine", InsertLine);
     add_proc(k, "InsertLineBelow", InsertLineBelow);
+
+    add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
+    add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
 }
 
 ///////////////////////////////
@@ -233,7 +236,7 @@ InsertLineBelow :: () {
 
     current_row_index := get_cursor_row(text)-1;
     row := row_table[current_row_index];
-    set_cursor_pos(row.pos); // set cursor to the last character of the current row
+    set_cursor_pos(row.pos);     // set cursor to the last character of the current row
     append_text(*builder, "\n"); // also we do a character step in this procedure
 
     // :SmartIndentFeature @Cleanup
@@ -264,6 +267,26 @@ InsertTab :: inline () {
     // }
 
     append_text(*builder, TAB_SPACE_CHARS);
+}
+
+GotoFirstCharOFCurrentRow :: inline () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    index := get_cursor_row(text)-1;
+    row := row_table[index];
+    byte_index := first_byte_pos(row);
+    set_cursor_pos(byte_index);
+}
+
+GotoLastCharOfCurrentRow :: inline () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    index := get_cursor_row(text)-1;
+    row := row_table[index];
+    byte_index := last_byte_pos(row);
+    set_cursor_pos(byte_index);
 }
 
 init_keymaps :: () {
