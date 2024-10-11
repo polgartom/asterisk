@@ -11,6 +11,8 @@ register_keymap_procedures :: () {
     add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
 
     add_proc(k, "InsertTab", InsertTab);
+    add_proc(k, "InsertLine", InsertLine);
+    add_proc(k, "InsertLineBelow", InsertLineBelow);
 }
 
 ///////////////////////////////
@@ -23,14 +25,14 @@ DeleteTheWholeLine :: () {
 
     row_index := get_cursor_row(text) - 1;
     row := row_table[row_index];
-    start := first_row_col(row);
+    start := first_byte_pos(row);
     end := row.pos;
     
     set_cursor_pos(start);
 
     if row_index+1 < row_table.count {
         next_row := row_table[row_index+1];
-        end = first_row_col(next_row);
+        end = first_byte_pos(next_row);
     }
 
     before := slice(text, 0, start);
@@ -182,6 +184,71 @@ _delete_word_or_subword_from_right :: ($subword_mode: bool) {
     }
 
     append(*builder, text); // @Hacky
+}
+
+InsertLine :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);   
+    should_rebuild_row_table = true;
+
+    if cursor_pos == 0 {
+        append_text(*builder, "\n");
+        return;
+    }
+
+    // :SmartIndentFeature @Cleanup
+    // A basic smart indent count characters in the current row until the first non-space character.
+
+    current_row_index := get_cursor_row(text)-1;
+    row := row_table[current_row_index];
+    start := first_byte_pos(row);
+    end := find_index_from_left_until_not(text, #char " ", start);
+
+    if end == -1 {
+        // In this case we only have one row with only whitespace characters
+        append_text(*builder, "\n");
+        return;
+    }
+
+    if cursor_pos >= start && cursor_pos < end {
+        // We're in the range of the first n empty spaces, so we just jump to the first non-whitespace
+        // occurrence to prevent the weird effect of splitting whitespace characters
+        set_cursor_pos(end);
+    }
+
+    append_text(*builder, "\n");
+
+    spaces := end - start;
+    assert(spaces > -1);
+    while spaces != 0 {
+        append_text(*builder, " ");
+        spaces -= 1;
+    }
+}
+
+InsertLineBelow :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);  
+    should_rebuild_row_table = true;
+
+    current_row_index := get_cursor_row(text)-1;
+    row := row_table[current_row_index];
+    set_cursor_pos(row.pos); // set cursor to the last character of the current row
+    append_text(*builder, "\n"); // also we do a character step in this procedure
+
+    // :SmartIndentFeature @Cleanup
+    // A basic smart indent count characters in the current row until the first non-space character.
+    row_first_byte_index := first_byte_pos(row);
+    first_non_whitespace_byte_index := find_index_from_left_until_not(text, #char " ", row_first_byte_index);
+    if first_non_whitespace_byte_index != -1 {
+        spaces := first_non_whitespace_byte_index - row_first_byte_index;
+        assert(spaces > -1);
+        while spaces != 0 {
+            append_text(*builder, " ");
+            spaces -= 1;
+        }
+    }
+
 }
 
 InsertTab :: inline () {

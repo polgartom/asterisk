@@ -18,7 +18,7 @@
 [x] Draw tabulators (4 spaces) (debug)
 [x] Display frame debug info on the screen instead of the console
 [x] Scroll up or left only if the cursor is at the top or left
-[x] Use WaitMessage() because of the cputime
+[x] Use   WaitMessage() because of the cputime
 [x] Fix the first chars problem (its caused by the new rendering thing and the row_table)
 [x] Fix the last char problem by adding an extra space ??
 [] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
@@ -34,6 +34,8 @@
 [x] Delete whole word from right
 [x] Delete subword from right
 [x] DeleteWordFromRight - Delete all the whitespace until we find a non-whitespace character
+[] Jump the first character and the last character of current the line
+[] Ctrl-Enter insert line below
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)  
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
@@ -45,7 +47,7 @@
 [] Range selection
 [] Copy / paste
 [] Markers, also do some visualization for them
-
+[] Multiple cursor support
 
 /* IDEAS */
 

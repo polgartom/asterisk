@@ -73,7 +73,6 @@ main :: () {
 
     init_string_builder(*builder);
     
-    
     // sample := read_entire_file("TODO");
     // sample := read_entire_file("sample.txt");
 
@@ -184,50 +183,6 @@ main :: () {
 
                     if key == .PAGE_UP   key_pgup  = event.key_pressed;
                     if key == .PAGE_DOWN key_pgdn  = event.key_pressed;
-
-                    if key == .ENTER {
-                        text := builder_to_string(*builder, do_reset = false);
-                        defer free(text);
-
-                        if cursor_pos-1 > -1 {
-                            // A basic smart indent count characters in the current row until the first non-space character.
-
-                            start := cursor_pos-1;
-                            index := -1;
-                            for < start..0 {
-                                if text.data[it] == #char "\n" {
-                                    index = it;
-                                    break;
-                                }
-                            }
-
-                            if index+1 < text.count {
-                                index += 1;
-                                index2 := find_index_from_left_until_not(text, #char " ", index);
-                                spaces := index2 - index;
-                                // print("spaces: % ; index-1: %\n", spaces, index-1);
-                                
-                                if cursor_pos >= index && cursor_pos < index2 {
-                                    // We're in the first n empty space range
-                                    set_cursor_pos(index2); // jump to the first non-whitespace char in the row
-                                }
-
-                                append_text(*builder, "\n");
-
-                                while spaces != 0 {
-                                    append_text(*builder, " ");
-                                    spaces -= 1;
-                                }
-                            } else {
-                                append_text(*builder, "\n");
-                            }
-
-
-                        } else {
-                            append_text(*builder, "\n");
-                        }
-                    }
-
                 }
 
             }
@@ -268,7 +223,7 @@ main :: () {
                     current_col := get_cursor_col(text);
                     prev_row_cols := cols_in_the_row(text, prev_row);
                     steps := min(prev_row_cols, current_col);
-                    pos := first_row_col(prev_row);
+                    pos := first_byte_pos(prev_row);
                     while steps {
                         byte := text[pos];
                         bytes := 1 + trailingBytesForUTF8[byte];
@@ -291,7 +246,7 @@ main :: () {
                     current_col := get_cursor_col(text);
                     next_row_cols := cols_in_the_row(text, next_row);
                     steps := min(next_row_cols, current_col);
-                    pos := first_row_col(next_row);
+                    pos := first_byte_pos(next_row);
                     while steps {
                         byte := text[pos];
                         bytes := 1 + trailingBytesForUTF8[byte];
@@ -312,7 +267,7 @@ main :: () {
             current_row := get_cursor_row(text)-1;
             dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
             dest_row := row_table[dest_row_index];
-            pos := first_row_col(dest_row);
+            pos := first_byte_pos(dest_row);
             set_cursor_pos(pos);
         }
 
@@ -323,7 +278,7 @@ main :: () {
             current_row := get_cursor_row(text)-1;
             dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
             dest_row := row_table[dest_row_index];
-            pos := first_row_col(dest_row);
+            pos := first_byte_pos(dest_row);
             set_cursor_pos(pos);
         }
 
@@ -403,7 +358,7 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
     return c;
 }
 
-first_row_col :: inline (row: Row_Info) -> s64 {
+first_byte_pos :: inline (row: Row_Info) -> s64 {
     return row.pos - row.cols;
 }
 
@@ -424,7 +379,7 @@ get_cursor_col :: (text: string) -> s64 {
     for row_table {
         if cursor_pos <= it.pos {
             row := it;
-            i := first_row_col(it);
+            i := first_byte_pos(it);
             cols := 0;
             while i < cursor_pos {
                 byte := text[i];
@@ -446,14 +401,14 @@ prev_char_byte_index :: (text: string) -> s64 {
     if cursor_pos == 0 return 0;
 
     row_index := get_cursor_row(text) - 1;
-    i := first_row_col(row_table[row_index]);
+    i := first_byte_pos(row_table[row_index]);
     if i == cursor_pos {
         // we on the first col of the row so we should check the above row last char
         assert(row_index > 0); // sanity
         if row_index == 0 return 0;
         // step up by one row
         row_index -= 1;
-        i = first_row_col(row_table[row_index]);
+        i = first_byte_pos(row_table[row_index]);
     }
 
     last_char_in_bytes := 0;
@@ -470,7 +425,7 @@ prev_char_byte_index :: (text: string) -> s64 {
 }
 
 cols_in_the_row :: (s: string, row: Row_Info) -> s64 {
-    index := first_row_col(row);
+    index := first_byte_pos(row);
     end := row.pos;
     chars := 0;
     while index < end {
