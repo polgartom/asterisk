@@ -8,6 +8,7 @@ my_font: *Simp.Dynamic_Font;
 
 cursor_pos   := 0;
 cursor_moved := false;
+last_cursor_col_for_up_down_movement := 0; // @Cleanup naming! :SetDesiredColumnAfterMove
 
 last_time : float64;
 
@@ -73,21 +74,9 @@ main :: () {
 
     init_string_builder(*builder);
     
-    // sample := read_entire_file("TODO");
-    // sample := read_entire_file("sample.txt");
-
-
-    // sample := read_entire_file("TODO");
-    // sample := read_entire_file("sample.txt");
-
     sample := read_entire_file("main.jai");
     append(*builder, sample);
     should_rebuild_row_table = true;
-
-    // sample := "\"x$";
-    // append(*builder, sample);
-    // should_rebuild_row_table = true;
-    // set_cursor_pos(sample.count);
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -206,12 +195,18 @@ main :: () {
         if key_left && cursor_pos != 0 {
             i := prev_char_byte_index(text);
             set_cursor_pos(i);
+
+            // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
+            // also we should update this value every time except when we move up or down  
+            last_cursor_col_for_up_down_movement = get_cursor_col(text);
         }
 
         if key_right && cursor_pos < text.count {
             byte := text[cursor_pos];
             steps := 1 + trailingBytesForUTF8[byte];
-            increase_cursor_pos(steps);
+            cursor_pos += (steps);
+
+            last_cursor_col_for_up_down_movement = get_cursor_col(text);
         }
 
         if key_up {
@@ -220,9 +215,8 @@ main :: () {
                     if it_index == 0 break; // no more row above
                     prev_row := row_table[it_index-1];
 
-                    current_col := get_cursor_col(text);
                     prev_row_cols := cols_in_the_row(text, prev_row);
-                    steps := min(prev_row_cols, current_col);
+                    steps := min(prev_row_cols, last_cursor_col_for_up_down_movement);
                     pos := first_byte_pos(prev_row);
                     while steps {
                         byte := text[pos];
@@ -243,9 +237,8 @@ main :: () {
                     if it_index == row_table.count-1 break; // no more row below
                     next_row := row_table[it_index+1];
                     
-                    current_col := get_cursor_col(text);
                     next_row_cols := cols_in_the_row(text, next_row);
-                    steps := min(next_row_cols, current_col);
+                    steps := min(next_row_cols, last_cursor_col_for_up_down_movement);
                     pos := first_byte_pos(next_row);
                     while steps {
                         byte := text[pos];
@@ -492,11 +485,10 @@ append_text :: (b: *String_Builder, t: string) {
     should_rebuild_row_table = true;
 }
 
-set_cursor_pos :: inline (index: s64) {
+set_cursor_pos :: inline (index: s64, $update_desired_cursor_col := false) {
     // @Todo: check overflow, use clamp() proc
     if index < 0 then index = 0;
     cursor_pos = index;
-
     cursor_moved = true;
 }
 
@@ -572,7 +564,8 @@ rebuild_row_table :: (s: string) {
     
     row_table_recalc_time = seconds_since_init()*1000;
 
-    array_reset(*row_table); // we can reuse the same memory
+    // array_reset(*row_table); // @speedwe can reuse the same memory
+    array_reset_keeping_memory(*row_table);
 
     pos  := 0;
     posc := 0;
