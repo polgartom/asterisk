@@ -3,6 +3,11 @@ register_keymap_procedures :: () {
     // Editor keymaps   
     k := *default_keymap;
 
+    add_proc(k, "ToggleDevInfo", ToggleDevInfo);
+    add_proc(k, "DrawSpecialChars", DrawSpecialChars);
+
+    add_proc(k, "Quit", Quit);
+
     add_proc(k, "MoveUp", MoveUp);
     add_proc(k, "MoveDown", MoveDown);
     add_proc(k, "MoveLeft", MoveLeft);
@@ -25,10 +30,29 @@ register_keymap_procedures :: () {
 
     add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
     add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
+
+    add_proc(k, "OpenWidget", OpenWidget);
 }
 
 ///////////////////////////////
 // EDITOR
+
+Quit :: () {
+    should_quit = true;
+}
+
+OpenWidget :: () {
+    editor_in_focus = false;
+}
+
+ToggleDevInfo :: () {
+    show_debug_info = !show_debug_info;
+}
+
+DrawSpecialChars :: () {
+    draw_special_chars = !draw_special_chars;
+}
+
 
 MoveUp :: () {
     text := builder_to_string(*builder, do_reset = false);

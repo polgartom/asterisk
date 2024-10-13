@@ -4,6 +4,13 @@
 # S .SHIFT
 # C .CTRL
 
+F1 ToggleDevInfo
+F2 DrawSpecialChars
+
+A-F4 Quit
+
+C-p OpenWidget
+
 ArrowUp MoveUp
 ArrowDown MoveDown
 ArrowLeft MoveLeft

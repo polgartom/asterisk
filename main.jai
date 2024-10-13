@@ -1,5 +1,8 @@
-window_width := 1280;
-window_height := 720;
+// window_width := 1280;
+// window_height := 720;
+
+window_width := 1200;
+window_height := 1200;
 
 should_quit := false;
 
@@ -60,19 +63,34 @@ builder: String_Builder;
 
 editor_in_focus := true;
 
+// GETRECT - START
+current_theme: s32 = xx Default_Themes.Default;
+my_theme: Overall_Theme;  // This gets filled out by calling the Theme_Proc for current_theme.
+// GETRECT - END
+
+my_window: Window_Type;
+
+footer_height: float;
+
+event_find_next_occurence := false; // @Temporary
+
 main :: () {
     print("\n--------------\n\n");
 
     base_path := path_strip_filename(get_path_of_running_executable());
-    window := create_window(window_name="Asterisk", width=window_width, height=window_height);
-    Simp.set_render_target(window);
+    my_window = create_window(window_name="Asterisk", width=window_width, height=window_height);
+    Simp.set_render_target(my_window);
 
     my_init_fonts();
+    init_keymaps();
+    ui_init(); // GetRect
 
     {
         f := <<my_font;
         print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
     }
+
+    footer_height = my_font.character_height*1.5;
 
     init_string_builder(*builder);
 
@@ -86,11 +104,9 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
-    init_keymaps();
-
     while !should_quit {
         #if OS == .WINDOWS {
-            WaitMessage();
+            // WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -105,7 +121,7 @@ main :: () {
 
         for get_window_resizes() {
             Simp.update_window(it.window);
-            if it.window == window {
+            if it.window == my_window {
                 should_reinit := (it.width != window_width) || (it.height != window_height);
 
                 window_width  = it.width;
@@ -137,9 +153,11 @@ main :: () {
                 break;
             }
 
-            if event.key_code == .ESCAPE {
-                if event.key_pressed should_quit = true;
-            }
+            // if event.key_code == .ESCAPE {
+            //     if event.key_pressed should_quit = true;
+            // }
+
+            getrect_handle_event(event);
 
             if editor_in_focus {
                 handled := keymap_handle_event(default_keymap, event);
@@ -151,7 +169,12 @@ main :: () {
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
                     append_text(*builder, string_for_utf32_to_utf8);
                 }
+            } else {
+                if event.key_code == .ESCAPE {
+                    editor_in_focus = true;
+                }
             }
+
         }
 
         text := builder_to_string(*builder, do_reset = false);
@@ -161,21 +184,7 @@ main :: () {
             rebuild_row_table(text);
         }
 
-        if cursor_moved {
-            rel_x := get_cursor_rel_x(text);
-            if rel_x - window_width >= 0 {
-                left_offset += rel_x - window_width;
-            } else if rel_x - my_font.em_width < 0 {
-                left_offset -= (rel_x * -1) + my_font.em_width;
-            }
-
-            rel_y := get_cursor_rel_y(text);
-            if rel_y < 0 {
-                top_offset += abs(rel_y);
-            } else if rel_y + my_font.character_height > window_height {
-                top_offset -= rel_y + my_font.character_height - window_height;
-            }
-        }
+        handle_editor_events();
 
         if draw_special_chars {
             // Tabs
@@ -215,9 +224,9 @@ main :: () {
             PrintDev("--------------rendering--------------\n");
         }
 
-        draw_frame(text, second_elapsed);
+        draw_frame(text, second_elapsed, last_time);
 
-        Simp.swap_buffers(window);
+        Simp.swap_buffers(my_window);
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
@@ -484,9 +493,11 @@ first_visible_row_index :: inline (s: string) -> s64 {
 }
 
 last_visible_row_index :: inline (s: string) -> s64 {
+    viewport_h := window_height-footer_height*2; // @Hacky
+
     line_height := get_line_height();
-    end_row: s64 = xx ((top_offset + window_height) / line_height);
-    end_row = clamp(end_row + 1, end_row, row_table.count-1);
+    end_row: s64 = xx ((top_offset + viewport_h) / line_height);
+    end_row = clamp(end_row+1, 0, row_table.count-1);
     return end_row;
 }
 
@@ -532,6 +543,13 @@ is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
            ;
 }
 
+modify_string :: (ps: *string, new_value: string) {
+    free(ps.*);
+    ps.* = copy_string(new_value);
+}
+
+search_text: string;
+
 row_table_recalc_time: float64 = 0.0;
 draw_row_table := false;
 should_rebuild_row_table := false;
@@ -541,6 +559,49 @@ row_table: [..] Row_Info;
 Row_Info :: struct {
     pos: s64;  // end byte index of the row
     cols: s64; // bytes in the row
+}
+
+Editor_Event :: struct {
+    proc: Editor_Event_Proc;
+}
+
+Editor_Event_Proc :: #type ();
+
+editor_events: [..] Editor_Event;
+
+add_editor_event :: (proc_: Editor_Event_Proc) {
+    array_add(*editor_events, .{proc=proc_});
+}
+
+handle_editor_events :: () {
+    for < editor_events.count-1..0 {
+        event := editor_events[it];
+        event.proc();
+    }
+
+    array_reset_keeping_memory(*editor_events);
+}
+
+last_occurance_offset: s64 = -1;
+FindNextOccurence :: () {
+    if search_text.count == 0 return;
+
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    start := ifx last_occurance_offset == -1 then 0 else last_occurance_offset;
+    
+    if start < text.count {
+        s := text;
+        advance(*s, start);
+        byte_offset, found := index_of_string_nocase(s, search_text);
+        if !found byte_offset = -1;
+        if byte_offset != -1 {
+            last_occurance_offset = start + byte_offset + search_text.count; // @Todo: check overflow
+            set_cursor_pos(start+byte_offset);
+        }
+    }
+
 }
 
 #if OS == .WINDOWS {
