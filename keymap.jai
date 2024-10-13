@@ -1,7 +1,16 @@
 register_keymap_procedures :: () {
-    k := *default_keymap;
 
     // Editor keymaps   
+    k := *default_keymap;
+
+    add_proc(k, "MoveUp", MoveUp);
+    add_proc(k, "MoveDown", MoveDown);
+    add_proc(k, "MoveLeft", MoveLeft);
+    add_proc(k, "MoveRight", MoveRight);
+
+    add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
+    add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
+
     add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
     add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
     
@@ -20,6 +29,111 @@ register_keymap_procedures :: () {
 
 ///////////////////////////////
 // EDITOR
+
+MoveUp :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    for row_table {
+        if cursor_pos <= it.pos {
+            if it_index == 0 break; // no more row above
+            prev_row := row_table[it_index-1];
+
+            prev_row_cols := cols_in_the_row(text, prev_row);
+            steps := min(prev_row_cols, last_cursor_col_for_up_down_movement);
+            pos := first_byte_pos(prev_row);
+            while steps {
+                byte := text[pos];
+                bytes := 1 + trailingBytesForUTF8[byte];
+                pos += bytes;
+                steps -= 1;
+            }
+
+            set_cursor_pos(pos);
+            break;
+        }
+    }
+}
+
+MoveDown :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    for row_table {
+        if cursor_pos <= it.pos {
+            if it_index == row_table.count-1 break; // no more row below
+            next_row := row_table[it_index+1];
+
+            next_row_cols := cols_in_the_row(text, next_row);
+            steps := min(next_row_cols, last_cursor_col_for_up_down_movement);
+            pos := first_byte_pos(next_row);
+            while steps {
+                byte := text[pos];
+                bytes := 1 + trailingBytesForUTF8[byte];
+                pos += bytes;
+                steps -= 1;
+            }
+
+            set_cursor_pos(pos);
+            break;
+        }
+    }
+}
+
+MoveLeft :: () {
+    if cursor_pos == 0 return;
+
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    i := prev_char_byte_index(text);
+    set_cursor_pos(i);
+
+    // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
+    // also we should update this value every time except when we move up or down
+    last_cursor_col_for_up_down_movement = get_cursor_col(text);
+}
+
+MoveRight :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    if !(cursor_pos < text.count) return;
+
+    byte := text[cursor_pos];
+    steps := 1 + trailingBytesForUTF8[byte];
+    cursor_pos += (steps);
+
+    last_cursor_col_for_up_down_movement = get_cursor_col(text);
+}
+
+ScrollViewPortUp :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    start := first_visible_row_index(text);
+    end := last_visible_row_index(text);
+    max_row := clamp(end-start, 0, row_table.count-1);
+    current_row := get_cursor_row(text)-1;
+    dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
+    dest_row := row_table[dest_row_index];
+    pos := first_byte_pos(dest_row);
+    set_cursor_pos(pos);
+}
+
+ScrollViewPortDown :: () {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    start := first_visible_row_index(text);
+    end := last_visible_row_index(text);
+    max_row := clamp(end-start, 0, row_table.count-1);
+    current_row := get_cursor_row(text)-1;
+    dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
+    dest_row := row_table[dest_row_index];
+    pos := first_byte_pos(dest_row);
+    set_cursor_pos(pos);
+}
 
 DeleteTheWholeLine :: () {
     // @Speed !!!!

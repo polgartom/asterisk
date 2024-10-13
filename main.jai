@@ -58,6 +58,8 @@ frametime: float64;
 
 builder: String_Builder;
 
+editor_in_focus := true;
+
 main :: () {
     print("\n--------------\n\n");
 
@@ -66,14 +68,14 @@ main :: () {
     Simp.set_render_target(window);
 
     my_init_fonts();
-    
+
     {
         f := <<my_font;
         print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
     }
 
     init_string_builder(*builder);
-    
+
     sample := read_entire_file("main.jai");
     append(*builder, sample);
     should_rebuild_row_table = true;
@@ -139,41 +141,16 @@ main :: () {
                 if event.key_pressed should_quit = true;
             }
 
-            handled := keymap_handle_event(default_keymap, event);
-            if handled continue;
+            if editor_in_focus {
+                handled := keymap_handle_event(default_keymap, event);
+                if handled continue;
 
-            if event.type == .TEXT_INPUT {
-                if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
-
-                memset(string_for_utf32_to_utf8.data, 0, 4);
-                character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
-                append_text(*builder, string_for_utf32_to_utf8);
-
-            } else if event.type == .KEYBOARD {
-                key := event.key_code;
-
-                if event.key_pressed {
-
-                    // Dev hotkeys (for now)
-                    if event.key_code == .F1 {
-                        show_debug_info = !show_debug_info;
-                    }
-                    if event.key_code == .F2 {
-                        draw_special_chars = !draw_special_chars;
-                    }
-                    if event.key_code == .F3 {
-                        draw_row_table = !draw_row_table;
-                    }
-
-                    if key == .ARROW_LEFT   key_left  = event.key_pressed;
-                    if key == .ARROW_RIGHT  key_right = event.key_pressed;
-                    if key == .ARROW_DOWN   key_down  = event.key_pressed;
-                    if key == .ARROW_UP     key_up    = event.key_pressed;
-
-                    if key == .PAGE_UP   key_pgup  = event.key_pressed;
-                    if key == .PAGE_DOWN key_pgdn  = event.key_pressed;
+                if event.type == .TEXT_INPUT {
+                    if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
+                    memset(string_for_utf32_to_utf8.data, 0, 4);
+                    character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
+                    append_text(*builder, string_for_utf32_to_utf8);
                 }
-
             }
         }
 
@@ -182,97 +159,6 @@ main :: () {
 
         if should_rebuild_row_table {
             rebuild_row_table(text);
-
-            // if draw_row_table {
-            //     print("\n----------------\nrow_table | rows: %\n", row_table.count);
-            //     for row_table {
-            //         print("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
-            //     }
-            // }
-        }
-
-        // Handle cursor movement
-        if key_left && cursor_pos != 0 {
-            i := prev_char_byte_index(text);
-            set_cursor_pos(i);
-
-            // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
-            // also we should update this value every time except when we move up or down  
-            last_cursor_col_for_up_down_movement = get_cursor_col(text);
-        }
-
-        if key_right && cursor_pos < text.count {
-            byte := text[cursor_pos];
-            steps := 1 + trailingBytesForUTF8[byte];
-            cursor_pos += (steps);
-
-            last_cursor_col_for_up_down_movement = get_cursor_col(text);
-        }
-
-        if key_up {
-            for row_table {
-                if cursor_pos <= it.pos {
-                    if it_index == 0 break; // no more row above
-                    prev_row := row_table[it_index-1];
-
-                    prev_row_cols := cols_in_the_row(text, prev_row);
-                    steps := min(prev_row_cols, last_cursor_col_for_up_down_movement);
-                    pos := first_byte_pos(prev_row);
-                    while steps {
-                        byte := text[pos];
-                        bytes := 1 + trailingBytesForUTF8[byte];
-                        pos += bytes;
-                        steps -= 1;
-                    }
-
-                    set_cursor_pos(pos);
-                    break;
-                }
-            }
-        }
-
-        if key_down {
-            for row_table {
-                if cursor_pos <= it.pos {
-                    if it_index == row_table.count-1 break; // no more row below
-                    next_row := row_table[it_index+1];
-                    
-                    next_row_cols := cols_in_the_row(text, next_row);
-                    steps := min(next_row_cols, last_cursor_col_for_up_down_movement);
-                    pos := first_byte_pos(next_row);
-                    while steps {
-                        byte := text[pos];
-                        bytes := 1 + trailingBytesForUTF8[byte];
-                        pos += bytes;
-                        steps -= 1;
-                    }
-
-                    set_cursor_pos(pos);
-                    break;
-                }
-            }
-        }
-
-        if key_pgup {
-            start := first_visible_row_index(text);
-            end := last_visible_row_index(text);
-            max_row := clamp(end-start, 0, row_table.count-1);
-            current_row := get_cursor_row(text)-1;
-            dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
-            dest_row := row_table[dest_row_index];
-            pos := first_byte_pos(dest_row);
-            set_cursor_pos(pos);
-        }
-
-        if key_pgdn {
-            start := first_visible_row_index(text);
-            end := last_visible_row_index(text);
-            max_row := clamp(end-start, 0, row_table.count-1);
-            current_row := get_cursor_row(text)-1;
-            dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
-            dest_row := row_table[dest_row_index];
-            pos := first_byte_pos(dest_row);
-            set_cursor_pos(pos);
         }
 
         if cursor_moved {
@@ -283,7 +169,7 @@ main :: () {
                 left_offset -= (rel_x * -1) + my_font.em_width;
             }
 
-            rel_y := get_cursor_rel_y(text);            
+            rel_y := get_cursor_rel_y(text);
             if rel_y < 0 {
                 top_offset += abs(rel_y);
             } else if rel_y + my_font.character_height > window_height {
@@ -315,7 +201,7 @@ main :: () {
             PrintDev("F1 toggle dev | F2 hidden chars\n");
             PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-            
+
             row := get_cursor_row(text);
             col := get_cursor_col(text);
             cx  := get_cursor_x(text);
@@ -327,7 +213,7 @@ main :: () {
             // }
 
             PrintDev("--------------rendering--------------\n");
-        }        
+        }
 
         draw_frame(text, second_elapsed);
 
@@ -336,7 +222,7 @@ main :: () {
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
     }
-    
+
 }
 
 PrintDev :: (fmt: string, args: .. Any) #expand {
@@ -391,7 +277,7 @@ get_cursor_col :: (text: string) -> s64 {
 }
 
 // next_char_byte_index :: (s: string) -> s64 {
-    
+
 // }
 
 prev_char_byte_index :: (text: string) -> s64 {
@@ -476,7 +362,7 @@ append_text :: (b: *String_Builder, t: string) {
     }
 
     append(b, t);
-    
+
     a := advance(text, cursor_pos);
     append(b, a);
 
@@ -561,7 +447,7 @@ num_of_utf8_chars :: inline (s: string) -> s64 {
 
 rebuild_row_table :: (s: string) {
     should_rebuild_row_table = false;
-    
+
     row_table_recalc_time = seconds_since_init()*1000;
 
     // array_reset(*row_table); // @speedwe can reuse the same memory
@@ -576,7 +462,7 @@ rebuild_row_table :: (s: string) {
             array_add(*row_table, .{pos=pos+chars, cols=chars});
             break;
         }
-        
+
         chars := ln_index;
         pos += chars;
         array_add(*row_table, .{pos=pos, cols=chars});
@@ -592,7 +478,7 @@ rebuild_row_table :: (s: string) {
 
 first_visible_row_index :: inline (s: string) -> s64 {
     line_height := get_line_height();
-    start_row: s64 = xx (top_offset / line_height); 
+    start_row: s64 = xx (top_offset / line_height);
     start_row = clamp(start_row - 1, 0, row_table.count-1);
     return start_row;
 }
@@ -664,7 +550,7 @@ Row_Info :: struct {
 
 #load "draw.jai";
 #load "keymap.jai";
-
+// #load "editor.jai";
 
 #import "System";
 #import "Basic";
@@ -676,3 +562,4 @@ Row_Info :: struct {
 #import "Keymap";
 #import "Unicode";
 Simp :: #import "Simp";
+#import "GetRect";

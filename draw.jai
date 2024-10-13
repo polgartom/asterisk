@@ -1,6 +1,6 @@
 draw_frame :: (text: string, second_elapsed: bool) {
     // Draw cursor
-    {
+    if editor_in_focus {
         row := get_cursor_row(text);
         cx  := get_cursor_x(text);
 
@@ -55,7 +55,6 @@ draw_frame :: (text: string, second_elapsed: bool) {
 
     // Draw debug info
     if show_debug_info {
-
         {
             ct := seconds_since_init();
             if second_elapsed {
@@ -92,6 +91,7 @@ draw_frame :: (text: string, second_elapsed: bool) {
 
         array_reset(*debug_infos);
     }
+    
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {

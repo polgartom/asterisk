@@ -38,12 +38,12 @@
 [] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
 [] Open a file
 [] Save the buffer
-[] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)  
+[] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
 [] Draw right, bottom scrollbar
 [] Word stepping (Ctrl+{arrow})
-[] Subword stepping (Alt+{arrow}) 
+[] Subword stepping (Alt+{arrow})
 [] Search forward (Ctrl+?)
 [] Search backward (Ctrl+:)
 [] Search from the top (Ctrl+F)
