@@ -12,6 +12,10 @@ register_keymap_procedures :: () {
     add_proc(k, "MoveDown", MoveDown);
     add_proc(k, "MoveLeft", MoveLeft);
     add_proc(k, "MoveRight", MoveRight);
+    add_proc(k, "MoveLeftWord", MoveLeftWord);
+    add_proc(k, "MoveRightWord", MoveRightWord);
+    add_proc(k, "MoveLeftSubword", MoveLeftSubword);
+    add_proc(k, "MoveRightSubword", MoveRightSubword);
 
     add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
     add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
@@ -52,7 +56,6 @@ ToggleDevInfo :: () {
 DrawSpecialChars :: () {
     draw_special_chars = !draw_special_chars;
 }
-
 
 MoveUp :: () {
     text := builder_to_string(*builder, do_reset = false);
@@ -126,9 +129,69 @@ MoveRight :: () {
 
     byte := text[cursor_pos];
     steps := 1 + trailingBytesForUTF8[byte];
-    cursor_pos += (steps);
+    set_cursor_pos(cursor_pos + steps);
 
     last_cursor_col_for_up_down_movement = get_cursor_col(text);
+}
+
+move_left_word :: ($subword_mode: bool) {
+    if cursor_pos == 0 return;
+
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    row_index := get_cursor_row(text)-1;
+    row := row_table[row_index];
+
+    offset := first_byte_pos(row);
+    if offset == cursor_pos {
+        if row_index == 0 return; // no more row above
+
+        row = row_table[row_index-1];
+        offset = first_byte_pos(row);
+    }
+
+    last_separator_byte_offset := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
+    end := min(cursor_pos-1, text.count-1);
+    end = max(0, end);
+    for offset..end {
+        if is_separator_char(text[it], subword_mode) {
+            last_separator_byte_offset = it;
+        }
+    }
+
+    set_cursor_pos(last_separator_byte_offset);
+    last_cursor_col_for_up_down_movement = get_cursor_col(text);
+}
+
+move_right_word :: ($subword_mode: bool) {
+    text := builder_to_string(*builder, do_reset = false);
+    defer free(text);
+
+    if !(cursor_pos < text.count) return;
+
+    for cursor_pos+1..text.count-1 {
+        if is_separator_char(text[it], subword_mode) {
+            set_cursor_pos(it);
+            return;
+        }
+    }
+}
+
+MoveLeftWord :: inline () {
+    move_left_word(false);
+}
+
+MoveRightWord :: inline () {
+    move_right_word(false);
+}
+
+MoveLeftSubword :: inline () {
+    move_left_word(true);
+}
+
+MoveRightSubword :: inline () {
+    move_right_word(true);
 }
 
 ScrollViewPortUp :: () {
@@ -413,8 +476,14 @@ GotoFirstCharOFCurrentRow :: inline () {
 
     index := get_cursor_row(text)-1;
     row := row_table[index];
-    byte_index := first_byte_pos(row);
-    set_cursor_pos(byte_index);
+    start := first_byte_pos(row);
+    for start..row.pos {
+        if text[it] != #char " " {
+            if it == cursor_pos set_cursor_pos(start);
+            else                set_cursor_pos(it);
+            break;
+        }
+    }
 }
 
 GotoLastCharOfCurrentRow :: inline () {
@@ -423,8 +492,8 @@ GotoLastCharOfCurrentRow :: inline () {
 
     index := get_cursor_row(text)-1;
     row := row_table[index];
-    byte_index := last_byte_pos(row);
-    set_cursor_pos(byte_index);
+    offset := last_byte_pos(row);
+    set_cursor_pos(offset);
 }
 
 init_keymaps :: () {

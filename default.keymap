@@ -9,12 +9,16 @@ F2 DrawSpecialChars
 
 A-F4 Quit
 
-C-p OpenWidget
+C-f OpenWidget
 
 ArrowUp MoveUp
 ArrowDown MoveDown
 ArrowLeft MoveLeft
 ArrowRight MoveRight
+C-ArrowLeft MoveLeftWord
+C-ArrowRight MoveRightWord
+A-ArrowLeft MoveLeftSubword
+A-ArrowRight MoveRightSubword
 
 PageUp ScrollViewPortUp
 PageDown ScrollViewPortDown
