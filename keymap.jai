@@ -157,6 +157,7 @@ move_left_word :: ($subword_mode: bool) {
     end = max(0, end);
 
     // @Todo: Explain!
+    // @Simplify !!
 
     whitespace := is_whitespace(text[cursor_pos]) && is_whitespace(text[end]);
     if whitespace {
@@ -170,21 +171,22 @@ move_left_word :: ($subword_mode: bool) {
         return;
     }
     
-    combined := is_separator_char(text[cursor_pos]);
+    not_combined := is_separator_char(text[cursor_pos]) && !is_separator_char(text[end]);
     for start..end {
         separator := is_separator_char(text[it], subword_mode);
-        if combined {
-            if !separator {
+        if not_combined {
+            if separator {
                 offset = it;
             }
         } else {
-            if separator {
+            if !separator {
                 offset = it;
             }
         }
     }
 
-    set_cursor_pos(offset+1);
+    if offset != start offset += 1;
+    set_cursor_pos(offset);
 
     // set_cursor_pos(last_separator_byte_offset);
     // last_cursor_col_for_up_down_movement = get_cursor_col(text);
