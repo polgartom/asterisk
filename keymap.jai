@@ -151,17 +151,43 @@ move_left_word :: ($subword_mode: bool) {
         offset = first_byte_pos(row);
     }
 
-    last_separator_byte_offset := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
+    start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
+    // @Cleanup: this min and max thing are bullshits because it cant be, we should do an assert instead
     end := min(cursor_pos-1, text.count-1);
     end = max(0, end);
-    for offset..end {
-        if is_separator_char(text[it], subword_mode) {
-            last_separator_byte_offset = it;
+
+    // @Todo: Explain!
+
+    whitespace := is_whitespace(text[cursor_pos]) && is_whitespace(text[end]);
+    if whitespace {
+        last_non_whitespace_offset := cursor_pos;
+        for start..end {
+            if !is_whitespace(text[it]) {
+                last_non_whitespace_offset = it;
+            }
+        }
+        set_cursor_pos(last_non_whitespace_offset+1);
+        return;
+    }
+    
+    combined := is_separator_char(text[cursor_pos]);
+    for start..end {
+        separator := is_separator_char(text[it], subword_mode);
+        if combined {
+            if !separator {
+                offset = it;
+            }
+        } else {
+            if separator {
+                offset = it;
+            }
         }
     }
 
-    set_cursor_pos(last_separator_byte_offset);
-    last_cursor_col_for_up_down_movement = get_cursor_col(text);
+    set_cursor_pos(offset+1);
+
+    // set_cursor_pos(last_separator_byte_offset);
+    // last_cursor_col_for_up_down_movement = get_cursor_col(text);
 }
 
 move_right_word :: ($subword_mode: bool) {
@@ -170,15 +196,39 @@ move_right_word :: ($subword_mode: bool) {
 
     if !(cursor_pos < text.count) return;
 
+    // @Todo: Explain!
+
+    // It's a better solution than the current IDE's behavior
+    whitespace := is_whitespace(text[cursor_pos]);
+    if whitespace {
+        last_whitespace_offset := cursor_pos;
+        for cursor_pos+1..text.count-1 {
+            last_whitespace_offset = it;
+            if !is_whitespace(text[it]) break;
+        }
+        set_cursor_pos(last_whitespace_offset);
+        return;
+    }
+
+    combined := is_separator_char(text[cursor_pos]);
     for cursor_pos+1..text.count-1 {
-        if is_separator_char(text[it], subword_mode) {
-            set_cursor_pos(it);
-            return;
+        separator := is_separator_char(text[it], subword_mode);
+        if combined {
+            if !separator {
+                set_cursor_pos(it);
+                return; 
+            }
+        } else {
+            if separator {
+                set_cursor_pos(it);
+                return;
+            }
         }
     }
+
 }
 
-MoveLeftWord :: inline () {
+MoveLeftWord                        :: inline () {
     move_left_word(false);
 }
 

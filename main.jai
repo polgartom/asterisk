@@ -543,6 +543,12 @@ is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
            ;
 }
 
+is_whitespace :: inline (c: s64) -> bool {
+    assert(c != #char "\t", "We should convert all of the tabs to spaces");
+
+    return c == #char " " || c == #char "\n";
+}
+
 modify_string :: (ps: *string, new_value: string) {
     free(ps.*);
     ps.* = copy_string(new_value);
