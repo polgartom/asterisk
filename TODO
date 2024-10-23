@@ -31,19 +31,20 @@
 [x] Jump the first character and the last character of current the line
 [x] Ctrl-Enter insert line below
 [x] Proper UTF-8
-[] Show the current (opened) filename
+[X] Word stepping (Ctrl+{arrow})
+[X] Subword stepping (Alt+{arrow})
+[] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set, which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
 [] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
 [] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
 [] Draw spaces
+[] Keep the cursor center after new occurence has found
 [] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
 [] Open a file
-[] Save the buffer
+[] Save the buffer (file)
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
 [] Smart movement check { } positions, also we should check the current language
 [] Add a little padding and scrolling offset
 [] Draw right, bottom scrollbar
-[] Word stepping (Ctrl+{arrow})
-[] Subword stepping (Alt+{arrow})
 [] Search forward (Ctrl+?)
 [] Search backward (Ctrl+:)
 [] Search from the top (Ctrl+F)
@@ -59,6 +60,7 @@
 [] Separate input handling like if we open a file browser modal we should not handle editor events like insert text and so on
 [] More row_table rebuild proc improvements. Maybe mark the rebuild type like we should do a whole rebuild or a partial rebuild which starting from the last insert character-1
 [] Basic syntax highlighting
+[] Draw the left line which indicates the block from { to } (this option should be toggable)
 
 /* IDEAS */
 

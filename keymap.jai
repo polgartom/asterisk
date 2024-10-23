@@ -113,7 +113,7 @@ MoveLeft :: () {
     text := builder_to_string(*builder, do_reset = false);
     defer free(text);
 
-    i := prev_char_byte_index(text);
+    i := prev_char_byte_index(text, cursor_pos);
     set_cursor_pos(i);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
@@ -140,6 +140,11 @@ move_left_word :: ($subword_mode: bool) {
     text := builder_to_string(*builder, do_reset = false);
     defer free(text);
 
+    if !(cursor_pos < text.count) {
+        i := prev_char_byte_index(text, cursor_pos);
+        set_cursor_pos(i);
+    }
+
     row_index := get_cursor_row(text)-1;
     row := row_table[row_index];
 
@@ -152,13 +157,11 @@ move_left_word :: ($subword_mode: bool) {
     }
 
     start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
-    // @Cleanup: this min and max thing are bullshits because it cant be, we should do an assert instead
-    end := min(cursor_pos-1, text.count-1);
-    end = max(0, end);
+    end := prev_char_byte_index(text, cursor_pos);
+    assert(end > -1);
+    assert(end < text.count);
 
-    // @Todo: Explain!
-    // @Simplify !!
-
+    // @Cleanup
     whitespace := is_whitespace(text[cursor_pos]) && is_whitespace(text[end]);
     if whitespace {
         last_non_whitespace_offset := cursor_pos;
@@ -168,28 +171,41 @@ move_left_word :: ($subword_mode: bool) {
             }
         }
         set_cursor_pos(last_non_whitespace_offset+1);
+        last_cursor_col_for_up_down_movement = get_cursor_col(text);
         return;
     }
-    
-    not_combined := is_separator_char(text[cursor_pos]) && !is_separator_char(text[end]);
-    for start..end {
-        separator := is_separator_char(text[it], subword_mode);
-        if not_combined {
+
+    // @Cleanup
+    if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[cursor_pos], subword_mode) {
+        for start..end {
+            separator := is_separator_char(text[it], subword_mode);
             if separator {
                 offset = it;
             }
-        } else {
-            if !separator {
-                offset = it;
+        }
+    } else {
+        not_combined := is_separator_char(text[cursor_pos], subword_mode) && !is_separator_char(text[end]);
+        for start..end {
+            separator := is_separator_char(text[it], subword_mode);
+            if not_combined {
+                if separator {
+                    offset = it;
+                }
+            } else {
+                if !separator {
+                    offset = it;
+                }
             }
         }
     }
 
-    if offset != start offset += 1;
-    set_cursor_pos(offset);
+    
+    if offset != start {
+        offset = next_char_byte_index(text, offset);
+    }
 
-    // set_cursor_pos(last_separator_byte_offset);
-    // last_cursor_col_for_up_down_movement = get_cursor_col(text);
+    set_cursor_pos(offset);
+    last_cursor_col_for_up_down_movement = get_cursor_col(text);
 }
 
 move_right_word :: ($subword_mode: bool) {
@@ -198,31 +214,34 @@ move_right_word :: ($subword_mode: bool) {
 
     if !(cursor_pos < text.count) return;
 
-    // @Todo: Explain!
+    start := next_char_byte_index(text, cursor_pos);
 
     // It's a better solution than the current IDE's behavior
     whitespace := is_whitespace(text[cursor_pos]);
     if whitespace {
         last_whitespace_offset := cursor_pos;
-        for cursor_pos+1..text.count-1 {
+        for start..text.count-1 {
             last_whitespace_offset = it;
             if !is_whitespace(text[it]) break;
         }
         set_cursor_pos(last_whitespace_offset);
+        last_cursor_col_for_up_down_movement = get_cursor_col(text);
         return;
     }
 
     combined := is_separator_char(text[cursor_pos]);
-    for cursor_pos+1..text.count-1 {
+    for start..text.count-1 {
         separator := is_separator_char(text[it], subword_mode);
         if combined {
             if !separator {
                 set_cursor_pos(it);
-                return; 
+                last_cursor_col_for_up_down_movement = get_cursor_col(text);
+                return;
             }
         } else {
             if separator {
                 set_cursor_pos(it);
+                last_cursor_col_for_up_down_movement = get_cursor_col(text);
                 return;
             }
         }
@@ -230,7 +249,7 @@ move_right_word :: ($subword_mode: bool) {
 
 }
 
-MoveLeftWord                        :: inline () {
+MoveLeftWord :: inline () {
     move_left_word(false);
 }
 
@@ -378,14 +397,14 @@ DeleteCharFromLeft :: () {
 }
 
 DeleteWordFromRight :: inline () {
-    _delete_word_or_subword_from_right(subword_mode=false);
+    delete_word_or_subword_from_right(subword_mode=false);
 }
 
 DeleteSubwordFromRight :: inline () {
-    _delete_word_or_subword_from_right(subword_mode=true);
+    delete_word_or_subword_from_right(subword_mode=true);
 }
 
-_delete_word_or_subword_from_right :: ($subword_mode: bool) {
+delete_word_or_subword_from_right :: ($subword_mode: bool) {
     // @Speed @Cleanup !!!!!!
     if cursor_pos == 0 return;
 

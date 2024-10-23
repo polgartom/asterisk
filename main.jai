@@ -285,11 +285,40 @@ get_cursor_col :: (text: string) -> s64 {
     return 0;
 }
 
-// next_char_byte_index :: (s: string) -> s64 {
+next_char_byte_index :: inline (s: string, start: s64) -> s64 {
+    assert(start < s.count);
+    byte := s[start];
+    return start + 1 + trailingBytesForUTF8[byte];
+}
 
-// }
+prev_char_byte_index :: (text: string, start: s64) -> s64 {
+    if start == 0 return 0;
 
-prev_char_byte_index :: (text: string) -> s64 {
+    row_index := get_cursor_row(text) - 1;
+    i := first_byte_pos(row_table[row_index]);
+    if i == start {
+        // we on the first col of the row so we should check the above row last char
+        assert(row_index > 0); // sanity
+        if row_index == 0 return 0;
+        // step up by one row
+        row_index -= 1;
+        i = first_byte_pos(row_table[row_index]);
+    }
+
+    last_char_in_bytes := 0;
+    while i < start {
+        byte := text[i];
+        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
+        i += last_char_in_bytes;
+    }
+
+    index := start - last_char_in_bytes;
+    assert(index > -1);
+
+    return index;
+}
+
+prev_char_byte_index :: (text: string) -> s64 #deprecated {
     if cursor_pos == 0 return 0;
 
     row_index := get_cursor_row(text) - 1;

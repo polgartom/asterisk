@@ -132,12 +132,12 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw debug info
     if show_debug_info {
-        {
-            // Draw crosshair
-            Simp.set_shader_for_color();
-            Simp.immediate_quad(window_width/2.0-1.0, 0.0, window_width/2.0, xx window_height, DEBUG_CROSSHAIR_COLOR); 
-            Simp.immediate_quad(0.0, window_height/2.0-1.0, xx window_width, window_height/2.0, DEBUG_CROSSHAIR_COLOR); 
-        }
+        // {
+        //     // Draw crosshair
+        //     Simp.set_shader_for_color();
+        //     Simp.immediate_quad(window_width/2.0-1.0, 0.0, window_width/2.0, xx window_height, DEBUG_CROSSHAIR_COLOR); 
+        //     Simp.immediate_quad(0.0, window_height/2.0-1.0, xx window_width, window_height/2.0, DEBUG_CROSSHAIR_COLOR); 
+        // }
 
         {
             ct := seconds_since_init();
