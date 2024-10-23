@@ -184,7 +184,7 @@ move_left_word :: ($subword_mode: bool) {
             }
         }
     } else {
-        not_combined := is_separator_char(text[cursor_pos], subword_mode) && !is_separator_char(text[end]);
+        not_combined := is_separator_char(text[cursor_pos], subword_mode) && !is_separator_char(text[end], subword_mode);
         for start..end {
             separator := is_separator_char(text[it], subword_mode);
             if not_combined {
@@ -198,7 +198,6 @@ move_left_word :: ($subword_mode: bool) {
             }
         }
     }
-
     
     if offset != start {
         offset = next_char_byte_index(text, offset);
@@ -247,6 +246,8 @@ move_right_word :: ($subword_mode: bool) {
         }
     }
 
+    set_cursor_pos(text.count);
+    last_cursor_col_for_up_down_movement = get_cursor_col(text);
 }
 
 MoveLeftWord :: inline () {

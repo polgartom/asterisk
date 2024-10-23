@@ -94,9 +94,9 @@ main :: () {
 
     init_string_builder(*builder);
 
-    sample := read_entire_file("main.jai");
-    append(*builder, sample);
-    should_rebuild_row_table = true;
+    // sample := read_entire_file("main.jai");
+    // append(*builder, sample);
+    // should_rebuild_row_table = true;
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
