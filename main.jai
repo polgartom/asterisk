@@ -15,17 +15,6 @@ last_cursor_col_for_up_down_movement := 0; // @Cleanup naming! :SetDesiredColumn
 
 last_time : float64;
 
-key_left: u32;
-key_right: u32;
-key_down: u32;
-key_up: u32;
-key_backspace: u32;
-key_pgup: u32;
-key_pgdn: u32;
-
-key_shift: u32;
-key_ctrl: u32;
-
 font_width: s64;
 
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
@@ -59,8 +48,6 @@ debug_infos: [..] string;
 fps: float64;
 frametime: float64;
 
-builder: String_Builder;
-
 editor_in_focus := true;
 
 // GETRECT - START
@@ -92,12 +79,18 @@ main :: () {
 
     footer_height = my_font.character_height*1.5;
 
-    init_string_builder(*builder);
+    // @Todo: We should create an initial empty buffer
+    {
+        open_file(*editor, "main.jai");
+        print("buffer: %\n", editor.buffers[0]);
 
-    // sample := read_entire_file("main.jai");
-    // append(*builder, sample);
-    // should_rebuild_row_table = true;
-
+        // buffer := array_add(*editor.buffers);
+        // buffer.data = cast(*u8)alloc(4096);
+        // buffer.allocated = 4096;
+        // buffer.count = 0;
+        // editor.active_buffer = buffer;
+    }
+        
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
     second_elapsed := false;
@@ -136,16 +129,6 @@ main :: () {
         c := bg_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
 
-        key_left = 0;
-        key_right = 0;
-        key_down = 0;
-        key_up = 0;
-        key_backspace = 0;
-        key_shift = 0;
-        key_pgup = 0;
-        key_pgdn = 0;
-        key_ctrl = 0;
-
         for event : events_this_frame {
             if event.type == .QUIT {
                 // print("quit!\n");
@@ -153,9 +136,10 @@ main :: () {
                 break;
             }
 
-            // if event.key_code == .ESCAPE {
-            //     if event.key_pressed should_quit = true;
-            // }
+            // @Debug
+            if event.key_code == .ESCAPE {
+                if event.key_pressed should_quit = true;
+            }
 
             getrect_handle_event(event);
 
@@ -167,7 +151,8 @@ main :: () {
                     if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
-                    append_text(*builder, string_for_utf32_to_utf8);
+                    append_text(*editor, editor.active_buffer, string_for_utf32_to_utf8);
+                    // append_text(*builder, string_for_utf32_to_utf8);
                 }
             } else {
                 if event.key_code == .ESCAPE {
@@ -177,11 +162,13 @@ main :: () {
 
         }
 
-        text := builder_to_string(*builder, do_reset = false);
-        defer free(text);
+        text := to_string(editor.active_buffer);
+        if editor.active_buffer.rebuild_row_table {
+            rebuild_row_table(editor.active_buffer);
+        }
 
-        if should_rebuild_row_table {
-            rebuild_row_table(text);
+        for row_table {
+            PrintDev("pos: % ; cols: %\n", it.pos, it.cols);
         }
 
         handle_editor_events();
@@ -206,27 +193,30 @@ main :: () {
             }
         }
 
+        // simtime := (seconds_since_init()-last_time)*1000;
+
         if show_debug_info {
             PrintDev("F1 toggle dev | F2 hidden chars\n");
             PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
 
-            row := get_cursor_row(text);
-            col := get_cursor_col(text);
-            cx  := get_cursor_x(text);
-            cy  := get_cursor_y(text);
+            row := get_cursor_row(*editor);
+            col := get_cursor_col(*editor);
+            cx  := get_cursor_x(*editor);
+            cy  := get_cursor_y(*editor);
             PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
             PrintDev("rows: % ; gentime: %ms\n", row_table.count, formatFloat(row_table_recalc_time, trailing_width=2));
-            // for row_table {
-            //     PrintDev("#% | pos: % cols: %\n", it_index, it.pos, it.cols);
-            // }
 
             PrintDev("--------------rendering--------------\n");
         }
 
-        draw_frame(text, second_elapsed, last_time);
+        // drawtime := seconds_since_init();
 
+        draw_frame(text, second_elapsed, last_time);
         Simp.swap_buffers(my_window);
+
+        // drawtime = (seconds_since_init()-drawtime)*1000;
+        // PrintDev("simulate: %ms ; rendertime: %ms\n", formatFloat(simtime, trailing_width=2), formatFloat(drawtime, trailing_width=2));
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
@@ -254,6 +244,22 @@ last_byte_pos :: inline (row: Row_Info) -> s64 {
     return row.pos;
 }
 
+get_cursor_row :: (using editor: *Editor) -> s64 {
+    if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
+
+    buffer := editor.active_buffer;
+    using buffer;
+
+    assert(row_table.count != 0);
+    for row_table {
+        if cursor_pos <= it.pos {
+            return it_index+1;
+        }
+    }
+
+    return row_table.count;
+}
+
 get_cursor_row :: (text: string) -> s64 {
     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 
@@ -265,6 +271,29 @@ get_cursor_row :: (text: string) -> s64 {
     }
 
     return row_table.count;
+}
+
+get_cursor_col :: (using editor: *Editor) -> s64 {
+    buffer := editor.active_buffer;
+    using buffer;
+    
+    text := to_string(buffer);
+
+    for row_table {
+        if cursor_pos <= it.pos {
+            row := it;
+            i := first_byte_pos(it);
+            cols := 0;
+            while i < cursor_pos {
+                byte := text[i];
+                i += 1 + trailingBytesForUTF8[byte];
+                cols += 1;
+            }
+            return cols;
+        }
+    }
+
+    return 0;
 }
 
 get_cursor_col :: (text: string) -> s64 {
@@ -289,6 +318,37 @@ next_char_byte_index :: inline (s: string, start: s64) -> s64 {
     assert(start < s.count);
     byte := s[start];
     return start + 1 + trailingBytesForUTF8[byte];
+}
+
+prev_char_byte_index :: (editor: *Editor, start: s64) -> s64 {
+    if start == 0 return 0;
+
+    buffer := editor.active_buffer;
+    using buffer;
+    text := to_string(buffer);
+
+    row_index := get_cursor_row(text) - 1;
+    i := first_byte_pos(row_table[row_index]);
+    if i == start {
+        // we on the first col of the row so we should check the above row last char
+        assert(row_index > 0); // sanity
+        if row_index == 0 return 0;
+        // step up by one row
+        row_index -= 1;
+        i = first_byte_pos(row_table[row_index]);
+    }
+
+    last_char_in_bytes := 0;
+    while i < start {
+        byte := text[i];
+        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
+        i += last_char_in_bytes;
+    }
+
+    index := start - last_char_in_bytes;
+    assert(index > -1);
+
+    return index;
 }
 
 prev_char_byte_index :: (text: string, start: s64) -> s64 {
@@ -365,55 +425,82 @@ safe_advance :: inline (s: *string, amount: s64 = 1) {
     s.data  += amount;
 }
 
+get_cursor_rel_x :: inline (using editor: *Editor) -> s64 {
+    x := get_cursor_x(editor);
+    return xx (x - left_offset + my_font.em_width);
+}
+
+get_cursor_rel_y :: inline (using editor: *Editor) -> s64 {
+    row := get_cursor_row(editor);
+    return xx (window_height - get_line_height(row) + top_offset);
+}
+
+get_cursor_x :: inline (using editor: *Editor) -> s64 {
+    if cursor_pos == 0 return 0;
+    return get_cursor_col(editor) * current_font_width();
+}
+
+get_cursor_y :: (using editor: *Editor) -> s64 {
+    if cursor_pos == 0 return window_height;
+    row := get_cursor_row(editor);
+    return window_height - xx get_line_height(row);
+}
+
+
+//// DELETE
 get_cursor_rel_y :: inline (text: string) -> s64 {
     row := get_cursor_row(text);
     return xx (window_height - get_line_height(row) + top_offset);
 }
-
 get_cursor_rel_x :: inline (text: string) -> s64 {
     x := get_cursor_x(text);
     return xx (x - left_offset + my_font.em_width);
 }
-
 get_cursor_x :: inline (text: string) -> s64 {
     if cursor_pos == 0 return 0;
     return get_cursor_col(text) * current_font_width();
 }
-
 get_cursor_y :: (text: string) -> s64 {
     if cursor_pos == 0 return window_height;
     row := get_cursor_row(text);
     return window_height - xx get_line_height(row);
 }
+//// DELETE
 
-append_text :: (b: *String_Builder, t: string) {
-    // @Speed @Cleanup
+append_text :: inline (editor: *Editor, buffer: *Buffer, text: string) {
+    // @Speed @Speed @Speed @Cleanup: Basically it's a memmove() do we have that intrinsic? !!!!!
 
-    buf := get_current_buffer(b);
-    text := builder_to_string(b, do_reset = true);
-    defer free(text);
+    maybe_grow(buffer, text.count);
+    
+    left := buffer.data;
+    dest := left + editor.cursor_pos;
+    new_right := dest + text.count;
+    right_rem_size := buffer.count - (dest-left);
 
-    if cursor_pos {
-        a := text;
-        a.count = cursor_pos;
-        append(b, a);
-    }
+    // @Speed
+    tmp := cast(*u8)alloc(right_rem_size);
+    defer free(tmp);
+    copy(tmp, dest, right_rem_size);
+    copy(new_right, tmp, right_rem_size);
+    copy(dest, text.data, text.count);
 
-    append(b, t);
+    buffer.rebuild_row_table = true;
+    set_cursor_pos(editor, editor.cursor_pos+text.count);
+}
 
-    a := advance(text, cursor_pos);
-    append(b, a);
-
-    increase_cursor_pos(t.count);
-
-    should_rebuild_row_table = true;
+set_cursor_pos :: inline (using editor: *Editor, index: s64) {
+    // @Todo: check overflow, use clamp() proc
+    if index < 0 then index = 0;
+    cursor_pos = index;
+    cursor_moved = true;
+    // cursor_moved = true; // @Cleanup: Remove
 }
 
 set_cursor_pos :: inline (index: s64, $update_desired_cursor_col := false) {
     // @Todo: check overflow, use clamp() proc
     if index < 0 then index = 0;
     cursor_pos = index;
-    cursor_moved = true;
+    cursor_moved = true; // @Cleanup: Remove
 }
 
 increase_cursor_pos :: inline (by: s64) {
@@ -442,17 +529,6 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
     }
 
     return -1;
-}
-
-surround_chars :: (s: string, index: s64) -> bool, string {
-    if s.count == 0    return false, s;
-    if index > s.count return false, s;
-
-    r := s;
-    if index+1 <= s.count then r.count = index+1;
-    if index-1 > -1      then advance(*r, index-1);
-
-    return true, r;
 }
 
 my_init_fonts :: () {
@@ -514,19 +590,26 @@ rebuild_row_table :: (s: string) {
     row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
 }
 
-first_visible_row_index :: inline (s: string) -> s64 {
-    line_height := get_line_height();
-    start_row: s64 = xx (top_offset / line_height);
-    start_row = clamp(start_row - 1, 0, row_table.count-1);
-    return start_row;
-}
+// @Cleanup: use this!!
+// first_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
+//     s := to_string(buffer);
 
-last_visible_row_index :: inline (s: string) -> s64 {
+//     line_height := get_line_height();
+//     start_row: s64 = xx (top_offset / line_height);
+//     start_row = clamp(start_row - 1, 0, row_table.count-1);
+
+//     return start_row;
+// }
+
+last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
+    s := to_string(buffer);
+
     viewport_h := window_height-footer_height*2; // @Hacky
 
     line_height := get_line_height();
     end_row: s64 = xx ((top_offset + viewport_h) / line_height);
     end_row = clamp(end_row+1, 0, row_table.count-1);
+
     return end_row;
 }
 
@@ -544,7 +627,7 @@ print_row :: inline (s: string, row_index: s64) {
 }
 
 get_line_height :: inline (row: s64 = 1) -> float32 {
-    return (my_font.default_line_spacing+line_height)*row;
+    return row * (my_font.default_line_spacing+line_height);
 }
 
 is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
@@ -585,17 +668,6 @@ modify_string :: (ps: *string, new_value: string) {
 
 search_text: string;
 
-row_table_recalc_time: float64 = 0.0;
-draw_row_table := false;
-should_rebuild_row_table := false;
-row_table: [..] Row_Info;
-
-// @Ambiguity
-Row_Info :: struct {
-    pos: s64;  // end byte index of the row
-    cols: s64; // bytes in the row
-}
-
 Editor_Event :: struct {
     proc: Editor_Event_Proc;
 }
@@ -617,27 +689,27 @@ handle_editor_events :: () {
     array_reset_keeping_memory(*editor_events);
 }
 
-last_occurance_offset: s64 = -1;
-FindNextOccurence :: () {
-    if search_text.count == 0 return;
+// last_occurance_offset: s64 = -1;
+// FindNextOccurence :: () {
+//     if search_text.count == 0 return;
 
-    text := builder_to_string(*builder, do_reset = false);
-    defer free(text);
+//     text := builder_to_string(*builder, do_reset = false);
+//     defer free(text);
 
-    start := ifx last_occurance_offset == -1 then 0 else last_occurance_offset;
+//     start := ifx last_occurance_offset == -1 then 0 else last_occurance_offset;
     
-    if start < text.count {
-        s := text;
-        advance(*s, start);
-        byte_offset, found := index_of_string_nocase(s, search_text);
-        if !found byte_offset = -1;
-        if byte_offset != -1 {
-            last_occurance_offset = start + byte_offset + search_text.count; // @Todo: check overflow
-            set_cursor_pos(start+byte_offset);
-        }
-    }
+//     if start < text.count {
+//         s := text;
+//         advance(*s, start);
+//         byte_offset, found := index_of_string_nocase(s, search_text);
+//         if !found byte_offset = -1;
+//         if byte_offset != -1 {
+//             last_occurance_offset = start + byte_offset + search_text.count; // @Todo: check overflow
+//             set_cursor_pos(start+byte_offset);
+//         }
+//     }
 
-}
+// }
 
 #if OS == .WINDOWS {
     user32 :: #system_library "user32";
@@ -646,7 +718,7 @@ FindNextOccurence :: () {
 
 #load "draw.jai";
 #load "keymap.jai";
-// #load "editor.jai";
+#load "editor.jai";
 
 #import "System";
 #import "Basic";
@@ -659,3 +731,4 @@ FindNextOccurence :: () {
 #import "Unicode";
 Simp :: #import "Simp";
 #import "GetRect";
+#import "Memory";

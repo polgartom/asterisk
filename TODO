@@ -33,6 +33,8 @@
 [x] Proper UTF-8
 [X] Word stepping (Ctrl+{arrow})
 [X] Subword stepping (Alt+{arrow})
+[] Custom u8 buffer instead of string builder
+[] Editor context which have multiple buffer, we want multiple editor context for split screen
 [] Fix word/subword stepping if the cursor surrounded with multiple line breaks
 [] Improve word/subword stepping mainly because the left and right movement not exactly the same
 [] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set, which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
