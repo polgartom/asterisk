@@ -33,16 +33,19 @@
 [x] Proper UTF-8
 [X] Word stepping (Ctrl+{arrow})
 [X] Subword stepping (Alt+{arrow})
-[] Custom u8 buffer instead of string builder
-[] Editor context which have multiple buffer, we want multiple editor context for split screen
+[X] Custom u8 buffer instead of string builder
+[X] Editor context which have multiple buffer, we want multiple editor context for split screen
+[] Move cursor related data to the Buffer struct
+[] Need an abstraction for the c_memmove thing like move_data_left, most of the time that is what we need 
+[] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [] Fix word/subword stepping if the cursor surrounded with multiple line breaks
 [] Improve word/subword stepping mainly because the left and right movement not exactly the same
 [] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set, which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
 [] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
-[] Draw spaces
+[] Draw spaces. We should remove the current thing because that replaces the spaces with ~ characters which is not gooood!
 [] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
-[] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
-[] Open a file
+[X] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
+[X] Open a file
 [] Save the buffer (file)
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
 [] Keep the cursor center after new occurence has found
