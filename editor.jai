@@ -3,6 +3,7 @@ Editor :: struct {
     active_buffer: *Buffer;
     cursor_pos: s64 = 0;
     cursor_moved := false;
+    last_cursor_col_for_up_down_movement: s64 = 0;
 }
 
 editor: Editor; // @Temporary
@@ -18,17 +19,17 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
 	assert(size > -1);
 
     desired_size := buffer.count + size;
+    if desired_size == 0 desired_size = 4096; // @temporary
     if desired_size >= buffer.allocated {
         SCALAR :: 2;
         new_size := buffer.allocated + (desired_size * SCALAR);
-        new_data := cast(*u8)alloc(new_size);
+        new_data := cast(*u8)c_malloc(xx new_size);
         assert(new_data != null);
+        memset(new_data, 0, xx new_size);
 
         if buffer.data {
-            // @Cleanup: We should use realloc, but does it free the memory?
-            // copy(new_data, buffer.data, buffer.count);
-            copy(new_data, buffer.data, buffer.allocated);
-            free(buffer.data);
+            memcpy(new_data, buffer.data, buffer.allocated);
+            c_free(buffer.data);
         }
 
         buffer.data      = new_data;
@@ -47,11 +48,6 @@ Buffer :: struct {
 
     filepath: string;
 }
-
-// @Todo: Delete
-should_rebuild_row_table := false;
-row_table: [..] Row_Info;
-row_table_recalc_time: float64 = 0.0;
 
 // @Ambiguity
 Row_Info :: struct {

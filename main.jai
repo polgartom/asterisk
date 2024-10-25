@@ -9,17 +9,16 @@ should_quit := false;
 // background_color : Vector4 = .{.0, .155, .125, 1};
 my_font: *Simp.Dynamic_Font;
 
-cursor_pos   := 0;
-cursor_moved := false;
-last_cursor_col_for_up_down_movement := 0; // @Cleanup naming! :SetDesiredColumnAfterMove
-
 last_time : float64;
 
 font_width: s64;
 
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
-cursor_color :: Vector4.{.9, .0, .0, 1.0};
+CURSOR_COLOR :: Vector4.{.9, .0, .0, 1.0}; // RED
+
+// @Todo: Blend with the text color
+// CURSOR_COLOR :: Vector4.{134.0/255, 224.0/255, 143.0/255, 3.0};
 
 line_height :: 0.0;
 font_size :: 15;
@@ -81,14 +80,18 @@ main :: () {
 
     // @Todo: We should create an initial empty buffer
     {
-        open_file(*editor, "main.jai");
-        print("buffer: %\n", editor.buffers[0]);
+        // open_file(*editor, "main.jai");
+        // print("buffer: %\n", editor.buffers[0]);
 
-        // buffer := array_add(*editor.buffers);
-        // buffer.data = cast(*u8)alloc(4096);
-        // buffer.allocated = 4096;
-        // buffer.count = 0;
-        // editor.active_buffer = buffer;
+        // @Todo: It's just for debug but we shoudl create an initial (starting) buffer for every new Editor instance
+        t := "birka\ncica";
+        buffer := array_add(*editor.buffers);
+        editor.active_buffer = buffer;
+        maybe_grow(buffer, t.count);
+        memcpy(buffer.data, t.data, t.count);
+        buffer.count = t.count;
+
+        buffer.rebuild_row_table = true;
     }
         
     last_time = seconds_since_init();
@@ -151,8 +154,9 @@ main :: () {
                     if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
-                    append_text(*editor, editor.active_buffer, string_for_utf32_to_utf8);
-                    // append_text(*builder, string_for_utf32_to_utf8);
+                    
+                    insert_text(editor.active_buffer, editor.cursor_pos, string_for_utf32_to_utf8);
+                    advance_cursor_pos(*editor, string_for_utf32_to_utf8.count);
                 }
             } else {
                 if event.key_code == .ESCAPE {
@@ -165,10 +169,6 @@ main :: () {
         text := to_string(editor.active_buffer);
         if editor.active_buffer.rebuild_row_table {
             rebuild_row_table(editor.active_buffer);
-        }
-
-        for row_table {
-            PrintDev("pos: % ; cols: %\n", it.pos, it.cols);
         }
 
         handle_editor_events();
@@ -196,6 +196,8 @@ main :: () {
         // simtime := (seconds_since_init()-last_time)*1000;
 
         if show_debug_info {
+            using editor;
+
             PrintDev("F1 toggle dev | F2 hidden chars\n");
             PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
@@ -205,7 +207,7 @@ main :: () {
             cx  := get_cursor_x(*editor);
             cy  := get_cursor_y(*editor);
             PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
-            PrintDev("rows: % ; gentime: %ms\n", row_table.count, formatFloat(row_table_recalc_time, trailing_width=2));
+            PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
 
             PrintDev("--------------rendering--------------\n");
         }
@@ -244,6 +246,19 @@ last_byte_pos :: inline (row: Row_Info) -> s64 {
     return row.pos;
 }
 
+find_row_index :: (using buffer: *Buffer, pos: s64) -> s64 {
+    if pos == 0 return 0;
+
+    assert(row_table.count != 0);
+    for row_table {
+        if pos <= it.pos {
+            return it_index;
+        }
+    }
+
+    return row_table.count;
+}
+
 get_cursor_row :: (using editor: *Editor) -> s64 {
     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 
@@ -260,19 +275,7 @@ get_cursor_row :: (using editor: *Editor) -> s64 {
     return row_table.count;
 }
 
-get_cursor_row :: (text: string) -> s64 {
-    if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
-
-    assert(row_table.count != 0);
-    for row_table {
-        if cursor_pos <= it.pos {
-            return it_index+1;
-        }
-    }
-
-    return row_table.count;
-}
-
+// We should define the cursor_pos in the buffer not in the editor
 get_cursor_col :: (using editor: *Editor) -> s64 {
     buffer := editor.active_buffer;
     using buffer;
@@ -296,48 +299,28 @@ get_cursor_col :: (using editor: *Editor) -> s64 {
     return 0;
 }
 
-get_cursor_col :: (text: string) -> s64 {
-    for row_table {
-        if cursor_pos <= it.pos {
-            row := it;
-            i := first_byte_pos(it);
-            cols := 0;
-            while i < cursor_pos {
-                byte := text[i];
-                i += 1 + trailingBytesForUTF8[byte];
-                cols += 1;
-            }
-            return cols;
-        }
-    }
-
-    return 0;
-}
-
 next_char_byte_index :: inline (s: string, start: s64) -> s64 {
     assert(start < s.count);
     byte := s[start];
     return start + 1 + trailingBytesForUTF8[byte];
 }
 
-prev_char_byte_index :: (editor: *Editor, start: s64) -> s64 {
+prev_char_byte_index :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
 
-    buffer := editor.active_buffer;
-    using buffer;
     text := to_string(buffer);
 
-    row_index := get_cursor_row(text) - 1;
+    row_index := find_row_index(buffer, start);
     i := first_byte_pos(row_table[row_index]);
     if i == start {
         // we on the first col of the row so we should check the above row last char
         assert(row_index > 0); // sanity
         if row_index == 0 return 0;
-        // step up by one row
-        row_index -= 1;
+        row_index -= 1; // step up by one row
         i = first_byte_pos(row_table[row_index]);
     }
 
+    // count back from left to right
     last_char_in_bytes := 0;
     while i < start {
         byte := text[i];
@@ -346,60 +329,6 @@ prev_char_byte_index :: (editor: *Editor, start: s64) -> s64 {
     }
 
     index := start - last_char_in_bytes;
-    assert(index > -1);
-
-    return index;
-}
-
-prev_char_byte_index :: (text: string, start: s64) -> s64 {
-    if start == 0 return 0;
-
-    row_index := get_cursor_row(text) - 1;
-    i := first_byte_pos(row_table[row_index]);
-    if i == start {
-        // we on the first col of the row so we should check the above row last char
-        assert(row_index > 0); // sanity
-        if row_index == 0 return 0;
-        // step up by one row
-        row_index -= 1;
-        i = first_byte_pos(row_table[row_index]);
-    }
-
-    last_char_in_bytes := 0;
-    while i < start {
-        byte := text[i];
-        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
-        i += last_char_in_bytes;
-    }
-
-    index := start - last_char_in_bytes;
-    assert(index > -1);
-
-    return index;
-}
-
-prev_char_byte_index :: (text: string) -> s64 #deprecated {
-    if cursor_pos == 0 return 0;
-
-    row_index := get_cursor_row(text) - 1;
-    i := first_byte_pos(row_table[row_index]);
-    if i == cursor_pos {
-        // we on the first col of the row so we should check the above row last char
-        assert(row_index > 0); // sanity
-        if row_index == 0 return 0;
-        // step up by one row
-        row_index -= 1;
-        i = first_byte_pos(row_table[row_index]);
-    }
-
-    last_char_in_bytes := 0;
-    while i < cursor_pos {
-        byte := text[i];
-        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
-        i += last_char_in_bytes;
-    }
-
-    index := cursor_pos - last_char_in_bytes;
     assert(index > -1);
 
     return index;
@@ -446,46 +375,20 @@ get_cursor_y :: (using editor: *Editor) -> s64 {
     return window_height - xx get_line_height(row);
 }
 
-
-//// DELETE
-get_cursor_rel_y :: inline (text: string) -> s64 {
-    row := get_cursor_row(text);
-    return xx (window_height - get_line_height(row) + top_offset);
-}
-get_cursor_rel_x :: inline (text: string) -> s64 {
-    x := get_cursor_x(text);
-    return xx (x - left_offset + my_font.em_width);
-}
-get_cursor_x :: inline (text: string) -> s64 {
-    if cursor_pos == 0 return 0;
-    return get_cursor_col(text) * current_font_width();
-}
-get_cursor_y :: (text: string) -> s64 {
-    if cursor_pos == 0 return window_height;
-    row := get_cursor_row(text);
-    return window_height - xx get_line_height(row);
-}
-//// DELETE
-
-append_text :: inline (editor: *Editor, buffer: *Buffer, text: string) {
-    // @Speed @Speed @Speed @Cleanup: Basically it's a memmove() do we have that intrinsic? !!!!!
-
+insert_text :: (buffer: *Buffer, pos: s64, text: string) {
     maybe_grow(buffer, text.count);
     
     left := buffer.data;
-    dest := left + editor.cursor_pos;
-    new_right := dest + text.count;
-    right_rem_size := buffer.count - (dest-left);
+    insert_at := left + pos;
+    new_right := insert_at + text.count;
+    right_rem_size := buffer.count - (insert_at-left);
 
-    // @Speed
-    tmp := cast(*u8)alloc(right_rem_size);
-    defer free(tmp);
-    copy(tmp, dest, right_rem_size);
-    copy(new_right, tmp, right_rem_size);
-    copy(dest, text.data, text.count);
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
 
+    memcpy(insert_at, text.data, text.count);
+
+    buffer.count += text.count;
     buffer.rebuild_row_table = true;
-    set_cursor_pos(editor, editor.cursor_pos+text.count);
 }
 
 set_cursor_pos :: inline (using editor: *Editor, index: s64) {
@@ -496,15 +399,8 @@ set_cursor_pos :: inline (using editor: *Editor, index: s64) {
     // cursor_moved = true; // @Cleanup: Remove
 }
 
-set_cursor_pos :: inline (index: s64, $update_desired_cursor_col := false) {
-    // @Todo: check overflow, use clamp() proc
-    if index < 0 then index = 0;
-    cursor_pos = index;
-    cursor_moved = true; // @Cleanup: Remove
-}
-
-increase_cursor_pos :: inline (by: s64) {
-    set_cursor_pos(cursor_pos + by);
+advance_cursor_pos :: inline (editor: *Editor, by: s64) {
+    set_cursor_pos(editor, editor.cursor_pos + by);
 }
 
 find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
@@ -559,37 +455,6 @@ num_of_utf8_chars :: inline (s: string) -> s64 {
     return total;
 }
 
-rebuild_row_table :: (s: string) {
-    should_rebuild_row_table = false;
-
-    row_table_recalc_time = seconds_since_init()*1000;
-
-    // array_reset(*row_table); // @speedwe can reuse the same memory
-    array_reset_keeping_memory(*row_table);
-
-    pos  := 0;
-    posc := 0;
-    while true {
-        ln_index := find_index_from_left(s, #char "\n");
-        if ln_index == -1 {
-            chars := s.count;
-            array_add(*row_table, .{pos=pos+chars, cols=chars});
-            break;
-        }
-
-        chars := ln_index;
-        pos += chars;
-        array_add(*row_table, .{pos=pos, cols=chars});
-
-        ln_index += 1;
-        advance(*s, ln_index);
-
-        pos += 1; // because of the line end
-    }
-
-    row_table_recalc_time = seconds_since_init()*1000 - row_table_recalc_time;
-}
-
 // @Cleanup: use this!!
 // first_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
 //     s := to_string(buffer);
@@ -611,19 +476,6 @@ last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
     end_row = clamp(end_row+1, 0, row_table.count-1);
 
     return end_row;
-}
-
-print_row :: inline (s: string, row_index: s64) {
-    assert(row_index > -1);
-
-    row := row_table[row_index];
-    start := row.pos-row.cols;
-    end := start+row.cols;
-    assert(start > -1);
-    assert(end <= s.count, "end: % ; s.count: %\n", end, s.count);
-
-    t := slice(s, start, row.cols);
-    print("(%,%,%)> |%|\n", row_index, row.pos, row.cols, t);
 }
 
 get_line_height :: inline (row: s64 = 1) -> float32 {
@@ -732,3 +584,14 @@ handle_editor_events :: () {
 Simp :: #import "Simp";
 #import "GetRect";
 #import "Memory";
+
+c_malloc  :: (size: u64) -> *void                #foreign crt "malloc";
+c_free    :: (memory: *void)                     #foreign crt "free";
+c_realloc :: (memory: *void, size: u64) -> *void #foreign crt "realloc";
+c_memmove :: (dest: *void, src: *void, count: u64) -> *void #foreign crt "memmove";
+
+#if OS == .WINDOWS {
+    crt :: #system_library "msvcrt";  // For malloc, free on Windows
+} else #if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
+    crt :: #system_library "libc";
+}

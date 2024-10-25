@@ -12,10 +12,11 @@ register_keymap_procedures :: () {
     add_proc(k, "MoveDown", MoveDown);
     add_proc(k, "MoveLeft", MoveLeft);
     add_proc(k, "MoveRight", MoveRight);
-    // add_proc(k, "MoveLeftWord", MoveLeftWord);
-    // add_proc(k, "MoveRightWord", MoveRightWord);
-    // add_proc(k, "MoveLeftSubword", MoveLeftSubword);
-    // add_proc(k, "MoveRightSubword", MoveRightSubword);
+    
+    add_proc(k, "MoveLeftWord", MoveLeftWord);
+    add_proc(k, "MoveLeftSubword", MoveLeftSubword);
+    add_proc(k, "MoveRightWord", MoveRightWord);
+    add_proc(k, "MoveRightSubword", MoveRightSubword);
 
     // add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
     // add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
@@ -75,7 +76,7 @@ MoveUp :: () {
             prev_row := row_table[it_index-1];
 
             prev_row_cols := cols_in_the_row(text, prev_row);
-            steps := min(prev_row_cols, last_cursor_col_for_up_down_movement);
+            steps := min(prev_row_cols, editor.last_cursor_col_for_up_down_movement);
             pos := first_byte_pos(prev_row);
             while steps {
                 byte := text[pos];
@@ -101,7 +102,7 @@ MoveDown :: () {
             next_row := row_table[it_index+1];
 
             next_row_cols := cols_in_the_row(text, next_row);
-            steps := min(next_row_cols, last_cursor_col_for_up_down_movement);
+            steps := min(next_row_cols, editor.last_cursor_col_for_up_down_movement);
             pos := first_byte_pos(next_row);
             while steps {
                 byte := text[pos];
@@ -117,9 +118,12 @@ MoveDown :: () {
 }
 
 MoveLeft :: () {
-    if editor.cursor_pos == 0 return;
+    using editor;
 
-    i := prev_char_byte_index(*editor, editor.cursor_pos);
+    if cursor_pos == 0 return;
+
+    buffer := active_buffer;
+    i := prev_char_byte_index(active_buffer, editor.cursor_pos);
     set_cursor_pos(*editor, i);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
@@ -130,148 +134,149 @@ MoveLeft :: () {
 MoveRight :: () {
     buffer := editor.active_buffer;
     using buffer;
-    text := to_string(editor.active_buffer);
+    text := to_string(buffer);
 
     if !(editor.cursor_pos < text.count) return;
 
-    byte := text[cursor_pos];
+    byte := text[editor.cursor_pos];
     steps := 1 + trailingBytesForUTF8[byte];
     set_cursor_pos(*editor, editor.cursor_pos + steps);
 
+    editor.last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+}
+
+move_left_word :: ($subword_mode: bool) {
+    using editor;
+    
+    if cursor_pos == 0 return;
+
+    text := to_string(active_buffer);
+
+    if !(cursor_pos < text.count) {
+        i := prev_char_byte_index(active_buffer, cursor_pos);
+        set_cursor_pos(*editor, i);
+    }
+
+    row_index := find_row_index(active_buffer, cursor_pos);
+    row := active_buffer.row_table[row_index];
+
+    offset := first_byte_pos(row);
+    if offset == cursor_pos {
+        if row_index == 0 return; // no more row above
+
+        row = active_buffer.row_table[row_index-1];
+        offset = first_byte_pos(row);
+    }
+
+    start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
+    end := prev_char_byte_index(active_buffer, cursor_pos);
+    assert(end > -1);
+    assert(end < text.count);
+
+    // @Cleanup
+    whitespace := is_whitespace(text[cursor_pos]) && is_whitespace(text[end]);
+    if whitespace {
+        last_non_whitespace_offset := cursor_pos;
+        for start..end {
+            if !is_whitespace(text[it]) {
+                last_non_whitespace_offset = it;
+            }
+        }
+        set_cursor_pos(*editor, last_non_whitespace_offset+1);
+        last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+        return;
+    }
+
+    // @Cleanup
+    if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[cursor_pos], subword_mode) {
+        for start..end {
+            separator := is_separator_char(text[it], subword_mode);
+            if separator {
+                offset = it;
+            }
+        }
+    } else {
+        not_combined := is_separator_char(text[cursor_pos], subword_mode) && !is_separator_char(text[end], subword_mode);
+        for start..end {
+            separator := is_separator_char(text[it], subword_mode);
+            if not_combined {
+                if separator {
+                    offset = it;
+                }
+            } else {
+                if !separator {
+                    offset = it;
+                }
+            }
+        }
+    }
+    
+    if offset != start {
+        offset = next_char_byte_index(text, offset);
+    }
+
+    set_cursor_pos(*editor, offset);
     last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
 }
 
-// move_left_word :: ($subword_mode: bool) {
-//     if cursor_pos == 0 return;
+move_right_word :: ($subword_mode: bool) {
+    using editor;
 
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
+    if !(cursor_pos < active_buffer.count) return;
 
-//     if !(cursor_pos < text.count) {
-//         i := prev_char_byte_index(text, cursor_pos);
-//         set_cursor_pos(i);
-//     }
+    text := to_string(active_buffer);
+    start := next_char_byte_index(text, cursor_pos);
 
-//     row_index := get_cursor_row(text)-1;
-//     row := row_table[row_index];
+    // It's a better solution than the current IDE's behavior
+    whitespace := is_whitespace(text[cursor_pos]);
+    if whitespace {
+        last_whitespace_offset := cursor_pos;
+        for start..text.count-1 {
+            last_whitespace_offset = it;
+            if !is_whitespace(text[it]) break;
+        }
+        set_cursor_pos(*editor, last_whitespace_offset);
+        last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+        return;
+    }
 
-//     offset := first_byte_pos(row);
-//     if offset == cursor_pos {
-//         if row_index == 0 return; // no more row above
+    combined := is_separator_char(text[cursor_pos]);
+    for start..text.count-1 {
+        separator := is_separator_char(text[it], subword_mode);
+        if combined {
+            if !separator {
+                set_cursor_pos(*editor, it);
+                last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+                return;
+            }
+        } else {
+            if separator {
+                set_cursor_pos(*editor, it);
+                last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+                return;
+            }
+        }
+    }
 
-//         row = row_table[row_index-1];
-//         offset = first_byte_pos(row);
-//     }
+    set_cursor_pos(*editor, text.count); // no more word so we should jump to the last byte of the row
+    last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+}
 
-//     start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
-//     end := prev_char_byte_index(text, cursor_pos);
-//     assert(end > -1);
-//     assert(end < text.count);
+MoveLeftWord :: inline () {
+    move_left_word(false);
+}
 
-//     // @Cleanup
-//     whitespace := is_whitespace(text[cursor_pos]) && is_whitespace(text[end]);
-//     if whitespace {
-//         last_non_whitespace_offset := cursor_pos;
-//         for start..end {
-//             if !is_whitespace(text[it]) {
-//                 last_non_whitespace_offset = it;
-//             }
-//         }
-//         set_cursor_pos(last_non_whitespace_offset+1);
-//         last_cursor_col_for_up_down_movement = get_cursor_col(text);
-//         return;
-//     }
+MoveLeftSubword :: inline () {
+    move_left_word(true);
+}
 
-//     // @Cleanup
-//     if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[cursor_pos], subword_mode) {
-//         for start..end {
-//             separator := is_separator_char(text[it], subword_mode);
-//             if separator {
-//                 offset = it;
-//             }
-//         }
-//     } else {
-//         not_combined := is_separator_char(text[cursor_pos], subword_mode) && !is_separator_char(text[end], subword_mode);
-//         for start..end {
-//             separator := is_separator_char(text[it], subword_mode);
-//             if not_combined {
-//                 if separator {
-//                     offset = it;
-//                 }
-//             } else {
-//                 if !separator {
-//                     offset = it;
-//                 }
-//             }
-//         }
-//     }
-    
-//     if offset != start {
-//         offset = next_char_byte_index(text, offset);
-//     }
+MoveRightWord :: inline () {
+    move_right_word(false);
+}
 
-//     set_cursor_pos(offset);
-//     last_cursor_col_for_up_down_movement = get_cursor_col(text);
-// }
-
-// move_right_word :: ($subword_mode: bool) {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
-
-//     if !(cursor_pos < text.count) return;
-
-//     start := next_char_byte_index(text, cursor_pos);
-
-//     // It's a better solution than the current IDE's behavior
-//     whitespace := is_whitespace(text[cursor_pos]);
-//     if whitespace {
-//         last_whitespace_offset := cursor_pos;
-//         for start..text.count-1 {
-//             last_whitespace_offset = it;
-//             if !is_whitespace(text[it]) break;
-//         }
-//         set_cursor_pos(last_whitespace_offset);
-//         last_cursor_col_for_up_down_movement = get_cursor_col(text);
-//         return;
-//     }
-
-//     combined := is_separator_char(text[cursor_pos]);
-//     for start..text.count-1 {
-//         separator := is_separator_char(text[it], subword_mode);
-//         if combined {
-//             if !separator {
-//                 set_cursor_pos(it);
-//                 last_cursor_col_for_up_down_movement = get_cursor_col(text);
-//                 return;
-//             }
-//         } else {
-//             if separator {
-//                 set_cursor_pos(it);
-//                 last_cursor_col_for_up_down_movement = get_cursor_col(text);
-//                 return;
-//             }
-//         }
-//     }
-
-//     set_cursor_pos(text.count);
-//     last_cursor_col_for_up_down_movement = get_cursor_col(text);
-// }
-
-// MoveLeftWord :: inline () {
-//     move_left_word(false);
-// }
-
-// MoveRightWord :: inline () {
-//     move_right_word(false);
-// }
-
-// MoveLeftSubword :: inline () {
-//     move_left_word(true);
-// }
-
-// MoveRightSubword :: inline () {
-//     move_right_word(true);
-// }
+MoveRightSubword :: inline () {
+    move_right_word(true);
+}
 
 // ScrollViewPortUp :: () {
 //     text := builder_to_string(*builder, do_reset = false);

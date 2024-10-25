@@ -39,10 +39,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         left := cx - left_offset;
         h := my_font.character_height;
 
-        Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), cursor_color); // @Todo: WRONG!
-
-        // ch := get_char_at_string_index(text, cursor_pos);
-        // PrintDev("cursor | i: % % ; x1: % y1: % x2: % y2: %\n", cursor_pos, ch, left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)));
+        // @Improve: This isn't accurate
+        Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), CURSOR_COLOR); 
     }
 
     // Draw lines
@@ -145,13 +143,13 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         {
             ct := seconds_since_init();
             if second_elapsed {
-                frametime = (ct - last_time) * 1000; // frametime
-                fps       = 1000/frametime;
+                frametime = (ct - last_time); // frametime
+                fps       = 1/frametime;
             }
 
             PrintDev("%fps %ms %sec\n", 
                 formatFloat(fps, trailing_width=0), 
-                formatFloat(frametime, trailing_width=2), 
+                formatFloat(frametime*1000, trailing_width=2), 
                 formatFloat(last_time, trailing_width=0)
             );
         }
