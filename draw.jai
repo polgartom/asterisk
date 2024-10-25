@@ -1,16 +1,18 @@
 draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
+    active_editor := get_active_editor();
+
     proc := default_theme_procs[current_theme];
     my_theme = proc();
     set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
-
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
     r := get_rect(0.0, 0.0, xx width, xx height);
-
     r=, footer := cut_top(r, window_height-footer_height);
 
     {
+        using active_editor;
+
         rel_x := get_cursor_rel_x(*editor);
         if rel_x - window_width >= 0 {
             left_offset += rel_x - window_width;
@@ -28,6 +30,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw cursor
     if editor_in_focus {
+        using active_editor;
+
         row := get_cursor_row(*editor);
         cx  := get_cursor_x(*editor);
 
@@ -45,7 +49,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw lines
     if text.count {
-        using editor.active_buffer;
+        using active_editor;
+        using active_editor.active_buffer;
 
         avg_row_render_time: float64 = 0.0;
         rendered_rows := 0;

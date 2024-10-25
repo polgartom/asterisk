@@ -1,12 +1,19 @@
+// @Temporary
+editor: Editor;
+get_active_editor :: inline () -> *Editor {
+    return *editor;
+}
+
 Editor :: struct {
     buffers: [..] Buffer;
     active_buffer: *Buffer;
     cursor_pos: s64 = 0;
     cursor_moved := false;
     last_cursor_col_for_up_down_movement: s64 = 0;
-}
 
-editor: Editor; // @Temporary
+    top_offset  := 0.0; // s64?
+    left_offset := 0.0; // s64?
+}
 
 to_string :: inline (buffer: *Buffer) -> string {
     s: string = ---;
@@ -14,7 +21,6 @@ to_string :: inline (buffer: *Buffer) -> string {
     s.data = buffer.data;
     return s;
 }
-
 
 shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for "to" and "from"
     if to == from return;

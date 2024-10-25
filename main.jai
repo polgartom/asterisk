@@ -35,9 +35,6 @@ TAB_SPACE_CHARS :: #run -> string {
 
 draw_special_chars := false;
 
-top_offset := 0.0;
-left_offset := 0.0;
-
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
@@ -169,8 +166,6 @@ main :: () {
         if editor.active_buffer.rebuild_row_table {
             rebuild_row_table(editor.active_buffer);
         }
-
-        handle_editor_events();
 
         if draw_special_chars {
             // Tabs
@@ -462,33 +457,19 @@ current_font_width :: () -> s64 {
     return my_font.em_width;
 }
 
-num_of_utf8_chars :: inline (s: string) -> s64 {
-    total := 0;
-    while s.count {
-        count := 1 + trailingBytesForUTF8[s[0]];
-        advance(*s, count);
-        total += count;
-    }
-    return total;
-}
-
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
-    s := to_string(buffer);
-
     line_height := get_line_height();
-    start_row: s64 = xx (top_offset / line_height); // @Todo :OffsetsInTheEditorContext We should put this in the Editor context if we want a split screen later
+    start_row: s64 = xx (editor.top_offset / line_height);
     start_row = clamp(start_row - 1, 0, row_table.count-1);
 
     return start_row;
 }
 
 last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
-    s := to_string(buffer);
-
     viewport_h := window_height-footer_height*2; // @Hacky
 
     line_height := get_line_height();
-    end_row: s64 = xx ((top_offset + viewport_h) / line_height); // @Todo :OffsetsInTheEditorContext
+    end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);
     end_row = clamp(end_row+1, 0, row_table.count-1);
 
     return end_row;
@@ -528,56 +509,6 @@ is_whitespace :: inline (c: s64) -> bool {
 
     return c == #char " " || c == #char "\n";
 }
-
-modify_string :: (ps: *string, new_value: string) {
-    free(ps.*);
-    ps.* = copy_string(new_value);
-}
-
-search_text: string;
-
-Editor_Event :: struct {
-    proc: Editor_Event_Proc;
-}
-
-Editor_Event_Proc :: #type ();
-
-editor_events: [..] Editor_Event;
-
-add_editor_event :: (proc_: Editor_Event_Proc) {
-    array_add(*editor_events, .{proc=proc_});
-}
-
-handle_editor_events :: () {
-    for < editor_events.count-1..0 {
-        event := editor_events[it];
-        event.proc();
-    }
-
-    array_reset_keeping_memory(*editor_events);
-}
-
-// last_occurance_offset: s64 = -1;
-// FindNextOccurence :: () {
-//     if search_text.count == 0 return;
-
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
-
-//     start := ifx last_occurance_offset == -1 then 0 else last_occurance_offset;
-
-//     if start < text.count {
-//         s := text;
-//         advance(*s, start);
-//         byte_offset, found := index_of_string_nocase(s, search_text);
-//         if !found byte_offset = -1;
-//         if byte_offset != -1 {
-//             last_occurance_offset = start + byte_offset + search_text.count; // @Todo: check overflow
-//             set_cursor_pos(start+byte_offset);
-//         }
-//     }
-
-// }
 
 #if OS == .WINDOWS {
     user32 :: #system_library "user32";
