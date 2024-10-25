@@ -18,10 +18,10 @@ register_keymap_procedures :: () {
     add_proc(k, "MoveRightWord", MoveRightWord);
     add_proc(k, "MoveRightSubword", MoveRightSubword);
 
-    // add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
-    // add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
+    add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
+    add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
 
-    // add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
+    add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
     // add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
     
     // add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
@@ -29,9 +29,9 @@ register_keymap_procedures :: () {
     // add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
     // add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
 
-    // add_proc(k, "InsertTab", InsertTab);
-    // add_proc(k, "InsertLine", InsertLine);
-    // add_proc(k, "InsertLineBelow", InsertLineBelow);
+    add_proc(k, "InsertTab", InsertTab);
+    add_proc(k, "InsertLine", InsertLine);
+    add_proc(k, "InsertLineBelow", InsertLineBelow);
 
     // add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
     // add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
@@ -278,33 +278,37 @@ MoveRightSubword :: inline () {
     move_right_word(true);
 }
 
-// ScrollViewPortUp :: () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
+ScrollViewPortUp :: () {
+    buffer := editor.active_buffer;
+    using buffer;
 
-//     start := first_visible_row_index(text);
-//     end := last_visible_row_index(text);
-//     max_row := clamp(end-start, 0, row_table.count-1);
-//     current_row := get_cursor_row(text)-1;
-//     dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
-//     dest_row := row_table[dest_row_index];
-//     pos := first_byte_pos(dest_row);
-//     set_cursor_pos(pos);
-// }
+    text := to_string(buffer);
 
-// ScrollViewPortDown :: () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
+    start := first_visible_row_index(*editor, buffer);
+    end := last_visible_row_index(buffer);
+    max_row := clamp(end-start, 0, row_table.count-1);
+    current_row := find_row_index(buffer, editor.cursor_pos);
+    dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
+    dest_row := row_table[dest_row_index];
+    pos := first_byte_pos(dest_row);
+    set_cursor_pos(*editor, pos);
+}
 
-//     start := first_visible_row_index(text);
-//     end := last_visible_row_index(text);
-//     max_row := clamp(end-start, 0, row_table.count-1);
-//     current_row := get_cursor_row(text)-1;
-//     dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
-//     dest_row := row_table[dest_row_index];
-//     pos := first_byte_pos(dest_row);
-//     set_cursor_pos(pos);
-// }
+ScrollViewPortDown :: () {
+    buffer := editor.active_buffer;
+    using buffer;
+
+    text := to_string(buffer);
+
+    start := first_visible_row_index(*editor, buffer);
+    end := last_visible_row_index(buffer);
+    max_row := clamp(end-start, 0, row_table.count-1);
+    current_row := find_row_index(buffer, editor.cursor_pos);
+    dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
+    dest_row := row_table[dest_row_index];
+    pos := first_byte_pos(dest_row);
+    set_cursor_pos(*editor, pos);
+}
 
 // DeleteTheWholeLine :: () {
 //     // @Speed !!!!
@@ -354,42 +358,54 @@ MoveRightSubword :: inline () {
 //     should_rebuild_row_table = true;
 // }
 
-// DeleteCharFromRight :: () {
-//     if cursor_pos == 0 return;
+DeleteCharFromRight :: () {
+    using editor;
 
-//     // @Speed !!!!
-//     text := builder_to_string(*builder, do_reset = true);
-//     defer free(text);
+    if cursor_pos == 0 return;
 
-//     bytes_to_del := cursor_pos - prev_char_byte_index(text);
+    buffer := active_buffer;
+    text := to_string(buffer);
+
+    bytes_to_del := cursor_pos - prev_char_byte_index(buffer, cursor_pos);
     
-//     // Check if we should delete a "tab"
-//     ch := text.data[cursor_pos-1];
-//     if ch == #char " " {
-//         i := 0;
-//         spaces := 1;
-//         for < cursor_pos-1..0 {
-//             if text.data[it] == #char " " {
-//                 spaces += 1;
-//                 if spaces == TAB_SIZE_IN_SPACES {
-//                     bytes_to_del = TAB_SIZE_IN_SPACES;
-//                     break;
-//                 }
-//             } else {
-//                 break;
-//             }
-//         }
-//     }
+    space_char := ifx draw_special_chars #char "~" else #char " ";  // @Temporary: this is a stupid fix for the special char visualization
 
-//     if bytes_to_del {
-//         before := slice(text, 0, cursor_pos-bytes_to_del); 
-//         after := slice(text, cursor_pos, text.count);
-//         append(*builder, before);
-//         append(*builder, after);
-//         set_cursor_pos(cursor_pos-bytes_to_del);
-//         should_rebuild_row_table = true;
-//     }
-// }
+    // Check if we should delete a "tab"
+    ch := text.data[cursor_pos-1];
+    if ch == space_char {
+        i := 0;
+        spaces := 1;
+        for < cursor_pos-1..0 {
+            if text.data[it] == space_char {
+                spaces += 1;
+                if spaces == TAB_SIZE_IN_SPACES {
+                    bytes_to_del = TAB_SIZE_IN_SPACES;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    if bytes_to_del {
+        // Basically we shift the whole buffer by "bytes_to_del"
+        ptr := buffer.data+cursor_pos-bytes_to_del;
+        c_memmove(ptr, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
+
+        // @Speed: we only need one memcpy instead of two
+        // before := slice(text, 0, cursor_pos-bytes_to_del); 
+        // after := slice(text, cursor_pos, text.count);
+        // memcpy(ptr, before.data, before.count);
+        // ptr += before.count;
+        // memcpy(ptr, after.data, after.count);
+
+        buffer.count -= bytes_to_del;
+
+        set_cursor_pos(*editor, cursor_pos-bytes_to_del);
+        buffer.rebuild_row_table = true;
+    }
+}
 
 // DeleteCharFromLeft :: () {
 //     if !(cursor_pos < builder_string_length(*builder)) return;
@@ -474,85 +490,89 @@ MoveRightSubword :: inline () {
 //     append(*builder, text); // @Hacky
 // }
 
-// InsertLine :: () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);   
-//     should_rebuild_row_table = true;
+InsertLine :: () {
+    buffer := editor.active_buffer;
+    using buffer;
 
-//     if cursor_pos == 0 {
-//         append_text(*builder, "\n");
-//         return;
-//     }
+    text := to_string(buffer);
+    rebuild_row_table = true;
 
-//     // :SmartIndentFeature @Cleanup
-//     // A basic smart indent count characters in the current row until the first non-space character.
+    if editor.cursor_pos == 0 {
+        insert_text_at_cursor(*editor, buffer, "\n");
+        return;
+    }
 
-//     current_row_index := get_cursor_row(text)-1;
-//     row := row_table[current_row_index];
-//     start := first_byte_pos(row);
-//     end := find_index_from_left_until_not(text, #char " ", start);
+    // :SmartIndentFeature @Cleanup
+    // A basic smart indent count characters in the current row until the first non-space character.
 
-//     if end == -1 {
-//         // In this case we only have one row with only whitespace characters
-//         append_text(*builder, "\n");
-//         return;
-//     }
+    current_row_index := find_row_index(buffer, editor.cursor_pos);
+    row := row_table[current_row_index];
+    start := first_byte_pos(row);
+    end := find_index_from_left_until_not(text, #char " ", start);
 
-//     if cursor_pos >= start && cursor_pos < end {
-//         // We're in the range of the first n empty spaces, so we just jump to the first non-whitespace
-//         // occurrence to prevent the weird effect of splitting whitespace characters
-//         set_cursor_pos(end);
-//     }
+    if end == -1 {
+        // In this case we only have one row with only whitespace characters
+        insert_text_at_cursor(*editor, buffer, "\n");
+        return;
+    }
 
-//     append_text(*builder, "\n");
+    if editor.cursor_pos >= start && editor.cursor_pos < end {
+        // We're in the range of the first n empty spaces, so we just jump to the first non-whitespace
+        // occurrence to prevent the weird effect of splitting whitespace characters
+        set_cursor_pos(*editor, end);
+    }
 
-//     spaces := end - start;
-//     assert(spaces > -1);
-//     while spaces != 0 {
-//         append_text(*builder, " ");
-//         spaces -= 1;
-//     }
-// }
+    insert_text_at_cursor(*editor, buffer, "\n");
 
-// InsertLineBelow :: () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);  
-//     should_rebuild_row_table = true;
+    spaces := end - start;
+    assert(spaces > -1);
+    while spaces != 0 {
+        insert_text_at_cursor(*editor, buffer, " ");
+        spaces -= 1;
+    }
+}
 
-//     current_row_index := get_cursor_row(text)-1;
-//     row := row_table[current_row_index];
-//     set_cursor_pos(row.pos);     // set cursor to the last character of the current row
-//     append_text(*builder, "\n"); // also we do a character step in this procedure
+InsertLineBelow :: () {
+    buffer := editor.active_buffer;
+    using buffer;
+    
+    text := to_string(buffer);
+    rebuild_row_table = true;
 
-//     // :SmartIndentFeature @Cleanup
-//     // A basic smart indent count characters in the current row until the first non-space character.
-//     row_first_byte_index := first_byte_pos(row);
-//     first_non_whitespace_byte_index := find_index_from_left_until_not(text, #char " ", row_first_byte_index);
-//     if first_non_whitespace_byte_index != -1 {
-//         spaces := first_non_whitespace_byte_index - row_first_byte_index;
-//         assert(spaces > -1);
-//         while spaces != 0 {
-//             append_text(*builder, " ");
-//             spaces -= 1;
-//         }
-//     }
+    current_row_index := find_row_index(buffer, editor.cursor_pos);
+    row := row_table[current_row_index];
+    set_cursor_pos(*editor, row.pos);             // set cursor to the last character of the current row
+    insert_text_at_cursor(*editor, buffer, "\n"); // also we do a character step in this procedure
 
-// }
+    // :SmartIndentFeature @Cleanup
+    // A basic smart indent count characters in the current row until the first non-space character.
+    row_first_byte_index := first_byte_pos(row);
+    first_non_whitespace_byte_index := find_index_from_left_until_not(text, #char " ", row_first_byte_index);
+    if first_non_whitespace_byte_index != -1 {
+        spaces := first_non_whitespace_byte_index - row_first_byte_index;
+        assert(spaces > -1);
+        while spaces != 0 {
+            insert_text_at_cursor(*editor, buffer, " ");
+            spaces -= 1;
+        }
+    }
 
-// InsertTab :: inline () {
-//     // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
-//     // text := builder_to_string(*builder, do_reset = false);
-//     // defer free(text);
+}
 
-//     // if cursor_pos != text.count {
-//     //     ch := text.data[cursor_pos];
-//     //     // ok, sc := surround_chars(text, cursor_pos);
-//     //     // if ok print("surround_chars: |%|\n", sc);
-//     //     // else print("failed to get the surround_chars!\n");
-//     // }
+InsertTab :: inline () {
+    // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
+    // text := builder_to_string(*builder, do_reset = false);
+    // defer free(text);
 
-//     append_text(*builder, TAB_SPACE_CHARS);
-// }
+    // if cursor_pos != text.count {
+    //     ch := text.data[cursor_pos];
+    //     // ok, sc := surround_chars(text, cursor_pos);
+    //     // if ok print("surround_chars: |%|\n", sc);
+    //     // else print("failed to get the surround_chars!\n");
+    // }
+
+    insert_text_at_cursor(*editor, editor.active_buffer, TAB_SPACE_CHARS);
+}
 
 // GotoFirstCharOFCurrentRow :: inline () {
 //     text := builder_to_string(*builder, do_reset = false);

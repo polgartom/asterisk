@@ -155,8 +155,7 @@ main :: () {
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
                     
-                    insert_text(editor.active_buffer, editor.cursor_pos, string_for_utf32_to_utf8);
-                    advance_cursor_pos(*editor, string_for_utf32_to_utf8.count);
+                    insert_text_at_cursor(*editor, editor.active_buffer, string_for_utf32_to_utf8);
                 }
             } else {
                 if event.key_code == .ESCAPE {
@@ -375,20 +374,37 @@ get_cursor_y :: (using editor: *Editor) -> s64 {
     return window_height - xx get_line_height(row);
 }
 
-insert_text :: (buffer: *Buffer, pos: s64, text: string) {
-    maybe_grow(buffer, text.count);
+// insert_text :: (buffer: *Buffer, pos: s64, text: string) {
+//     maybe_grow(buffer, text.count);
     
+//     left := buffer.data;
+//     insert_at := left + pos;
+//     new_right := insert_at + text.count;
+//     right_rem_size := buffer.count - (insert_at-left);
+
+//     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+
+//     memcpy(insert_at, text.data, text.count);
+
+//     buffer.count += text.count;
+//     buffer.rebuild_row_table = true;
+// }
+
+insert_text_at_cursor :: inline (editor: *Editor, buffer: *Buffer, text: string) {
+    maybe_grow(buffer, text.count);
+
     left := buffer.data;
-    insert_at := left + pos;
+    insert_at := left + editor.cursor_pos;
     new_right := insert_at + text.count;
     right_rem_size := buffer.count - (insert_at-left);
 
     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
-
     memcpy(insert_at, text.data, text.count);
 
     buffer.count += text.count;
     buffer.rebuild_row_table = true;
+    
+    advance_cursor_pos(editor, text.count);
 }
 
 set_cursor_pos :: inline (using editor: *Editor, index: s64) {
@@ -403,6 +419,7 @@ advance_cursor_pos :: inline (editor: *Editor, by: s64) {
     set_cursor_pos(editor, editor.cursor_pos + by);
 }
 
+//  @Cleanup: Naming
 find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
     assert(start_index > -1 && start_index < s.count);
 
@@ -415,6 +432,7 @@ find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -
     return -1;
 }
 
+//  @Cleanup: Naming
 find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
     assert(start_index > -1);
 
@@ -455,16 +473,15 @@ num_of_utf8_chars :: inline (s: string) -> s64 {
     return total;
 }
 
-// @Cleanup: use this!!
-// first_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
-//     s := to_string(buffer);
+first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
+    s := to_string(buffer);
 
-//     line_height := get_line_height();
-//     start_row: s64 = xx (top_offset / line_height);
-//     start_row = clamp(start_row - 1, 0, row_table.count-1);
+    line_height := get_line_height();
+    start_row: s64 = xx (top_offset / line_height); // @Todo :OffsetsInTheEditorContext We should put this in the Editor context if we want a split screen later
+    start_row = clamp(start_row - 1, 0, row_table.count-1);
 
-//     return start_row;
-// }
+    return start_row;
+}
 
 last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
     s := to_string(buffer);
@@ -472,7 +489,7 @@ last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
     viewport_h := window_height-footer_height*2; // @Hacky
 
     line_height := get_line_height();
-    end_row: s64 = xx ((top_offset + viewport_h) / line_height);
+    end_row: s64 = xx ((top_offset + viewport_h) / line_height); // @Todo :OffsetsInTheEditorContext
     end_row = clamp(end_row+1, 0, row_table.count-1);
 
     return end_row;
