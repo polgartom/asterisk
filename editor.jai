@@ -15,6 +15,21 @@ to_string :: inline (buffer: *Buffer) -> string {
     return s;
 }
 
+
+shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for "to" and "from"
+    if to == from return;
+    assert(to < from);
+
+    dest   := data  + to;
+    source := data  + from;
+    size   := count - from;
+
+    c_memmove(dest, source, xx size);
+    count -= (from - to);
+
+    rebuild_row_table = true;
+}
+
 maybe_grow :: (buffer: *Buffer, size: s64) {
 	assert(size > -1);
 

@@ -152,7 +152,7 @@ move_left_word :: ($subword_mode: bool) {
 
     text := to_string(active_buffer);
 
-    if !(cursor_pos < text.count) {
+    if cursor_pos == active_buffer.count {
         i := prev_char_byte_index(active_buffer, cursor_pos);
         set_cursor_pos(*editor, i);
     }
@@ -222,7 +222,7 @@ move_left_word :: ($subword_mode: bool) {
 move_right_word :: ($subword_mode: bool) {
     using editor;
 
-    if !(cursor_pos < active_buffer.count) return;
+    if cursor_pos == active_buffer.count return;
 
     text := to_string(active_buffer);
     start := next_char_byte_index(text, cursor_pos);
@@ -298,8 +298,6 @@ ScrollViewPortDown :: () {
     buffer := editor.active_buffer;
     using buffer;
 
-    text := to_string(buffer);
-
     start := first_visible_row_index(*editor, buffer);
     end := last_visible_row_index(buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
@@ -312,42 +310,34 @@ ScrollViewPortDown :: () {
 
 DeleteTheWholeLine :: () {
     buffer := editor.active_buffer;
-    text   := to_string(buffer);
 
     row_index := find_row_index(buffer, editor.cursor_pos);
-    row := buffer.row_table[row_index];
-    start := first_byte_pos(row);
-    end := row.pos;
+    row       := buffer.row_table[row_index];
+    start     := first_byte_pos(row);
+    end       := row.pos;
     
-    set_cursor_pos(*editor, start);
+    set_cursor_pos(*editor, start); // jump to first col in the row
 
     if row_index+1 < buffer.row_table.count {
         next_row := buffer.row_table[row_index+1];
         end = first_byte_pos(next_row);
     }
 
-    c_memmove(buffer.data+start, buffer.data+end, xx (buffer.count-end));
-    buffer.count -= (end-start);
+    shift_left(buffer, start, end);
 
     assert(editor.cursor_pos <= buffer.count, "cursor: % ; buffer.count: %", editor.cursor_pos, buffer.count);
-
     if editor.cursor_pos > 0 && editor.cursor_pos == buffer.count then editor.cursor_pos -= 1;
-
-    buffer.rebuild_row_table = true;
 }
 
 DeleteEverythingFromLeft :: () {
     buffer := editor.active_buffer;
-    text   := to_string(buffer);
 
     row_index := find_row_index(buffer, editor.cursor_pos);
     row       := buffer.row_table[row_index];
     start     := editor.cursor_pos;
     end       := row.pos;
 
-    c_memmove(buffer.data+start, buffer.data+end, xx (buffer.count-end));
-    buffer.count -= (end-start);
-    buffer.rebuild_row_table = true;
+    shift_left(buffer, start, end);
 }
 
 DeleteCharFromRight :: () {
@@ -381,10 +371,10 @@ DeleteCharFromRight :: () {
     }
 
     if bytes_to_del {
-        c_memmove(buffer.data+cursor_pos-bytes_to_del, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
-        buffer.count -= bytes_to_del;
-        buffer.rebuild_row_table = true;
-        set_cursor_pos(*editor, cursor_pos-bytes_to_del);
+        to   := cursor_pos-bytes_to_del;
+        from := cursor_pos;
+        shift_left(buffer, to, from);
+        set_cursor_pos(*editor, to);
     }
 }
 
@@ -401,9 +391,9 @@ DeleteCharFromLeft :: () {
     bytes_to_del := 1 + trailingBytesForUTF8[byte];
     assert(editor.cursor_pos + bytes_to_del <= text.count);
 
-    c_memmove(buffer.data+editor.cursor_pos, buffer.data+editor.cursor_pos+bytes_to_del, xx (buffer.count-(editor.cursor_pos+bytes_to_del)));
-    buffer.count -= bytes_to_del;
-    buffer.rebuild_row_table = true;
+    to   := editor.cursor_pos;
+    from := editor.cursor_pos+bytes_to_del;
+    shift_left(buffer, to, from);
 }
 
 DeleteWordFromRight :: inline () {
@@ -433,8 +423,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
             for < index: start..0 {
                 if text[index] != #char " " {
                     index += 1;
-                    c_memmove(buffer.data+index, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
-                    buffer.count -= (cursor_pos-index);
+                    shift_left(buffer, index, cursor_pos);
                     set_cursor_pos(*editor, index);
                     return;
                 }
@@ -450,13 +439,11 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     for < index: start..0 {
         if is_separator_char(text[index], subword_mode) {
             index += 1;
-            c_memmove(buffer.data+index, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
-            buffer.count -= (cursor_pos-index);
+            shift_left(buffer, index, cursor_pos);
             set_cursor_pos(*editor, index);
             return;
         } else if index == 0 {
-            c_memmove(buffer.data, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
-            buffer.count -= (cursor_pos-0);
+            shift_left(buffer, 0, cursor_pos);
             set_cursor_pos(*editor, 0); 
             return;
         }

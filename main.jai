@@ -93,7 +93,7 @@ main :: () {
 
         buffer.rebuild_row_table = true;
     }
-        
+
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
     second_elapsed := false;
@@ -154,7 +154,7 @@ main :: () {
                     if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
-                    
+
                     insert_text_at_cursor(*editor, editor.active_buffer, string_for_utf32_to_utf8);
                 }
             } else {
@@ -278,7 +278,7 @@ get_cursor_row :: (using editor: *Editor) -> s64 {
 get_cursor_col :: (using editor: *Editor) -> s64 {
     buffer := editor.active_buffer;
     using buffer;
-    
+
     text := to_string(buffer);
 
     for row_table {
@@ -376,7 +376,7 @@ get_cursor_y :: (using editor: *Editor) -> s64 {
 
 // insert_text :: (buffer: *Buffer, pos: s64, text: string) {
 //     maybe_grow(buffer, text.count);
-    
+
 //     left := buffer.data;
 //     insert_at := left + pos;
 //     new_right := insert_at + text.count;
@@ -393,17 +393,16 @@ get_cursor_y :: (using editor: *Editor) -> s64 {
 insert_text_at_cursor :: inline (editor: *Editor, buffer: *Buffer, text: string) {
     maybe_grow(buffer, text.count);
 
-    left := buffer.data;
-    insert_at := left + editor.cursor_pos;
-    new_right := insert_at + text.count;
-    right_rem_size := buffer.count - (insert_at-left);
+    insert_at      := buffer.data+editor.cursor_pos;
+    new_right      := insert_at + text.count;
+    right_rem_size := buffer.count - (insert_at-buffer.data);
 
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
     memcpy(insert_at, text.data, text.count);
 
     buffer.count += text.count;
     buffer.rebuild_row_table = true;
-    
+
     advance_cursor_pos(editor, text.count);
 }
 
@@ -566,7 +565,7 @@ handle_editor_events :: () {
 //     defer free(text);
 
 //     start := ifx last_occurance_offset == -1 then 0 else last_occurance_offset;
-    
+
 //     if start < text.count {
 //         s := text;
 //         advance(*s, start);

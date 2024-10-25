@@ -36,7 +36,7 @@
 [X] Custom u8 buffer instead of string builder
 [X] Editor context which have multiple buffer, we want multiple editor context for split screen
 [] Move cursor related data to the Buffer struct
-[] Need an abstraction for the c_memmove thing like move_data_left, most of the time that is what we need 
+[X] Need an abstraction for the c_memmove like shift_left or smth
 [] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [] Fix word/subword stepping if the cursor surrounded with multiple line breaks
 [] Improve word/subword stepping mainly because the left and right movement not exactly the same
