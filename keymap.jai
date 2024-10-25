@@ -22,19 +22,19 @@ register_keymap_procedures :: () {
     add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
 
     add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
-    // add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
+    add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
     
-    // add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
-    // add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
-    // add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
-    // add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
+    add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+    add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
+    add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
+    add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
 
     add_proc(k, "InsertTab", InsertTab);
     add_proc(k, "InsertLine", InsertLine);
     add_proc(k, "InsertLineBelow", InsertLineBelow);
 
-    // add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
-    // add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
+    add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
+    add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
 
     // add_proc(k, "OpenWidget", OpenWidget);
 }
@@ -310,53 +310,45 @@ ScrollViewPortDown :: () {
     set_cursor_pos(*editor, pos);
 }
 
-// DeleteTheWholeLine :: () {
-//     // @Speed !!!!
-//     text := builder_to_string(*builder, do_reset = true);
-//     defer free(text);
+DeleteTheWholeLine :: () {
+    buffer := editor.active_buffer;
+    text   := to_string(buffer);
 
-//     row_index := get_cursor_row(text) - 1;
-//     row := row_table[row_index];
-//     start := first_byte_pos(row);
-//     end := row.pos;
+    row_index := find_row_index(buffer, editor.cursor_pos);
+    row := buffer.row_table[row_index];
+    start := first_byte_pos(row);
+    end := row.pos;
     
-//     set_cursor_pos(start);
+    set_cursor_pos(*editor, start);
 
-//     if row_index+1 < row_table.count {
-//         next_row := row_table[row_index+1];
-//         end = first_byte_pos(next_row);
-//     }
+    if row_index+1 < buffer.row_table.count {
+        next_row := buffer.row_table[row_index+1];
+        end = first_byte_pos(next_row);
+    }
 
-//     before := slice(text, 0, start);
-//     after := slice(text, end, text.count);
+    c_memmove(buffer.data+start, buffer.data+end, xx (buffer.count-end));
+    buffer.count -= (end-start);
 
-//     append(*builder, before);
-//     append(*builder, after);
+    assert(editor.cursor_pos <= buffer.count, "cursor: % ; buffer.count: %", editor.cursor_pos, buffer.count);
 
-//     len := builder_string_length(*builder);
-//     if cursor_pos > len set_cursor_pos(len);
+    if editor.cursor_pos > 0 && editor.cursor_pos == buffer.count then editor.cursor_pos -= 1;
 
-//     should_rebuild_row_table = true;
-// }
+    buffer.rebuild_row_table = true;
+}
 
-// DeleteEverythingFromLeft :: () {
-//     // @Speed !!!!
-//     text := builder_to_string(*builder, do_reset = true);
-//     defer free(text);
+DeleteEverythingFromLeft :: () {
+    buffer := editor.active_buffer;
+    text   := to_string(buffer);
 
-//     row_index := get_cursor_row(text) - 1;
-//     row := row_table[row_index];
-//     start := cursor_pos;
-//     end := row.pos;
+    row_index := find_row_index(buffer, editor.cursor_pos);
+    row       := buffer.row_table[row_index];
+    start     := editor.cursor_pos;
+    end       := row.pos;
 
-//     before := slice(text, 0, start);
-//     after := slice(text, end, text.count);
-
-//     append(*builder, before);
-//     append(*builder, after);
-
-//     should_rebuild_row_table = true;
-// }
+    c_memmove(buffer.data+start, buffer.data+end, xx (buffer.count-end));
+    buffer.count -= (end-start);
+    buffer.rebuild_row_table = true;
+}
 
 DeleteCharFromRight :: () {
     using editor;
@@ -389,106 +381,88 @@ DeleteCharFromRight :: () {
     }
 
     if bytes_to_del {
-        // Basically we shift the whole buffer by "bytes_to_del"
-        ptr := buffer.data+cursor_pos-bytes_to_del;
-        c_memmove(ptr, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
-
-        // @Speed: we only need one memcpy instead of two
-        // before := slice(text, 0, cursor_pos-bytes_to_del); 
-        // after := slice(text, cursor_pos, text.count);
-        // memcpy(ptr, before.data, before.count);
-        // ptr += before.count;
-        // memcpy(ptr, after.data, after.count);
-
+        c_memmove(buffer.data+cursor_pos-bytes_to_del, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
         buffer.count -= bytes_to_del;
-
-        set_cursor_pos(*editor, cursor_pos-bytes_to_del);
         buffer.rebuild_row_table = true;
+        set_cursor_pos(*editor, cursor_pos-bytes_to_del);
     }
 }
 
-// DeleteCharFromLeft :: () {
-//     if !(cursor_pos < builder_string_length(*builder)) return;
+DeleteCharFromLeft :: () {
+    buffer := editor.active_buffer;
 
-//     // @Speed !!!!
-//     text := builder_to_string(*builder, do_reset = true);
-//     defer free(text);
-//     should_rebuild_row_table = true;
+    assert(editor.cursor_pos <= buffer.count);
+    if editor.cursor_pos == buffer.count return;
 
-//     byte := text[cursor_pos];
-//     bytes_to_del := 1 + trailingBytesForUTF8[byte];
-//     assert(cursor_pos+bytes_to_del <= text.count);
+    text := to_string(buffer);
+    buffer.rebuild_row_table = true;
 
-//     before := slice(text, 0, cursor_pos); 
-//     after := slice(text, cursor_pos+bytes_to_del, text.count);
-//     append(*builder, before);
-//     append(*builder, after);
-// }
+    byte := text[editor.cursor_pos];
+    bytes_to_del := 1 + trailingBytesForUTF8[byte];
+    assert(editor.cursor_pos + bytes_to_del <= text.count);
 
-// DeleteWordFromRight :: inline () {
-//     delete_word_or_subword_from_right(subword_mode=false);
-// }
+    c_memmove(buffer.data+editor.cursor_pos, buffer.data+editor.cursor_pos+bytes_to_del, xx (buffer.count-(editor.cursor_pos+bytes_to_del)));
+    buffer.count -= bytes_to_del;
+    buffer.rebuild_row_table = true;
+}
 
-// DeleteSubwordFromRight :: inline () {
-//     delete_word_or_subword_from_right(subword_mode=true);
-// }
+DeleteWordFromRight :: inline () {
+    delete_word_or_subword_from_right(subword_mode=false);
+}
 
-// delete_word_or_subword_from_right :: ($subword_mode: bool) {
-//     // @Speed @Cleanup !!!!!!
-//     if cursor_pos == 0 return;
+DeleteSubwordFromRight :: inline () {
+    delete_word_or_subword_from_right(subword_mode=true);
+}
 
-//     text := builder_to_string(*builder, do_reset = true);
-//     defer free(text);
-//     should_rebuild_row_table = true;
+delete_word_or_subword_from_right :: ($subword_mode: bool) {
+    if editor.cursor_pos == 0 return;
 
-//     assert(text.count > 0); // it should never happen, 'cause we already checked the cursor poistion above
+    buffer := editor.active_buffer;
+    using buffer;
+    using editor;
 
-//     start := min(cursor_pos-1, text.count-1); // pos of the next deletable char from right
+    text := to_string(buffer);
+    rebuild_row_table = true;
 
-//     #if !subword_mode {
-//         // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
-//         if text[start] == #char " " {
-//             for < index: start..0 {
-//                 if text[index] != #char " " {
-//                     index += 1;
-//                     left := slice(text, 0, index);
-//                     right := slice(text, cursor_pos, text.count);
-//                     append(*builder, left);
-//                     append(*builder, right);
-//                     set_cursor_pos(index);
-//                     return;
-//                 }
-//             }
-//         }
-//     }
+    assert(text.count > 0); // it should never happen, 'cause we already checked the cursor poistion above
+    start := cursor_pos-1;
 
-//     if is_separator_char(text[cursor_pos-1], subword_mode) {
-//         append(*builder, text); // @Hacky
-//         DeleteCharFromRight();
-//         return;
-//     }
+    #if !subword_mode {
+        // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
+        if text[start] == #char " " {
+            for < index: start..0 {
+                if text[index] != #char " " {
+                    index += 1;
+                    c_memmove(buffer.data+index, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
+                    buffer.count -= (cursor_pos-index);
+                    set_cursor_pos(*editor, index);
+                    return;
+                }
+            }
+        }
+    }
 
-//     for < index: start..0 {
-//         if is_separator_char(text[index], subword_mode) {
-//             index += 1; // 'cause we don't want to delete the separator char. We do handle that case above
-//             left := slice(text, 0, index);
-//             right := slice(text, cursor_pos, text.count);
-//             append(*builder, left);
-//             append(*builder, right);
-//             set_cursor_pos(index);
+    if is_separator_char(text[cursor_pos-1], subword_mode) {
+        DeleteCharFromRight();
+        return;
+    }
 
-//             return;
-//         } else if index == 0 {
-//             right := slice(text, cursor_pos, text.count);
-            
-//             append(*builder, right);
-//             set_cursor_pos(0); 
-//             return;
-//         }
-//     }
+    for < index: start..0 {
+        if is_separator_char(text[index], subword_mode) {
+            index += 1;
+            c_memmove(buffer.data+index, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
+            buffer.count -= (cursor_pos-index);
+            set_cursor_pos(*editor, index);
+            return;
+        } else if index == 0 {
+            c_memmove(buffer.data, buffer.data+cursor_pos, xx (buffer.count-cursor_pos));
+            buffer.count -= (cursor_pos-0);
+            set_cursor_pos(*editor, 0); 
+            return;
+        }
+    }
 
-//     append(*builder, text); // @Hacky
-// }
+}
 
 InsertLine :: () {
     buffer := editor.active_buffer;
@@ -574,28 +548,24 @@ InsertTab :: inline () {
     insert_text_at_cursor(*editor, editor.active_buffer, TAB_SPACE_CHARS);
 }
 
-// GotoFirstCharOFCurrentRow :: inline () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
+GotoFirstCharOFCurrentRow :: inline () {
+    buffer := editor.active_buffer;
 
-//     index := get_cursor_row(text)-1;
-//     row := row_table[index];
-//     start := first_byte_pos(row);
-//     for start..row.pos {
-//         if text[it] != #char " " {
-//             if it == cursor_pos set_cursor_pos(start);
-//             else                set_cursor_pos(it);
-//             break;
-//         }
-//     }
-// }
+    index := find_row_index(buffer, editor.cursor_pos);
+    row   := buffer.row_table[index];
+    start := first_byte_pos(row);
 
-// GotoLastCharOfCurrentRow :: inline () {
-//     text := builder_to_string(*builder, do_reset = false);
-//     defer free(text);
+    for start..row.pos {
+        if buffer.data[it] != #char " " { // skip the indentation
+            set_cursor_pos(*editor, it);
+            break;
+        }
+    }
+}
 
-//     index := get_cursor_row(text)-1;
-//     row := row_table[index];
-//     offset := last_byte_pos(row);
-//     set_cursor_pos(offset);
-// }
+GotoLastCharOfCurrentRow :: inline () {
+    index  := find_row_index(editor.active_buffer, editor.cursor_pos);
+    row    := editor.active_buffer.row_table[index];
+    offset := last_byte_pos(row);
+    set_cursor_pos(*editor, offset);
+}

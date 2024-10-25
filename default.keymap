@@ -28,8 +28,8 @@ A-ArrowRight MoveRightSubword
 PageUp ScrollViewPortUp
 PageDown ScrollViewPortDown
 
-# Home GotoFirstCharOFCurrentRow
-# A-Home GotoLastCharOfCurrentRow
+Home GotoFirstCharOFCurrentRow
+A-Home GotoLastCharOfCurrentRow
 
 Enter InsertLine
 C-Enter InsertLineBelow
@@ -37,8 +37,8 @@ Tab InsertTab
 
 Backspace DeleteCharFromRight
 
-# Delete DeleteCharFromLeft
-# C-x DeleteTheWholeLine
-# C-k DeleteEverythingFromLeft
-# C-Backspace DeleteWordFromRight
-# A-Backspace DeleteSubwordFromRight
+Delete DeleteCharFromLeft
+C-x DeleteTheWholeLine
+C-k DeleteEverythingFromLeft
+C-Backspace DeleteWordFromRight
+A-Backspace DeleteSubwordFromRight

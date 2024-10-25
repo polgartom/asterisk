@@ -255,7 +255,7 @@ find_row_index :: (using buffer: *Buffer, pos: s64) -> s64 {
         }
     }
 
-    return row_table.count;
+    return row_table.count-1;
 }
 
 get_cursor_row :: (using editor: *Editor) -> s64 {
