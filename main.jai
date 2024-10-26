@@ -78,7 +78,6 @@ main :: () {
     // @Todo: We should create an initial empty buffer
     {
         // open_file(*editor, "main.jai");
-        // print("buffer: %\n", editor.buffers[0]);
 
         // @Todo: It's just for debug but we shoudl create an initial (starting) buffer for every new Editor instance
         t := "birka\ncica";
@@ -99,7 +98,7 @@ main :: () {
 
     while !should_quit {
         #if OS == .WINDOWS {
-            // WaitMessage();
+            WaitMessage();
         }
 
         last_time = seconds_since_init();
@@ -293,39 +292,36 @@ get_cursor_col :: (using editor: *Editor) -> s64 {
     return 0;
 }
 
-next_char_byte_index :: inline (s: string, start: s64) -> s64 {
-    assert(start < s.count);
+next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
+    assert(start < s.count); // Do we want to assert this?
     byte := s[start];
     return start + 1 + trailingBytesForUTF8[byte];
 }
 
-prev_char_byte_index :: (using buffer: *Buffer, start: s64) -> s64 {
+prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
 
-    text := to_string(buffer);
+    cursor := buffer.data + start;
+    cursor -= 1;
 
-    row_index := find_row_index(buffer, start);
-    i := first_byte_pos(row_table[row_index]);
-    if i == start {
-        // we on the first col of the row so we should check the above row last char
-        assert(row_index > 0); // sanity
-        if row_index == 0 return 0;
-        row_index -= 1; // step up by one row
-        i = first_byte_pos(row_table[row_index]);
+    first_bit := cursor.* & 0x80;
+    if first_bit == 0x0 return cursor - buffer.data; // 1 byte unicode char
+
+    // Cursor movement is based on characters, not bytes - this issue should never occur!
+    first_2bit := cursor.* & 0xc0;
+    assert(first_2bit != 0xc0, "The start byte (buffer.data+start) is in the middle of a Unicode character.");
+    assert(first_2bit == 0x80, "Invalid UTF-8"); // the first bit check happens above
+
+    bytes := 1;
+    while (cursor.* & 0xc0) == 0x80 && (cursor > buffer.data) {
+        cursor -= 1;
+        bytes += 1;
+        assert(bytes <= 4, "Invalid UTF-8! We expect less than 5 bytes but we got %", bytes); // it's not totally correct
     }
 
-    // count back from left to right
-    last_char_in_bytes := 0;
-    while i < start {
-        byte := text[i];
-        last_char_in_bytes = 1 + trailingBytesForUTF8[byte];
-        i += last_char_in_bytes;
-    }
+    assert((cursor.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
 
-    index := start - last_char_in_bytes;
-    assert(index > -1);
-
-    return index;
+    return cursor - buffer.data;
 }
 
 cols_in_the_row :: (s: string, row: Row_Info) -> s64 {

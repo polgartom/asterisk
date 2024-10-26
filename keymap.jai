@@ -123,7 +123,7 @@ MoveLeft :: () {
     if cursor_pos == 0 return;
 
     buffer := active_buffer;
-    i := prev_char_byte_index(active_buffer, editor.cursor_pos);
+    i := prev_char_byte_offset(active_buffer, editor.cursor_pos);
     set_cursor_pos(*editor, i);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
@@ -153,7 +153,7 @@ move_left_word :: ($subword_mode: bool) {
     text := to_string(active_buffer);
 
     if cursor_pos == active_buffer.count {
-        i := prev_char_byte_index(active_buffer, cursor_pos);
+        i := prev_char_byte_offset(active_buffer, cursor_pos);
         set_cursor_pos(*editor, i);
     }
 
@@ -169,7 +169,7 @@ move_left_word :: ($subword_mode: bool) {
     }
 
     start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
-    end := prev_char_byte_index(active_buffer, cursor_pos);
+    end := prev_char_byte_offset(active_buffer, cursor_pos);
     assert(end > -1);
     assert(end < text.count);
 
@@ -212,7 +212,7 @@ move_left_word :: ($subword_mode: bool) {
     }
     
     if offset != start {
-        offset = next_char_byte_index(text, offset);
+        offset = next_char_byte_offset(text, offset);
     }
 
     set_cursor_pos(*editor, offset);
@@ -225,7 +225,7 @@ move_right_word :: ($subword_mode: bool) {
     if cursor_pos == active_buffer.count return;
 
     text := to_string(active_buffer);
-    start := next_char_byte_index(text, cursor_pos);
+    start := next_char_byte_offset(text, cursor_pos);
 
     // It's a better solution than the current IDE's behavior
     whitespace := is_whitespace(text[cursor_pos]);
@@ -348,7 +348,7 @@ DeleteCharFromRight :: () {
     buffer := active_buffer;
     text := to_string(buffer);
 
-    bytes_to_del := cursor_pos - prev_char_byte_index(buffer, cursor_pos);
+    bytes_to_del := cursor_pos - prev_char_byte_offset(buffer, cursor_pos);
     
     space_char := ifx draw_special_chars #char "~" else #char " ";  // @Temporary: this is a stupid fix for the special char visualization
 
