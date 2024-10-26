@@ -36,7 +36,7 @@ set_build_options(options, w);
 
     compiler_begin_intercept(w);
 
-    add_build_file("main.jai", w);
+    add_build_file("src/main.jai", w);
     
     compiler_end_intercept(w);
 }
