@@ -3,48 +3,49 @@ register_keymap_procedures :: () {
     // Editor keymaps   
     k := *default_keymap;
 
-    add_proc(k, "ToggleDevInfo", ToggleDevInfo);
-    add_proc(k, "DrawSpecialChars", DrawSpecialChars);
+    Keymap.add_proc(k, "ToggleDevInfo", ToggleDevInfo);
+    Keymap.add_proc(k, "DrawSpecialChars", DrawSpecialChars);
 
-    add_proc(k, "Quit", Quit);
+    Keymap.add_proc(k, "Quit", Quit);
 
-    add_proc(k, "MoveUp", MoveUp);
-    add_proc(k, "MoveDown", MoveDown);
-    add_proc(k, "MoveLeft", MoveLeft);
-    add_proc(k, "MoveRight", MoveRight);
+    Keymap.add_proc(k, "MoveUp", MoveUp);
+    Keymap.add_proc(k, "MoveDown", MoveDown);
+    Keymap.add_proc(k, "MoveLeft", MoveLeft);
+    Keymap.add_proc(k, "MoveRight", MoveRight);
     
-    add_proc(k, "MoveLeftWord", MoveLeftWord);
-    add_proc(k, "MoveLeftSubword", MoveLeftSubword);
-    add_proc(k, "MoveRightWord", MoveRightWord);
-    add_proc(k, "MoveRightSubword", MoveRightSubword);
+    Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
+    Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);
+    Keymap.add_proc(k, "MoveRightWord", MoveRightWord);
+    Keymap.add_proc(k, "MoveRightSubword", MoveRightSubword);
 
-    add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
-    add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
+    Keymap.add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
+    Keymap.add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
 
-    add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
-    add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
+    Keymap.add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
+    Keymap.add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
     
-    add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
-    add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
-    add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
-    add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
+    Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+    Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
+    Keymap.add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
+    Keymap.add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
 
-    add_proc(k, "InsertTab", InsertTab);
-    add_proc(k, "InsertLine", InsertLine);
-    add_proc(k, "InsertLineBelow", InsertLineBelow);
+    Keymap.add_proc(k, "InsertTab", InsertTab);
+    Keymap.add_proc(k, "InsertLine", InsertLine);
+    Keymap.add_proc(k, "InsertLineBelow", InsertLineBelow);
 
-    add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
-    add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
+    Keymap.add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
+    Keymap.add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
 
     // add_proc(k, "OpenWidget", OpenWidget);
 }
 
 init_keymaps :: () {
     register_keymap_procedures();
-    reload_keymap(*default_keymap, "default", "default.keymap", false);
+    success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
+    assert(success, "Failed to load the 'default.keymap'");
 }
 
-default_keymap: Keymap;
+default_keymap: Keymap.Keymap;
 
 ///////////////////////////////
 // EDITOR
@@ -75,11 +76,11 @@ MoveUp :: () {
             if it_index == 0 break; // no more row above
             prev_row := row_table[it_index-1];
 
-            prev_row_cols := cols_in_the_row(text, prev_row);
+            prev_row_cols := char_num_in_row(buffer, prev_row);
             steps := min(prev_row_cols, editor.last_cursor_col_for_up_down_movement);
             pos := first_byte_pos(prev_row);
             while steps {
-                byte := text[pos];
+                byte := buffer.data[pos];
                 bytes := 1 + trailingBytesForUTF8[byte];
                 pos += bytes;
                 steps -= 1;
@@ -94,18 +95,17 @@ MoveUp :: () {
 MoveDown :: () {
     buffer := editor.active_buffer;
     using buffer;
-    text := to_string(buffer);
 
     for row_table {
         if editor.cursor_pos <= it.pos {
             if it_index == row_table.count-1 break; // no more row below
             next_row := row_table[it_index+1];
 
-            next_row_cols := cols_in_the_row(text, next_row);
+            next_row_cols := char_num_in_row(buffer, next_row);
             steps := min(next_row_cols, editor.last_cursor_col_for_up_down_movement);
             pos := first_byte_pos(next_row);
             while steps {
-                byte := text[pos];
+                byte := buffer.data[pos];
                 bytes := 1 + trailingBytesForUTF8[byte];
                 pos += bytes;
                 steps -= 1;
@@ -357,7 +357,7 @@ DeleteCharFromRight :: () {
     if ch == space_char {
         i := 0;
         spaces := 1;
-        for < cursor_pos-1..0 {
+        for #v2 < 0..cursor_pos-1 {
             if text.data[it] == space_char {
                 spaces += 1;
                 if spaces == TAB_SIZE_IN_SPACES {
@@ -420,7 +420,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     #if !subword_mode {
         // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
         if text[start] == #char " " {
-            for < index: start..0 {
+            for #v2 < index: 0..start {
                 if text[index] != #char " " {
                     index += 1;
                     shift_left(buffer, index, cursor_pos);
@@ -436,7 +436,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
         return;
     }
 
-    for < index: start..0 {
+    for #v2 < index: 0..start {
         if is_separator_char(text[index], subword_mode) {
             index += 1;
             shift_left(buffer, index, cursor_pos);

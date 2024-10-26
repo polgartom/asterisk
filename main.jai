@@ -143,7 +143,7 @@ main :: () {
             getrect_handle_event(event);
 
             if editor_in_focus {
-                handled := keymap_handle_event(default_keymap, event);
+                handled := Keymap.keymap_handle_event(default_keymap, event);
                 if handled continue;
 
                 if event.type == .TEXT_INPUT {
@@ -301,47 +301,42 @@ next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
 prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
 
-    cursor := buffer.data + start;
-    cursor -= 1;
+    offset := buffer.data + start;
+    offset -= 1;
 
-    first_bit := cursor.* & 0x80;
-    if first_bit == 0x0 return cursor - buffer.data; // 1 byte unicode char
+    first_bit := offset.* & 0x80;
+    if first_bit == 0x0 return offset - buffer.data; // 1 byte unicode char
 
-    // Cursor movement is based on characters, not bytes - this issue should never occur!
-    first_2bit := cursor.* & 0xc0;
+    // Cursor (caret) movement is based on characters, not bytes - this issue should never occur!
+    first_2bit := offset.* & 0xc0;
     assert(first_2bit != 0xc0, "The start byte (buffer.data+start) is in the middle of a Unicode character.");
     assert(first_2bit == 0x80, "Invalid UTF-8"); // the first bit check happens above
 
     bytes := 1;
-    while (cursor.* & 0xc0) == 0x80 && (cursor > buffer.data) {
-        cursor -= 1;
+    while (offset.* & 0xc0) == 0x80 && (offset > buffer.data) {
+        offset -= 1;
         bytes += 1;
         assert(bytes <= 4, "Invalid UTF-8! We expect less than 5 bytes but we got %", bytes); // it's not totally correct
     }
 
-    assert((cursor.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
+    assert((offset.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
 
-    return cursor - buffer.data;
+    return offset - buffer.data;
 }
 
-cols_in_the_row :: (s: string, row: Row_Info) -> s64 {
-    index := first_byte_pos(row);
-    end := row.pos;
+char_num_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
+    pos   := first_byte_pos(row);
+    end   := row.pos;
+    assert(row.pos <= buffer.count, "% %", row.pos, buffer.count);
+
     chars := 0;
-    while index < end {
-        byte := s[index];
-        index += 1 + trailingBytesForUTF8[byte];
+    while pos < end {
+        byte := buffer.data[pos];
+        pos  += 1 + trailingBytesForUTF8[byte];
         chars += 1;
-    }
-    return chars;
-}
+    } 
 
-// source: https://github.com/focus-editor/focus
-safe_advance :: inline (s: *string, amount: s64 = 1) {
-    // Doesn't crash if amount is incorrect for any reason
-    amount = clamp(amount, 0, s.count);
-    s.count -= amount;
-    s.data  += amount;
+    return chars;
 }
 
 get_cursor_rel_x :: inline (using editor: *Editor) -> s64 {
@@ -522,7 +517,7 @@ is_whitespace :: inline (c: s64) -> bool {
 #import "Math";
 #import "Window_Creation";
 #import "Input";
-#import "Keymap";
+Keymap :: #import "Keymap";
 #import "Unicode";
 Simp :: #import "Simp";
 #import "GetRect";
