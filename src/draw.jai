@@ -1,5 +1,5 @@
 draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
-    active_editor := get_active_editor();
+    editor, buffer := get_active_editor_and_buffer();
 
     proc := default_theme_procs[current_theme];
     my_theme = proc();
@@ -11,37 +11,33 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     r=, footer := cut_top(r, window_height-footer_height);
 
     {
-        using active_editor;
-
-        rel_x := get_cursor_rel_x(*editor);
+        rel_x := get_cursor_rel_x(editor, buffer, *buffer._cursor);
         if rel_x - window_width >= 0 {
-            left_offset += rel_x - window_width;
+            editor.left_offset += rel_x - window_width;
         } else if rel_x - my_font.em_width < 0 {
-            left_offset -= (rel_x * -1) + my_font.em_width;
+            editor.left_offset -= (rel_x * -1) + my_font.em_width;
         }
 
-        rel_y := get_cursor_rel_y(*editor);
+        rel_y := get_cursor_rel_y(editor, buffer, *buffer._cursor);
         if xx rel_y < r.y {
-            top_offset += abs(r.y-rel_y);
+            editor.top_offset += abs(r.y-rel_y);
         } else if rel_y + my_font.character_height > xx window_height {
-            top_offset -= rel_y + my_font.character_height - window_height;
+            editor.top_offset -= rel_y + my_font.character_height - window_height;
         }
     }
 
     // Draw cursor
     if editor_in_focus {
-        using active_editor;
-
-        row := get_cursor_row(*editor);
-        cx  := get_cursor_x(*editor);
+        row := get_cursor_row(buffer, *buffer._cursor);
+        cx  := get_cursor_x(buffer, *buffer._cursor);
 
         Simp.set_shader_for_color();
 
         // top  := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
-        top  := (r.h+r.y) - ((my_font.default_line_spacing+line_height) * row) + top_offset;
+        top  := (r.h+r.y) - ((my_font.default_line_spacing+line_height) * row) + editor.top_offset;
 
-        left := cx - left_offset;
-        h := my_font.character_height;
+        left := cx - editor.left_offset;
+        h    := my_font.character_height;
 
         // @Improve: This isn't accurate
         Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), CURSOR_COLOR); 
@@ -49,8 +45,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw lines
     if text.count {
-        using active_editor;
-        using active_editor.active_buffer;
+        using editor;
+        using buffer;
 
         avg_row_render_time: float64 = 0.0;
         rendered_rows := 0;
@@ -105,8 +101,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         w := Simp.prepare_text(my_font, opened_file);
         Simp.draw_prepared_text(my_font, 10, xx center, .{.0,.0,.0,1.0});
 
-        ln := get_cursor_row(*editor)-1;
-        col := get_cursor_col(*editor);
+        ln  := find_row_index(buffer, buffer._cursor.pos);
+        col := get_cursor_col(buffer, *buffer._cursor);
         lncolinfo := tprint("Ln % Col %", ln, col);
         w = Simp.prepare_text(my_font, lncolinfo);
         Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});

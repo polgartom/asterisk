@@ -77,17 +77,18 @@ main :: () {
 
     // @Todo: We should create an initial empty buffer
     {
-        // open_file(*editor, "main.jai");
+        // open_file(*editor, "src/main.jai");
+        open_file(*editor, "src/draw.jai");
 
         // @Todo: It's just for debug but we shoudl create an initial (starting) buffer for every new Editor instance
-        t := "birka\ncica";
-        buffer := array_add(*editor.buffers);
-        editor.active_buffer = buffer;
-        maybe_grow(buffer, t.count);
-        memcpy(buffer.data, t.data, t.count);
-        buffer.count = t.count;
+        // t := "birka\ncica";
+        // buffer := array_add(*editor.buffers);
+        // editor.active_buffer = buffer;
+        // maybe_grow(buffer, t.count);
+        // memcpy(buffer.data, t.data, t.count);
+        // buffer.count = t.count;
 
-        buffer.rebuild_row_table = true;
+        // buffer.rebuild_row_table = true;
     }
 
     last_time = seconds_since_init();
@@ -151,7 +152,8 @@ main :: () {
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                    insert_text_at_cursor(*editor, editor.active_buffer, string_for_utf32_to_utf8);
+                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                    insert_text_at_cursor(buffer, string_for_utf32_to_utf8);
                 }
             } else {
                 if event.key_code == .ESCAPE {
@@ -189,17 +191,19 @@ main :: () {
         // simtime := (seconds_since_init()-last_time)*1000;
 
         if show_debug_info {
+            editor, buffer := get_active_editor_and_buffer();
             using editor;
 
             PrintDev("F1 toggle dev | F2 hidden chars\n");
             PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+ 
+            row := find_row_index(buffer, buffer._cursor.pos);
+            col := get_cursor_col(buffer, *buffer._cursor);
+            cx  := get_cursor_x(buffer, *buffer._cursor);
+            cy  := get_cursor_y(buffer, *buffer._cursor);
 
-            row := get_cursor_row(*editor);
-            col := get_cursor_col(*editor);
-            cx  := get_cursor_x(*editor);
-            cy  := get_cursor_y(*editor);
-            PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row-1, col, cx, cy);
+            PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row, col, cx, cy);
             PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
 
             PrintDev("--------------rendering--------------\n");
@@ -239,13 +243,13 @@ last_byte_pos :: inline (row: Row_Info) -> s64 {
     return row.pos;
 }
 
-find_row_index :: (using buffer: *Buffer, pos: s64) -> s64 {
-    if pos == 0 return 0;
+find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
+    if offset == 0 return 0;
 
     assert(row_table.count != 0);
-    for row_table {
-        if pos <= it.pos {
-            return it_index;
+    for row, row_index: row_table {
+        if offset <= row.pos {
+            return row_index;
         }
     }
 
@@ -268,23 +272,30 @@ get_cursor_row :: (using editor: *Editor) -> s64 {
     return row_table.count;
 }
 
-// We should define the cursor_pos in the buffer not in the editor
-get_cursor_col :: (using editor: *Editor) -> s64 {
-    buffer := editor.active_buffer;
-    using buffer;
+get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
+    if cursor.pos == 0 return 1;
+    assert(row_table.count != 0);
+    
+    for row, row_index: row_table {
+        if cursor.pos <= row.pos {
+            return row_index + 1;
+        }
+    }
 
-    text := to_string(buffer);
+    return row_table.count;
+}
 
-    for row_table {
-        if cursor_pos <= it.pos {
-            row := it;
-            i := first_byte_pos(it);
-            cols := 0;
-            while i < cursor_pos {
-                byte := text[i];
-                i += 1 + trailingBytesForUTF8[byte];
+get_cursor_col :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
+    for row, row_index: row_table {
+        if cursor.pos <= row.pos {
+            cols   := 0;
+            offset := first_byte_pos(row);
+            while offset < cursor.pos {
+                byte := data[offset];
+                offset += 1 + trailingBytesForUTF8[byte];
                 cols += 1;
             }
+
             return cols;
         }
     }
@@ -301,30 +312,30 @@ next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
 prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
 
-    offset := buffer.data + start;
-    offset -= 1;
+    ptr := buffer.data + start;
+    ptr -= 1;
 
-    first_bit := offset.* & 0x80;
-    if first_bit == 0x0 return offset - buffer.data; // 1 byte unicode char
+    first_bit := ptr.* & 0x80;
+    if first_bit == 0x0 return ptr - buffer.data; // 1 byte length char
 
     // Cursor (caret) movement is based on characters, not bytes - this issue should never occur!
-    first_2bit := offset.* & 0xc0;
+    first_2bit := ptr.* & 0xc0;
     assert(first_2bit != 0xc0, "The start byte (buffer.data+start) is in the middle of a Unicode character.");
     assert(first_2bit == 0x80, "Invalid UTF-8"); // the first bit check happens above
 
     bytes := 1;
-    while (offset.* & 0xc0) == 0x80 && (offset > buffer.data) {
-        offset -= 1;
+    while (ptr.* & 0xc0) == 0x80 && (ptr > buffer.data) {
+        ptr -= 1;
         bytes += 1;
         assert(bytes <= 4, "Invalid UTF-8! We expect less than 5 bytes but we got %", bytes); // it's not totally correct
     }
 
-    assert((offset.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
+    assert((ptr.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
 
-    return offset - buffer.data;
+    return ptr - buffer.data;
 }
 
-char_num_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
+num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
     pos   := first_byte_pos(row);
     end   := row.pos;
     assert(row.pos <= buffer.count, "% %", row.pos, buffer.count);
@@ -339,26 +350,28 @@ char_num_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
     return chars;
 }
 
-get_cursor_rel_x :: inline (using editor: *Editor) -> s64 {
-    x := get_cursor_x(editor);
-    return xx (x - left_offset + my_font.em_width);
+get_cursor_rel_x :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
+    x := get_cursor_x(buffer, cursor);
+    return xx (x - editor.left_offset + my_font.em_width);
 }
 
-get_cursor_rel_y :: inline (using editor: *Editor) -> s64 {
-    row := get_cursor_row(editor);
-    return xx (window_height - get_line_height(row) + top_offset);
+get_cursor_rel_y :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
+    row_index   := find_row_index(buffer, cursor.pos);
+    line_height := get_line_height(row_index + 1);
+    return xx (window_height - line_height + editor.top_offset);
 }
 
-get_cursor_x :: inline (using editor: *Editor) -> s64 {
-    if cursor_pos == 0 return 0;
-    return get_cursor_col(editor) * current_font_width();
+get_cursor_y :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
+    if cursor.pos == 0 return window_height;
+    row_index := find_row_index(buffer, cursor.pos);
+    return window_height - xx get_line_height(row_index + 1);
 }
 
-get_cursor_y :: (using editor: *Editor) -> s64 {
-    if cursor_pos == 0 return window_height;
-    row := get_cursor_row(editor);
-    return window_height - xx get_line_height(row);
+get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
+    if cursor.pos == 0 return 0;
+    return get_cursor_col(buffer, cursor) * current_font_width();
 }
+
 
 // insert_text :: (buffer: *Buffer, pos: s64, text: string) {
 //     maybe_grow(buffer, text.count);
@@ -376,20 +389,21 @@ get_cursor_y :: (using editor: *Editor) -> s64 {
 //     buffer.rebuild_row_table = true;
 // }
 
-insert_text_at_cursor :: inline (editor: *Editor, buffer: *Buffer, text: string) {
-    maybe_grow(buffer, text.count);
+insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
+    maybe_grow(buffer, s.count);
 
-    insert_at      := buffer.data+editor.cursor_pos;
-    new_right      := insert_at + text.count;
-    right_rem_size := buffer.count - (insert_at-buffer.data);
+    insert_at      := buffer.data  + _cursor.pos;
+    new_right      := insert_at    + s.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
 
     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
-    memcpy(insert_at, text.data, text.count);
+    memcpy(insert_at, s.data, s.count);
 
-    buffer.count += text.count;
+    buffer.count += s.count;
     buffer.rebuild_row_table = true;
 
-    advance_cursor_pos(editor, text.count);
+    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count);
+    // advance_cursor_pos(editor, s.count);
 }
 
 set_cursor_pos :: inline (using editor: *Editor, index: s64) {
@@ -398,6 +412,13 @@ set_cursor_pos :: inline (using editor: *Editor, index: s64) {
     cursor_pos = index;
     cursor_moved = true;
     // cursor_moved = true; // @Cleanup: Remove
+}
+
+set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64) {
+    target_pos = max(target_pos, 0);
+    target_pos = min(target_pos, buffer.count);
+    
+    cursor.pos = target_pos;
 }
 
 advance_cursor_pos :: inline (editor: *Editor, by: s64) {
