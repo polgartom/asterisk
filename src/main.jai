@@ -75,27 +75,14 @@ main :: () {
 
     footer_height = my_font.character_height*1.5;
 
-    // @Todo: We should create an initial empty buffer
-    {
-        // open_file(*editor, "src/main.jai");
-        open_file(*editor, "src/draw.jai");
-
-        // @Todo: It's just for debug but we shoudl create an initial (starting) buffer for every new Editor instance
-        // t := "birka\ncica";
-        // buffer := array_add(*editor.buffers);
-        // editor.active_buffer = buffer;
-        // maybe_grow(buffer, t.count);
-        // memcpy(buffer.data, t.data, t.count);
-        // buffer.count = t.count;
-
-        // buffer.rebuild_row_table = true;
-    }
-
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
     second_elapsed := false;
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
+
+    editor = create_an_editor_instance();
+    // open_file(editor, "src/draw.jai");
 
     while !should_quit {
         #if OS == .WINDOWS {
@@ -397,7 +384,7 @@ insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
     right_rem_size := buffer.count - (insert_at - buffer.data);
 
     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
-    memcpy(insert_at, s.data, s.count);
+    copy(insert_at, s.data, s.count);
 
     buffer.count += s.count;
     buffer.rebuild_row_table = true;

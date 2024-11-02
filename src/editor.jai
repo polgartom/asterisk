@@ -1,8 +1,17 @@
-editor: Editor; // @Temporary
+editor: *Editor;
 
 get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     assert(editor.active_buffer != null);
-    return *editor, editor.active_buffer;
+    return editor, editor.active_buffer;
+}
+
+create_an_editor_instance :: () -> *Editor {
+    editor := New(Editor);
+    buffer := array_add(*editor.buffers);
+    editor.active_buffer = buffer;
+    maybe_grow(buffer, 0);
+
+    return editor;
 }
 
 Editor :: struct {
@@ -55,7 +64,7 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
         memset(new_data, 0, xx new_size);
 
         if buffer.data {
-            memcpy(new_data, buffer.data, buffer.allocated);
+            copy(new_data, buffer.data, buffer.allocated);
             c_free(buffer.data);
         }
 
@@ -124,6 +133,8 @@ rebuild_row_table :: (using buffer: *Buffer) {
 
 open_file :: (editor: *Editor, filepath: string) {
     file_data := read_entire_file(filepath);
+    defer free(file_data);
+
     {
         tmp := replace_crlf_to_lf(file_data);
         free(file_data);
@@ -134,13 +145,25 @@ open_file :: (editor: *Editor, filepath: string) {
         free(file_data);
         file_data = tmp;
     }
+    {
+        // @Todo: A nice alert or something instead of these asserts
+        // Validate UTF-8
+        s := file_data;
+        while s.count {
+            code, bytes, success := character_utf8_to_utf32(s.data, s.count);
+            assert(success == .CONVERSION_OK, "Invalid UTF-8 file");
+            s.data  += bytes;
+            s.count -= bytes;
+            assert(s.count >= 0, "Invalid UTF-8 file");
+        } 
+    }
 
     buffer := array_add(*editor.buffers);
     buffer.filepath = filepath;
     
     maybe_grow(buffer, file_data.count);
     
-    memcpy(buffer.data, file_data.data, file_data.count);
+    copy(buffer.data, file_data.data, file_data.count);
     buffer.count = file_data.count;
 
     buffer.rebuild_row_table = true;

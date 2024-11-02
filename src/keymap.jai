@@ -423,6 +423,7 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
         }
     }
 
+    shift_left(buffer, _cursor.pos, text.count); // We have no separator character at the end
 }
 
 DeleteCharFromLeft :: () {

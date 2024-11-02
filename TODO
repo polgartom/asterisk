@@ -39,8 +39,8 @@
 [X] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
 [X] Open a file
 [x] Move cursor related data to the Buffer struct - later we want multiple cursor support, so refact that way 
+[X] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [] Validate UTF-8 before we load the file data into the buffer
-[] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [] Fix word/subword movement if the cursor surrounded with multiple line breaks
 [] Improve word/subword movement mainly because the left and right movement not exactly the same
 [] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
