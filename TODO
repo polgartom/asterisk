@@ -38,7 +38,7 @@
 [X] Need an abstraction for the c_memmove like shift_left or smth
 [X] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
 [X] Open a file
-[] Move cursor related data to the Buffer struct - later we want multiple cursor support, so refact that way 
+[x] Move cursor related data to the Buffer struct - later we want multiple cursor support, so refact that way 
 [] Validate UTF-8 before we load the file data into the buffer
 [] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [] Fix word/subword movement if the cursor surrounded with multiple line breaks

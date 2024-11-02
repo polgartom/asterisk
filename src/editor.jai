@@ -9,8 +9,8 @@ Editor :: struct {
     buffers: [..] Buffer;
     active_buffer: *Buffer; // Cannot be null after initialization
 
-    cursor_pos: s64 = 0;
-    cursor_moved := false;
+    // cursor_pos: s64 = 0;
+    // cursor_moved := false;
     last_cursor_col_for_up_down_movement: s64 = 0;
 
     top_offset  := 0.0; // s64?

@@ -69,7 +69,7 @@ main :: () {
     ui_init(); // GetRect
 
     {
-        f := <<my_font;
+        f := my_font.*;
         print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
     }
 
@@ -203,7 +203,7 @@ main :: () {
             cx  := get_cursor_x(buffer, *buffer._cursor);
             cy  := get_cursor_y(buffer, *buffer._cursor);
 
-            PrintDev("p: % r: % col: % cx: % cy: %\n", cursor_pos, row, col, cx, cy);
+            PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
             PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
 
             PrintDev("--------------rendering--------------\n");
@@ -256,21 +256,21 @@ find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
     return row_table.count-1;
 }
 
-get_cursor_row :: (using editor: *Editor) -> s64 {
-    if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
+// get_cursor_row :: (using editor: *Editor) -> s64 {
+//     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
 
-    buffer := editor.active_buffer;
-    using buffer;
+//     buffer := editor.active_buffer;
+//     using buffer;
 
-    assert(row_table.count != 0);
-    for row_table {
-        if cursor_pos <= it.pos {
-            return it_index+1;
-        }
-    }
+//     assert(row_table.count != 0);
+//     for row_table {
+//         if cursor_pos <= it.pos {
+//             return it_index+1;
+//         }
+//     }
 
-    return row_table.count;
-}
+//     return row_table.count;
+// }
 
 get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     if cursor.pos == 0 return 1;
@@ -406,23 +406,11 @@ insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
     // advance_cursor_pos(editor, s.count);
 }
 
-set_cursor_pos :: inline (using editor: *Editor, index: s64) {
-    // @Todo: check overflow, use clamp() proc
-    if index < 0 then index = 0;
-    cursor_pos = index;
-    cursor_moved = true;
-    // cursor_moved = true; // @Cleanup: Remove
-}
-
 set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64) {
     target_pos = max(target_pos, 0);
     target_pos = min(target_pos, buffer.count);
     
     cursor.pos = target_pos;
-}
-
-advance_cursor_pos :: inline (editor: *Editor, by: s64) {
-    set_cursor_pos(editor, editor.cursor_pos + by);
 }
 
 //  @Cleanup: Naming
@@ -460,7 +448,7 @@ my_init_fonts :: () {
     pixel_height := font_size; // print(">>> %\n", window_height/40);
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-    // print("%\n\n", <<my_font);
+    // print("%\n\n", my_font.*);
     assert(my_font != null);
 }
 

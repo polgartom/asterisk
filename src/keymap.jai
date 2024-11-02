@@ -394,7 +394,6 @@ DeleteSubwordFromLeft :: inline () {
     delete_word_or_subword_from_left(subword_mode=true);
 }
 
-// kacsa
 delete_word_or_subword_from_left :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -587,23 +586,30 @@ InsertTab :: inline () {
 }
 
 GotoFirstCharOFCurrentRow :: inline () {
-    buffer := editor.active_buffer;
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
 
-    index := find_row_index(buffer, editor.cursor_pos);
-    row   := buffer.row_table[index];
+    index := find_row_index(buffer, _cursor.pos);
+    row   := row_table[index];
     start := first_byte_pos(row);
 
     for start..row.pos {
         if buffer.data[it] != #char " " { // skip the indentation
-            set_cursor_pos(*editor, it);
-            break;
+            new_pos := it;
+            if it == _cursor.pos new_pos = start;
+            set_cursor_pos(buffer, *_cursor, new_pos);
+            return;
         }
     }
 }
 
 GotoLastCharOfCurrentRow :: inline () {
-    index  := find_row_index(editor.active_buffer, editor.cursor_pos);
-    row    := editor.active_buffer.row_table[index];
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    index  := find_row_index(buffer, _cursor.pos);
+    row    := row_table[index];
     offset := last_byte_pos(row);
-    set_cursor_pos(*editor, offset);
+    
+    set_cursor_pos(buffer, *_cursor, offset);
 }
