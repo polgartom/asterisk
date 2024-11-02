@@ -82,7 +82,7 @@ main :: () {
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
     editor = create_an_editor_instance();
-    // open_file(editor, "src/draw.jai");
+    open_file(editor, "src/draw.jai");
 
     while !should_quit {
         #if OS == .WINDOWS {
@@ -389,15 +389,21 @@ insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
     buffer.count += s.count;
     buffer.rebuild_row_table = true;
 
-    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count);
-    // advance_cursor_pos(editor, s.count);
+    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count, horizontal=true);
+
+    buffer.dirty = true;
 }
 
-set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64) {
+set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false) {
     target_pos = max(target_pos, 0);
     target_pos = min(target_pos, buffer.count);
     
     cursor.pos = target_pos;
+
+    // Explain!
+    if horizontal {
+        cursor.col = get_cursor_col(buffer, cursor);
+    }
 }
 
 //  @Cleanup: Naming

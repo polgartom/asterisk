@@ -7,11 +7,12 @@
 # TODO
 # C-f OpenWidget
 
-
 F1 ToggleDevInfo
 F2 DrawSpecialChars
 
 A-F4 Quit
+C-s Save
+C-w CloseCurrentBuffer
 
 # CARET MOVEMENTS
 

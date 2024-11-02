@@ -95,16 +95,22 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         center := footer.y+footer.h/2-my_font.character_height/2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
-        opened_file := editor.active_buffer.filepath;
-        if !opened_file then opened_file = tprint("<new file>");
+        buffer := editor.active_buffer;
+        opened_file: string = ---;
+        filepath := buffer.filepath;
+        if filepath {
+            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else " ");
+        } else {
+            opened_file = tprint("<new file>");
+        }
 
         w := Simp.prepare_text(my_font, opened_file);
         Simp.draw_prepared_text(my_font, 10, xx center, .{.0,.0,.0,1.0});
 
-        ln  := find_row_index(buffer, buffer._cursor.pos);
+        row := find_row_index(buffer, buffer._cursor.pos)+1;
         col := get_cursor_col(buffer, *buffer._cursor);
-        lncolinfo := tprint("Ln % Col %", ln, col);
-        w = Simp.prepare_text(my_font, lncolinfo);
+        row_col_info := tprint("Row % Col %", row, col);
+        w = Simp.prepare_text(my_font, row_col_info);
         Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});
     }
 

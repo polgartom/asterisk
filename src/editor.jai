@@ -20,7 +20,7 @@ Editor :: struct {
 
     // cursor_pos: s64 = 0;
     // cursor_moved := false;
-    last_cursor_col_for_up_down_movement: s64 = 0;
+    // last_cursor_col_for_up_down_movement: s64 = 0;
 
     top_offset  := 0.0; // s64?
     left_offset := 0.0; // s64?
@@ -45,6 +45,8 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for
     count -= (from - to);
 
     rebuild_row_table = true;
+
+    dirty = true; // @Cleanup: Remove this from here
 }
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
@@ -73,10 +75,38 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
+close_buffer :: (editor: *Editor, buffer: *Buffer) {
+    // success := array_ordered_remove_by_value(editor.buffers, buffer);
+    // assert(success, "Buffer doesn't found!");
+
+    // @Cleanup: WTF??!
+    tmp := editor.buffers;
+    array_reset_keeping_memory(*editor.buffers);
+    for * tmp {
+        if it != buffer then array_add(*editor.buffers, it);
+    }
+
+    c_free(buffer.data);
+    array_free(buffer.row_table);
+    // free(buffer.filepath); // @Todo
+
+    if editor.buffers.count == 0 {
+        // Create a new empty (initial) buffer
+        new_buffer := array_add(*editor.buffers);
+        maybe_grow(new_buffer, 0);
+        change_active_buffer(editor, new_buffer);
+    } else {
+        last_index := editor.buffers.count-1;
+        change_active_buffer(editor, *editor.buffers[last_index]);
+    }
+}
+
 Buffer :: struct {
-    count: s64;
+    count:     s64;
     allocated: s64;
-    data: *u8; // Rename it to bytes or smth @Cleanup 
+    data:      *u8; // Rename it to bytes or smth @Cleanup 
+
+    dirty := false;
 
     // cursors: [..] Cursor; // @Todo: Multiple cursor support
     _cursor: Cursor; // This name temporary, because we're gonna use the cursors dynamic array
@@ -90,8 +120,8 @@ Buffer :: struct {
 
 Cursor :: struct {
     pos:  s64 = 0;
-    // pos2: s64 = 0; // for the selection @Todo
-    col: s64 = 0; // last_cursor_col_for_up_down_movement
+    pos2: s64 = 0;
+    col:  s64 = 0; // last_cursor_col_for_up_down_movement
 }
 
 // @Ambiguity

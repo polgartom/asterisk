@@ -1,58 +1,25 @@
-register_keymap_procedures :: () {
+Save :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
 
-    // Editor keymaps   
-    k := *default_keymap;
-
-    Keymap.add_proc(k, "ToggleDevInfo", ToggleDevInfo);
-    Keymap.add_proc(k, "DrawSpecialChars", DrawSpecialChars);
-
-    Keymap.add_proc(k, "Quit", Quit);
-
-    Keymap.add_proc(k, "MoveUp", MoveUp);
-    Keymap.add_proc(k, "MoveDown", MoveDown);
-    Keymap.add_proc(k, "MoveLeft", MoveLeft);
-    Keymap.add_proc(k, "MoveRight", MoveRight);
+    assert(!!filepath, "TODO");
     
-    Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
-    Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);
-    Keymap.add_proc(k, "MoveRightWord", MoveRightWord);
-    Keymap.add_proc(k, "MoveRightSubword", MoveRightSubword);
+    s := to_string(buffer);
+    write_entire_file(filepath, s);
 
-    Keymap.add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
-    Keymap.add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
-
-    Keymap.add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
-    Keymap.add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
-    
-    Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
-
-    Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
-    Keymap.add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
-    Keymap.add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
-    
-    Keymap.add_proc(k, "DeleteWordFromLeft", DeleteWordFromLeft);
-    Keymap.add_proc(k, "DeleteSubwordFromLeft", DeleteSubwordFromLeft);
-
-    Keymap.add_proc(k, "InsertTab", InsertTab);
-    Keymap.add_proc(k, "InsertLine", InsertLine);
-    Keymap.add_proc(k, "InsertLineBelow", InsertLineBelow);
-
-    Keymap.add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
-    Keymap.add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
-
-    // add_proc(k, "OpenWidget", OpenWidget);
+    dirty = false;
 }
 
-init_keymaps :: () {
-    register_keymap_procedures();
-    success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
-    assert(success, "Failed to load the 'default.keymap'");
+CloseCurrentBuffer :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    
+    assert(buffer != null);
+
+    // @Todo: A confirm popup thing
+    // if buffer.dirty {}
+
+    close_buffer(editor, buffer);
 }
-
-default_keymap: Keymap.Keymap;
-
-///////////////////////////////
-// EDITOR
 
 Quit :: () {
     should_quit = true;
@@ -187,8 +154,7 @@ move_left_word :: ($subword_mode: bool) {
         new_pos := last_non_whitespace_offset+1;
         if new_pos > _cursor.pos new_pos = last_non_whitespace_offset;
         if new_pos == _cursor.pos new_pos = max(0, _cursor.pos-1);
-        set_cursor_pos(buffer, *_cursor, new_pos);
-        // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+        set_cursor_pos(buffer, *_cursor, new_pos, horizontal=true);
         return;
     }
 
@@ -220,8 +186,7 @@ move_left_word :: ($subword_mode: bool) {
         offset = next_char_byte_offset(text, offset);
     }
 
-    set_cursor_pos(buffer, *_cursor, offset);
-    // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+    set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
 }
 
 move_right_word :: ($subword_mode: bool) {
@@ -241,8 +206,7 @@ move_right_word :: ($subword_mode: bool) {
             last_whitespace_offset = it;
             if !is_whitespace(text[it]) break;
         }
-        set_cursor_pos(buffer, *_cursor, last_whitespace_offset);
-        // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+        set_cursor_pos(buffer, *_cursor, last_whitespace_offset, horizontal=true);
         return;
     }
 
@@ -251,21 +215,18 @@ move_right_word :: ($subword_mode: bool) {
         separator := is_separator_char(text[it], subword_mode);
         if combined {
             if !separator {
-                set_cursor_pos(buffer, *_cursor, it);
-                // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+                set_cursor_pos(buffer, *_cursor, it, horizontal=true);
                 return;
             }
         } else {
             if separator {
-                set_cursor_pos(buffer, *_cursor, it);
-                // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+                set_cursor_pos(buffer, *_cursor, it, horizontal=true);
                 return;
             }
         }
     }
 
-    set_cursor_pos(buffer, *_cursor, text.count); // no more word so we should jump to the last byte of the row
-    // last_cursor_col_for_up_down_movement = get_cursor_col(*editor);
+    set_cursor_pos(buffer, *_cursor, text.count, horizontal=true); // no more word so we should jump to the last byte of the row
 }
 
 MoveLeftWord :: inline () {
@@ -382,7 +343,7 @@ DeleteCharFromRight :: () {
         to   := _cursor.pos-bytes_to_del;
         from := _cursor.pos;
         shift_left(buffer, to, from);
-        set_cursor_pos(buffer, *_cursor, to);
+        set_cursor_pos(buffer, *_cursor, to, horizontal=true);
     }
 }
 
@@ -473,7 +434,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
                 if text[index] != #char " " {
                     index += 1;
                     shift_left(buffer, index, _cursor.pos);
-                    set_cursor_pos(buffer, *_cursor, index);
+                    set_cursor_pos(buffer, *_cursor, index, horizontal=true);
                     return;
                 }
             }
@@ -489,11 +450,11 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
         if is_separator_char(text[index], subword_mode) {
             index += 1;
             shift_left(buffer, index, _cursor.pos);
-            set_cursor_pos(buffer, *_cursor, index);
+            set_cursor_pos(buffer, *_cursor, index, horizontal=true);
             return;
         } else if index == 0 {
             shift_left(buffer, 0, _cursor.pos);
-            set_cursor_pos(buffer, *_cursor, 0);
+            set_cursor_pos(buffer, *_cursor, 0, horizontal=true);
             return;
         }
     }
@@ -584,6 +545,7 @@ InsertTab :: inline () {
     editor, buffer := get_active_editor_and_buffer();
 
     insert_text_at_cursor(buffer, TAB_SPACE_CHARS);
+    buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
 GotoFirstCharOFCurrentRow :: inline () {
@@ -598,7 +560,7 @@ GotoFirstCharOFCurrentRow :: inline () {
         if buffer.data[it] != #char " " { // skip the indentation
             new_pos := it;
             if it == _cursor.pos new_pos = start;
-            set_cursor_pos(buffer, *_cursor, new_pos);
+            set_cursor_pos(buffer, *_cursor, new_pos, horizontal=true);
             return;
         }
     }
@@ -612,5 +574,65 @@ GotoLastCharOfCurrentRow :: inline () {
     row    := row_table[index];
     offset := last_byte_pos(row);
     
-    set_cursor_pos(buffer, *_cursor, offset);
+    set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
 }
+
+////////////////////////////////////
+//
+
+register_keymap_procedures :: () {
+
+    // Editor keymaps   
+    k := *default_keymap;
+
+    Keymap.add_proc(k, "ToggleDevInfo", ToggleDevInfo);
+    Keymap.add_proc(k, "DrawSpecialChars", DrawSpecialChars);
+
+    Keymap.add_proc(k, "Quit", Quit);
+    Keymap.add_proc(k, "Save", Save);
+    Keymap.add_proc(k, "CloseCurrentBuffer", CloseCurrentBuffer);
+
+    ///////////////////////////
+
+    Keymap.add_proc(k, "MoveUp", MoveUp);
+    Keymap.add_proc(k, "MoveDown", MoveDown);
+    Keymap.add_proc(k, "MoveLeft", MoveLeft);
+    Keymap.add_proc(k, "MoveRight", MoveRight);
+    
+    Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
+    Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);
+    Keymap.add_proc(k, "MoveRightWord", MoveRightWord);
+    Keymap.add_proc(k, "MoveRightSubword", MoveRightSubword);
+
+    Keymap.add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
+    Keymap.add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
+
+    Keymap.add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
+    Keymap.add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
+    
+    Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+
+    Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
+    Keymap.add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
+    Keymap.add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
+    
+    Keymap.add_proc(k, "DeleteWordFromLeft", DeleteWordFromLeft);
+    Keymap.add_proc(k, "DeleteSubwordFromLeft", DeleteSubwordFromLeft);
+
+    Keymap.add_proc(k, "InsertTab", InsertTab);
+    Keymap.add_proc(k, "InsertLine", InsertLine);
+    Keymap.add_proc(k, "InsertLineBelow", InsertLineBelow);
+
+    Keymap.add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
+    Keymap.add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
+
+    // add_proc(k, "OpenWidget", OpenWidget);
+}
+
+init_keymaps :: () {
+    register_keymap_procedures();
+    success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
+    assert(success, "Failed to load the 'default.keymap'");
+}
+
+default_keymap: Keymap.Keymap;
