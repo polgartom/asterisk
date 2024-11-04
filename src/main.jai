@@ -38,7 +38,7 @@ draw_special_chars := false;
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
-show_debug_info := true;
+show_debug_info := DEBUG; // hide debug info by default in RELEASE mode
 debug_infos: [..] string;
 
 fps: float64;
@@ -82,7 +82,7 @@ main :: () {
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
     editor = create_an_editor_instance();
-    open_file(editor, "src/draw.jai");
+    load_file_from_command_line(editor); // @Temporary
 
     while !should_quit {
         #if OS == .WINDOWS {
@@ -123,9 +123,10 @@ main :: () {
                 break;
             }
 
-            // @Debug
-            if event.key_code == .ESCAPE {
-                if event.key_pressed should_quit = true;
+            #if DEBUG {
+                if event.key_code == .ESCAPE {
+                    if event.key_pressed should_quit = true;
+                }
             }
 
             getrect_handle_event(event);
@@ -438,9 +439,12 @@ my_init_fonts :: () {
     path := path_strip_filename(get_path_of_running_executable());
 
     set_working_directory(path);
-    pixel_height := font_size; // print(">>> %\n", window_height/40);
+    // pixel_height := font_size; // print(">>> %\n", window_height/40);
+    pixel_height := 15;
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+    // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
+    print("font: %\n", my_font.*);
     // print("%\n\n", my_font.*);
     assert(my_font != null);
 }
@@ -508,6 +512,29 @@ is_whitespace :: inline (c: s64) -> bool {
     WaitMessage :: () -> s32 #foreign user32;
 }
 
+// @Temporary
+load_file_from_command_line :: (editor: *Editor) {
+    Args :: struct {
+        file: string;
+    };
+
+    args_success, args, is_set, free_args := parse_arguments(Args);
+    // print("% % % %\n", args_success, args, is_set, free_args);
+    if !args_success {
+        exit(1);
+    }
+
+    for free_args {
+        open_file(editor, it);
+    }
+
+    // if is_set.file {
+    //     open_file(editor, args.file);
+    // }
+
+    // assert(free_args.count > 1);
+}
+
 #load "draw.jai";
 #load "keymap.jai";
 #load "editor.jai";
@@ -524,6 +551,7 @@ Keymap :: #import "Keymap";
 Simp :: #import "Simp";
 #import "GetRect";
 #import "Memory";
+#import "Command_Line";
 
 c_malloc  :: (size: u64) -> *void                #foreign crt "malloc";
 c_free    :: (memory: *void)                     #foreign crt "free";

@@ -92,6 +92,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         Simp.immediate_quad(footer.x, footer.y, footer.w, footer.h, FOOTER_COLOR);
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
+        left := 10;
         center := footer.y+footer.h/2-my_font.character_height/2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
@@ -99,13 +100,18 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         opened_file: string = ---;
         filepath := buffer.filepath;
         if filepath {
-            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else " ");
+            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else "");
         } else {
             opened_file = tprint("<new file>");
         }
 
         w := Simp.prepare_text(my_font, opened_file);
-        Simp.draw_prepared_text(my_font, 10, xx center, .{.0,.0,.0,1.0});
+        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+
+        left += w;
+        index := tprint("| %/%", get_active_buffer_index(editor)+1, editor.buffers.count);
+        w = Simp.prepare_text(my_font, index);
+        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 
         row := find_row_index(buffer, buffer._cursor.pos)+1;
         col := get_cursor_col(buffer, *buffer._cursor);
@@ -147,19 +153,20 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         //     Simp.immediate_quad(0.0, window_height/2.0-1.0, xx window_width, window_height/2.0, DEBUG_CROSSHAIR_COLOR); 
         // }
 
-        {
-            ct := seconds_since_init();
-            if second_elapsed {
-                frametime = (ct - last_time); // frametime
-                fps       = 1/frametime;
-            }
+        // {
+        //     // Draw fps
+        //     ct := seconds_since_init();
+        //     if second_elapsed {
+        //         frametime = (ct - last_time); // frametime
+        //         fps       = 1/frametime;
+        //     }
 
-            PrintDev("%fps %ms %sec\n", 
-                formatFloat(fps, trailing_width=0), 
-                formatFloat(frametime*1000, trailing_width=2), 
-                formatFloat(last_time, trailing_width=0)
-            );
-        }
+        //     PrintDev("%fps %ms %sec\n", 
+        //         formatFloat(fps, trailing_width=0), 
+        //         formatFloat(frametime*1000, trailing_width=2), 
+        //         formatFloat(last_time, trailing_width=0)
+        //     );
+        // }
 
         row := 1;
         max := 0;

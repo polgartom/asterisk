@@ -101,6 +101,17 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
     }
 }
 
+get_active_buffer_index :: (using editor: *Editor) -> s64 {
+    for * buffers {
+        if active_buffer == it {
+            return it_index;
+        }
+    }
+
+    assert(false, "Buffer not in the list!");
+    return -1;
+}
+
 Buffer :: struct {
     count:     s64;
     allocated: s64;
@@ -188,7 +199,14 @@ open_file :: (editor: *Editor, filepath: string) {
         } 
     }
 
-    buffer := array_add(*editor.buffers);
+    assert(editor.active_buffer != null);
+
+    buffer := editor.active_buffer;
+    if buffer.dirty || buffer.filepath {
+        // Using the current buffer if it's empty, probably it's the initial buffer
+        buffer = array_add(*editor.buffers);
+    }
+
     buffer.filepath = filepath;
     
     maybe_grow(buffer, file_data.count);

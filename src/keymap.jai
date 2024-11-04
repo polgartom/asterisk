@@ -21,6 +21,29 @@ CloseCurrentBuffer :: () {
     close_buffer(editor, buffer);
 }
 
+PrevBuffer :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using editor;
+
+    current_index := get_active_buffer_index(editor);
+    next_index    := current_index-1;
+    if next_index < 0 then next_index = buffers.count-1;
+    next_buffer   := *buffers[next_index];
+
+    change_active_buffer(editor, next_buffer);
+}
+
+NextBuffer :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using editor;
+
+    current_index := get_active_buffer_index(editor);
+    next_index    := (current_index + 1) % buffers.count;
+    next_buffer   := *buffers[next_index];
+    
+    change_active_buffer(editor, next_buffer);
+}
+
 Quit :: () {
     should_quit = true;
 }
@@ -590,7 +613,10 @@ register_keymap_procedures :: () {
 
     Keymap.add_proc(k, "Quit", Quit);
     Keymap.add_proc(k, "Save", Save);
+
     Keymap.add_proc(k, "CloseCurrentBuffer", CloseCurrentBuffer);
+    Keymap.add_proc(k, "PrevBuffer", PrevBuffer);
+    Keymap.add_proc(k, "NextBuffer", NextBuffer);
 
     ///////////////////////////
 

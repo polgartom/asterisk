@@ -14,6 +14,9 @@ A-F4 Quit
 C-s Save
 C-w CloseCurrentBuffer
 
+C-PageUp PrevBuffer
+C-PageDown NextBuffer
+
 # CARET MOVEMENTS
 
 ArrowLeft MoveLeft

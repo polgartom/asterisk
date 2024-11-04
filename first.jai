@@ -38,6 +38,15 @@
 
     add_build_file("src/main.jai", w);
     
+    build_constants := tprint(#string STRING
+            DEBUG   :: %;
+            RELEASE :: %; 
+        STRING,
+            ifx do_optimization then "false" else "true",
+            ifx do_optimization then "true"  else "false"
+    );
+    add_build_string(build_constants, w);
+
     compiler_end_intercept(w);
 }
 
