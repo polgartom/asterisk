@@ -28,19 +28,17 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw cursor
     if editor_in_focus {
-        row := get_cursor_row(buffer, *buffer._cursor);
-        cx  := get_cursor_x(buffer, *buffer._cursor);
+        c := *buffer._cursor;
 
-        Simp.set_shader_for_color();
+        row_index := find_row_index(buffer, c.pos);
+        top  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+        cx   := get_cursor_x(buffer, c) - editor.left_offset;
+        cw   := cx + my_font.em_width;
+        ch   := my_font.character_height;
 
-        // top  := window_height - ((my_font.default_line_spacing+line_height) * row) + top_offset;
-        top  := (r.h+r.y) - ((my_font.default_line_spacing+line_height) * row) + editor.top_offset;
-
-        left := cx - editor.left_offset;
-        h    := my_font.character_height;
-
-        // @Improve: This isn't accurate
-        Simp.immediate_quad(left, top + (h-h*0.1), left + my_font.em_width, top - (h/2-(h*0.2)), CURSOR_COLOR); 
+        Simp.set_shader_for_color(true);
+        Simp.immediate_quad(xx cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
+        // Simp.immediate_flush();
     }
 
     // Draw lines
@@ -90,6 +88,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     {
         Simp.set_shader_for_color();
         Simp.immediate_quad(footer.x, footer.y, footer.w, footer.h, FOOTER_COLOR);
+        // Simp.immediate_flush();
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
         left := 10;
@@ -146,6 +145,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw debug info
     if show_debug_info {
+
         // {
         //     // Draw crosshair
         //     Simp.set_shader_for_color();
@@ -153,20 +153,23 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         //     Simp.immediate_quad(0.0, window_height/2.0-1.0, xx window_width, window_height/2.0, DEBUG_CROSSHAIR_COLOR); 
         // }
 
-        // {
-        //     // Draw fps
-        //     ct := seconds_since_init();
-        //     if second_elapsed {
-        //         frametime = (ct - last_time); // frametime
-        //         fps       = 1/frametime;
-        //     }
+        #if 1 {
+            // Draw fps
+            ct := seconds_since_init();
+            if second_elapsed {
+                frametime = (ct - last_time); // frametime
+                fps       = 1/frametime;
+                last_showed_sim_time = last_simulation_time;
+                last_rendering_time = (ct-last_time)*1000;
+            }
 
-        //     PrintDev("%fps %ms %sec\n", 
-        //         formatFloat(fps, trailing_width=0), 
-        //         formatFloat(frametime*1000, trailing_width=2), 
-        //         formatFloat(last_time, trailing_width=0)
-        //     );
-        // }
+            PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
+            PrintDev("%fps %ms %sec\n", 
+                formatFloat(fps, trailing_width=0), 
+                formatFloat(frametime*1000, trailing_width=2), 
+                formatFloat(last_time, trailing_width=0)
+            );
+        }
 
         row := 1;
         max := 0;

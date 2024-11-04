@@ -40,10 +40,8 @@
     
     build_constants := tprint(#string STRING
             DEBUG   :: %;
-            RELEASE :: %; 
         STRING,
-            ifx do_optimization then "false" else "true",
-            ifx do_optimization then "true"  else "false"
+            ifx do_optimization then "false" else "true"
     );
     add_build_string(build_constants, w);
 

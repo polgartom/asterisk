@@ -10,6 +10,9 @@ should_quit := false;
 my_font: *Simp.Dynamic_Font;
 
 last_time : float64;
+last_simulation_time : float64;
+last_showed_sim_time : float64;
+last_rendering_time  : float64;
 
 font_width: s64;
 
@@ -85,8 +88,10 @@ main :: () {
     load_file_from_command_line(editor); // @Temporary
 
     while !should_quit {
-        #if OS == .WINDOWS {
-            WaitMessage();
+        #if 0 {
+            #if OS == .WINDOWS {
+                WaitMessage();
+            }
         }
 
         last_time = seconds_since_init();
@@ -176,9 +181,12 @@ main :: () {
             }
         }
 
-        // simtime := (seconds_since_init()-last_time)*1000;
+        editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
+        get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
 
         if show_debug_info {
+            last_simulation_time = (seconds_since_init()-last_time)*1000;
+
             editor, buffer := get_active_editor_and_buffer();
             using editor;
 
@@ -197,13 +205,9 @@ main :: () {
             PrintDev("--------------rendering--------------\n");
         }
 
-        // drawtime := seconds_since_init();
 
         draw_frame(text, second_elapsed, last_time);
         Simp.swap_buffers(my_window);
-
-        // drawtime = (seconds_since_init()-drawtime)*1000;
-        // PrintDev("simulate: %ms ; rendertime: %ms\n", formatFloat(simtime, trailing_width=2), formatFloat(drawtime, trailing_width=2));
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
@@ -357,9 +361,21 @@ get_cursor_y :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
 
 get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
     if cursor.pos == 0 return 0;
-    return get_cursor_col(buffer, cursor) * current_font_width();
-}
+    if cursor.x_cache != -1 return cursor.x_cache;
 
+    // @Speed !!!!!! the prepare_text is so slooow!
+
+    row_index := find_row_index(buffer, cursor.pos);
+    row := buffer.row_table[row_index];
+    first_byte := row.pos-row.cols;
+    text := to_string(buffer);
+    text = slice(text, first_byte, cursor.pos-first_byte);
+    cx := Simp.prepare_text(my_font, text);
+
+    cursor.x_cache = cx; // @Temporary
+
+    return cx;
+}
 
 // insert_text :: (buffer: *Buffer, pos: s64, text: string) {
 //     maybe_grow(buffer, text.count);

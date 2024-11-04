@@ -133,6 +133,8 @@ Cursor :: struct {
     pos:  s64 = 0;
     pos2: s64 = 0;
     col:  s64 = 0; // last_cursor_col_for_up_down_movement
+
+    x_cache: s64 = -1; // @Temporary
 }
 
 // @Ambiguity
