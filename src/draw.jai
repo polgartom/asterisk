@@ -81,7 +81,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         }
 
         avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
-        PrintDev("rendered rows/total: %/% ; avg/row: %ms\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
+        PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
     // Draw footer
@@ -166,25 +166,26 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
             PrintDev("%fps %ms %sec\n", 
                 formatFloat(fps, trailing_width=0), 
-                formatFloat(frametime*1000, trailing_width=2), 
-                formatFloat(last_time, trailing_width=0)
+                formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO), 
+                formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO)
             );
         }
 
         row := 1;
         max := 0;
-        for debug_infos if it.count > max then max = it.count;
-        for debug_infos {
+        line_height := get_line_height();
+        bottom: float32 = footer_height + line_height;
+
+        for #v2 < debug_infos {
             s := it;
             ln := s[s.count-1] == #char "\n";
             if ln then s.count -= 1;
 
-            // roffset := max - it.count;
             rmargin := 10;
 
             w := Simp.prepare_text(my_font, s);
-            top := ((my_font.default_line_spacing+line_height) * row);
-            Simp.draw_prepared_text(my_font, xx (window_width - w - rmargin), xx (window_height-top), .{.8, .8, .8, 1});
+            bottom += line_height;
+            Simp.draw_prepared_text(my_font, xx (window_width - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
 
             if ln then row += 1;
 

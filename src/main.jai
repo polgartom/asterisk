@@ -41,7 +41,7 @@ draw_special_chars := false;
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
-show_debug_info := DEBUG; // hide debug info by default in RELEASE mode
+show_debug_info := DEBUG;
 debug_infos: [..] string;
 
 fps: float64;
@@ -88,7 +88,7 @@ main :: () {
     load_file_from_command_line(editor); // @Temporary
 
     while !should_quit {
-        #if 0 {
+        #if !DEBUG {
             #if OS == .WINDOWS {
                 WaitMessage();
             }
@@ -190,8 +190,8 @@ main :: () {
             editor, buffer := get_active_editor_and_buffer();
             using editor;
 
-            PrintDev("F1 toggle dev | F2 hidden chars\n");
-            PrintDev("----------------------------\n");
+            // PrintDev("F1 toggle dev | F2 hidden chars\n");
+            // PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
  
             row := find_row_index(buffer, buffer._cursor.pos);
@@ -201,8 +201,6 @@ main :: () {
 
             PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
             PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
-
-            PrintDev("--------------rendering--------------\n");
         }
 
 
@@ -489,7 +487,7 @@ last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
 }
 
 get_line_height :: inline (row: s64 = 1) -> float32 {
-    return row * (my_font.default_line_spacing+line_height);
+    return row * (my_font.default_line_spacing + line_height);
 }
 
 is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {

@@ -50,7 +50,7 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for
 }
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
-	assert(size > -1);
+    assert(size > -1);
 
     MAGNITUDE :: 3; // @temporary
     
