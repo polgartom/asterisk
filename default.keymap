@@ -49,3 +49,5 @@ A-Delete DeleteSubwordFromLeft
 Backspace DeleteCharFromRight
 C-Backspace DeleteWordFromRight
 A-Backspace DeleteSubwordFromRight
+
+S-ArrowDown ExpandSelectionDown

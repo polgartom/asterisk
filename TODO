@@ -47,7 +47,7 @@
 [] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
 [] Draw spaces. We should remove the current thing because that replaces the spaces with ~ characters which is not gooood!
 [] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
-[] Save the buffer (file)
+[X] Save the buffer (file)
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
 [] Keep the cursor center after new occurence has found
 [] Smart movement check { } positions, also we should check the current language

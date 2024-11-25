@@ -71,7 +71,7 @@ MoveUp :: () {
             prev_row      := row_table[row_index-1];
             prev_row_cols := num_of_chars_in_row(buffer, prev_row);
             steps         := min(prev_row_cols, _cursor.col);
-            pos           := first_byte_pos(prev_row);
+            pos           := row_first_byte_offset(prev_row);
 
             while steps {
                 byte := buffer.data[pos];
@@ -97,7 +97,9 @@ MoveDown :: () {
             next_row      := row_table[row_index+1];
             next_row_cols := num_of_chars_in_row(buffer, next_row);
             steps         := min(next_row_cols, _cursor.col);
-            pos           := first_byte_pos(next_row);
+            pos           := row_first_byte_offset(next_row);
+
+            print("cursor.col: % ; next_row_cols: %\n", _cursor.col, next_row_cols);
 
             while steps {
                 byte := buffer.data[pos];
@@ -118,11 +120,12 @@ MoveLeft :: () {
     if buffer._cursor.pos == 0 return;
 
     offset := prev_char_byte_offset(buffer, buffer._cursor.pos);
-    set_cursor_pos(buffer, *buffer._cursor, offset);
+    
+    set_cursor_pos(buffer, *buffer._cursor, offset, horizontal=true);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
     // also we should update this value every time except when we move up or down
-    buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
+    // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
 MoveRight :: () {
@@ -132,8 +135,12 @@ MoveRight :: () {
 
     byte := buffer.data[buffer._cursor.pos];
     steps := 1 + trailingBytesForUTF8[byte];
-    set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps);
-    buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
+    
+    set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps, horizontal=true);
+
+    // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
+    // also we should update this value every time except when we move up or down
+    // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
 move_left_word :: ($subword_mode: bool) {
@@ -144,18 +151,18 @@ move_left_word :: ($subword_mode: bool) {
 
     if _cursor.pos == buffer.count {
         offset := prev_char_byte_offset(buffer, _cursor.pos);
-        set_cursor_pos(buffer, *_cursor, offset);
+        set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
     }
 
     row_index := find_row_index(buffer, _cursor.pos);    
     row := row_table[row_index];
 
-    offset := first_byte_pos(row);
+    offset := row_first_byte_offset(row);
     if offset == _cursor.pos {
         if row_index == 0 return; // no more row above
 
         row = row_table[row_index-1];
-        offset = first_byte_pos(row);
+        offset = row_first_byte_offset(row);
     }
 
     text := to_string(buffer);
@@ -280,7 +287,7 @@ ScrollViewPortUp :: () {
     current_row := find_row_index(buffer, _cursor.pos);
     dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
     dest_row := row_table[dest_row_index];
-    pos := first_byte_pos(dest_row);
+    pos := row_last_byte_offset(dest_row);
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
@@ -294,7 +301,7 @@ ScrollViewPortDown :: () {
     current_row := find_row_index(buffer, _cursor.pos);
     dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
     dest_row := row_table[dest_row_index];
-    pos := first_byte_pos(dest_row);
+    pos := row_last_byte_offset(dest_row);
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
@@ -304,14 +311,14 @@ DeleteTheWholeLine :: () {
 
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
-    start     := first_byte_pos(row);
+    start     := row_first_byte_offset(row);
     end       := row.pos;
     
     set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
 
     if row_index+1 < row_table.count {
         next_row := row_table[row_index+1];
-        end = first_byte_pos(next_row);
+        end = row_first_byte_offset(next_row);
     }
 
     shift_left(buffer, start, end);
@@ -501,7 +508,7 @@ InsertLine :: () {
 
     current_row_index := find_row_index(buffer, _cursor.pos);
     row := row_table[current_row_index];
-    start := first_byte_pos(row);
+    start := row_first_byte_offset(row);
     end := find_index_from_left_until_not(text, #char " ", start);
 
     if end == -1 {
@@ -540,7 +547,7 @@ InsertLineBelow :: () {
 
     // :SmartIndentFeature @Cleanup
     // A basic smart indent count characters in the current row until the first non-space character.
-    row_first_byte_index := first_byte_pos(row);
+    row_first_byte_index := row_first_byte_offset(row);
     first_non_whitespace_byte_index := find_index_from_left_until_not(text, #char " ", row_first_byte_index);
     if first_non_whitespace_byte_index != -1 {
         spaces := first_non_whitespace_byte_index - row_first_byte_index;
@@ -577,7 +584,7 @@ GotoFirstCharOFCurrentRow :: inline () {
 
     index := find_row_index(buffer, _cursor.pos);
     row   := row_table[index];
-    start := first_byte_pos(row);
+    start := row_first_byte_offset(row);
 
     for start..row.pos {
         if buffer.data[it] != #char " " { // skip the indentation
@@ -595,9 +602,39 @@ GotoLastCharOfCurrentRow :: inline () {
 
     index  := find_row_index(buffer, _cursor.pos);
     row    := row_table[index];
-    offset := last_byte_pos(row);
+    offset := row_last_byte_offset(row);
     
     set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
+}
+
+ExpandSelectionDown :: inline () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    c := *_cursor;
+    current_col := 0;
+
+    success, next_row_index := find_next_row_index(buffer, c.pos);
+    if !success return;
+
+    curr_row_index := find_row_index(buffer, c.pos);
+    assert(curr_row_index != next_row_index);
+
+    curr_col := get_cursor_col(buffer, c);
+
+    next_row      := row_table[next_row_index];
+    next_row_cols := num_of_chars_in_row(buffer, next_row);
+    steps         := min(next_row_cols, curr_col);
+    pos           := row_first_byte_offset(next_row);
+
+    while steps {
+        byte := buffer.data[pos];
+        bytes := 1 + trailingBytesForUTF8[byte];
+        pos += bytes;
+        steps -= 1;
+    }
+
+    c.sel = pos;
 }
 
 ////////////////////////////////////
@@ -624,6 +661,9 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "MoveDown", MoveDown);
     Keymap.add_proc(k, "MoveLeft", MoveLeft);
     Keymap.add_proc(k, "MoveRight", MoveRight);
+
+    Keymap.add_proc(k, "ExpandSelectionDown", ExpandSelectionDown);
+    // Keymap.add_proc(k, "SelectRight", SelectRight);
     
     Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
     Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);

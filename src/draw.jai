@@ -39,6 +39,39 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(xx cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
         // Simp.immediate_flush();
+
+        // print("> c: %\n", c.*);
+
+        // Draw selection
+        sel_start, sel_end := selected_range(c);
+        if sel_start != sel_end {
+            start_row := find_row_index(buffer, sel_start);
+            end_row := find_row_index(buffer, sel_end);
+
+            line_height := get_line_height();
+            for row_index: start_row..end_row {
+                row := buffer.row_table[row_index];
+                row_start := row.pos-row.cols;
+
+                left := 0;
+                if sel_start > row_start {
+                    // it's the first row of the selection
+                    t := slice(buffer, row_start, sel_start);
+                    left += Simp.prepare_text(my_font, t);
+                }
+
+                start := max(sel_start, row_start);
+                end   := min(sel_end, row.pos);
+                // if sel_end < end then end = sel_end;
+                t := slice(buffer, start, end-start);
+                w := Simp.prepare_text(my_font, t);
+                top := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
+                PrintDev("> % % ; % % ; % %", sel_start, sel_end, start, end, left, w);
+                
+                Simp.immediate_quad(xx left, top + (ch-ch*0.1), xx w, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
+            }
+        }
+
     }
 
     // Draw lines
@@ -92,7 +125,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
         left := 10;
-        center := footer.y+footer.h/2-my_font.character_height/2;
+        center := footer.y + footer.h / 2 - my_font.character_height / 2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
         buffer := editor.active_buffer;

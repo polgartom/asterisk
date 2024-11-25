@@ -201,6 +201,12 @@ main :: () {
 
             PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
             PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
+            s := to_string(buffer);
+            PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
+            
+            t := "";
+            c := utf8_count_chars(t);
+            PrintDev("chars: %\n", c);
         }
 
 
@@ -225,12 +231,12 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
     return c;
 }
 
-first_byte_pos :: inline (row: Row_Info) -> s64 {
-    return row.pos - row.cols;
+row_first_byte_offset :: inline (row: Row_Info) -> s64 {
+    return row.end_byte_offset - row.bytes;
 }
 
-last_byte_pos :: inline (row: Row_Info) -> s64 {
-    return row.pos;
+row_last_byte_offset :: inline (row: Row_Info) -> s64 {
+    return row.end_byte_offset;
 }
 
 find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
@@ -244,6 +250,12 @@ find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
     }
 
     return row_table.count-1;
+}
+
+find_next_row_index :: (using buffer: *Buffer, offset: s64) -> (success: bool, index: s64) {
+    index := find_row_index(buffer, offset);
+    if !(index+1 < row_table.count) return false, -1;
+    return true, index+1;
 }
 
 // get_cursor_row :: (using editor: *Editor) -> s64 {
@@ -276,11 +288,19 @@ get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
 }
 
 get_cursor_col :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
+    return get_col_index(buffer, cursor.pos);
+}
+
+get_col_index :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
+    return get_col_index(buffer, cursor.pos);
+}
+
+get_col_index :: (using buffer: *Buffer, pos: s64) -> s64 {
     for row, row_index: row_table {
-        if cursor.pos <= row.pos {
+        if pos <= row.pos {
             cols   := 0;
-            offset := first_byte_pos(row);
-            while offset < cursor.pos {
+            offset := row_first_byte_offset(row);
+            while offset < pos {
                 byte := data[offset];
                 offset += 1 + trailingBytesForUTF8[byte];
                 cols += 1;
@@ -291,6 +311,12 @@ get_cursor_col :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     }
 
     return 0;
+}
+
+char_byte_offset :: inline (s: string, start: s64) -> s64 {
+    assert(start < s.count); // Do we want to assert this?
+    byte := s[start];
+    return start + 1 + trailingBytesForUTF8[byte];
 }
 
 next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
@@ -326,7 +352,7 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
 }
 
 num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
-    pos   := first_byte_pos(row);
+    pos   := row_first_byte_offset(row);
     end   := row.pos;
     assert(row.pos <= buffer.count, "% %", row.pos, buffer.count);
 
@@ -338,6 +364,15 @@ num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
     } 
 
     return chars;
+}
+
+byte_offset_to_col_index :: (buffer: *Buffer, offset: s64) -> s64 {
+    index := find_row_index(buffer, offset);
+    row := buffer.row_table[index];
+    start := row_first_byte_offset(row);
+    
+    t := slice(buffer, start, offset-start);
+    return utf8_count_chars(t);
 }
 
 get_cursor_rel_x :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
@@ -407,18 +442,6 @@ insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
     set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count, horizontal=true);
 
     buffer.dirty = true;
-}
-
-set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false) {
-    target_pos = max(target_pos, 0);
-    target_pos = min(target_pos, buffer.count);
-    
-    cursor.pos = target_pos;
-
-    // Explain!
-    if horizontal {
-        cursor.col = get_cursor_col(buffer, cursor);
-    }
 }
 
 //  @Cleanup: Naming
@@ -549,9 +572,12 @@ load_file_from_command_line :: (editor: *Editor) {
     // assert(free_args.count > 1);
 }
 
-#load "draw.jai";
-#load "keymap.jai";
+#load "unicode.jai";
 #load "editor.jai";
+#load "keymap.jai";
+#load "draw.jai";
+#load "buffer.jai";
+#load "cursor.jai";
 
 #import "System";
 #import "Basic";
