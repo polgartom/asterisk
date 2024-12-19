@@ -39,7 +39,7 @@ Enter InsertLine
 C-Enter InsertLineBelow
 Tab InsertTab
 
-C-x DeleteTheWholeLine
+C-x Cut
 C-k DeleteEverythingFromLeft
 
 Delete DeleteCharFromLeft
@@ -50,4 +50,8 @@ Backspace DeleteCharFromRight
 C-Backspace DeleteWordFromRight
 A-Backspace DeleteSubwordFromRight
 
+# Selection
+S-ArrowUp ExpandSelectionUp
+S-ArrowLeft ExpandSelectionLeft
 S-ArrowDown ExpandSelectionDown
+S-ArrowRight ExpandSelectionRight

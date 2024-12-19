@@ -1,6 +1,8 @@
 .vs
 .vscode
 
+!.vscode/tasks.json
+
 *.exe
 *.pdb
 

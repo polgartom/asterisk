@@ -60,7 +60,7 @@ DrawSpecialChars :: () {
     draw_special_chars = !draw_special_chars;
 }
 
-MoveUp :: () {
+move_up_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
@@ -80,13 +80,17 @@ MoveUp :: () {
                 steps -= 1;
             }
 
-            set_cursor_pos(buffer, *_cursor, pos);
+            set_cursor_pos(buffer, *_cursor, pos, with_selection=with_selection);
             break;
         }
     }
 }
 
-MoveDown :: () {
+MoveUp :: () {
+    move_up_by_one_row();
+}
+
+move_down_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
@@ -108,27 +112,35 @@ MoveDown :: () {
                 steps -= 1;
             }
 
-            set_cursor_pos(buffer, *_cursor, pos);
+            set_cursor_pos(buffer, *_cursor, pos, with_selection=with_selection);
             break;
         }
     }
 }
 
-MoveLeft :: () {
+MoveDown :: () {
+    move_down_by_one_row();
+}
+
+move_left_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     
     if buffer._cursor.pos == 0 return;
 
     offset := prev_char_byte_offset(buffer, buffer._cursor.pos);
     
-    set_cursor_pos(buffer, *buffer._cursor, offset, horizontal=true);
+    set_cursor_pos(buffer, *buffer._cursor, offset, horizontal=true, with_selection=with_selection);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
     // also we should update this value every time except when we move up or down
     // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
-MoveRight :: () {
+MoveLeft :: () {
+    move_left_by_one_character();
+}
+
+move_right_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     
     if !(buffer._cursor.pos < buffer.count) return;
@@ -136,11 +148,15 @@ MoveRight :: () {
     byte := buffer.data[buffer._cursor.pos];
     steps := 1 + trailingBytesForUTF8[byte];
     
-    set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps, horizontal=true);
+    set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps, horizontal=true, with_selection=with_selection);
 
     // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
     // also we should update this value every time except when we move up or down
     // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
+}
+
+MoveRight :: () {
+    move_right_by_one_character();
 }
 
 move_left_word :: ($subword_mode: bool) {
@@ -305,26 +321,51 @@ ScrollViewPortDown :: () {
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
-DeleteTheWholeLine :: () {
+Cut :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    row_index := find_row_index(buffer, _cursor.pos);
-    row       := row_table[row_index];
-    start     := row_first_byte_offset(row);
-    end       := row.pos;
-    
-    set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
+    c := *_cursor;
 
-    if row_index+1 < row_table.count {
-        next_row := row_table[row_index+1];
-        end = row_first_byte_offset(next_row);
+    if (has_selection(c)) {
+        start, end := selected_range(c);
+        s := to_string(buffer);
+        s = advance(s, start);
+        s.count = end - start;
+        print("\n[Cut/selection]: |%|\n\n", s);
+
+        shift_left(buffer, start, end);
+
+        assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
+
+        set_cursor_pos(buffer, c, start, horizontal=true, with_selection=true);
+
+    } else {
+        // Full line cut
+        row_index := find_row_index(buffer, _cursor.pos);
+        row       := row_table[row_index];
+        start     := row_first_byte_offset(row);
+        end       := row.pos;
+        
+        set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
+
+        if row_index+1 < row_table.count {
+            next_row := row_table[row_index+1];
+            end = row_first_byte_offset(next_row);
+        }
+
+        s := to_string(buffer);
+        s = advance(s, start);
+        s.count = end - start;
+        // print("\n[Cut/whole_line]: |%|\n\n", s);
+
+        shift_left(buffer, start, end);
+
+        assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
+
+        if _cursor.pos > 0 && _cursor.pos == buffer.count then _cursor.pos -= 1;
     }
 
-    shift_left(buffer, start, end);
-
-    assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
-    if _cursor.pos > 0 && _cursor.pos == buffer.count then _cursor.pos -= 1;
 }
 
 DeleteEverythingFromLeft :: () {
@@ -607,36 +648,20 @@ GotoLastCharOfCurrentRow :: inline () {
     set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
 }
 
-ExpandSelectionDown :: inline () {
-    editor, buffer := get_active_editor_and_buffer();
-    using buffer;
+ExpandSelectionUp :: () {
+    move_up_by_one_row(with_selection=false);
+}
 
-    c := *_cursor;
-    current_col := 0;
+ExpandSelectionDown :: () {
+    move_down_by_one_row(with_selection=false);
+}
 
-    cpos := max(c.pos, c.sel);
+ExpandSelectionRight :: () {
+    move_right_by_one_character(with_selection=false);
+}
 
-    success, next_row_index := find_next_row_index(buffer, cpos);
-    if !success return;
-
-    curr_row_index := find_row_index(buffer, c.pos);
-    assert(curr_row_index != next_row_index);
-
-    curr_col := get_cursor_col(buffer, c);
-
-    next_row      := row_table[next_row_index];
-    next_row_cols := num_of_chars_in_row(buffer, next_row);
-    steps         := min(next_row_cols, curr_col);
-    pos           := row_first_byte_offset(next_row);
-
-    while steps {
-        byte := buffer.data[pos];
-        bytes := 1 + trailingBytesForUTF8[byte];
-        pos += bytes;
-        steps -= 1;
-    }
-
-    c.sel = pos;
+ExpandSelectionLeft :: () {
+    move_left_by_one_character(with_selection=false);
 }
 
 ////////////////////////////////////
@@ -664,9 +689,6 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "MoveLeft", MoveLeft);
     Keymap.add_proc(k, "MoveRight", MoveRight);
 
-    Keymap.add_proc(k, "ExpandSelectionDown", ExpandSelectionDown);
-    // Keymap.add_proc(k, "SelectRight", SelectRight);
-    
     Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
     Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);
     Keymap.add_proc(k, "MoveRightWord", MoveRightWord);
@@ -678,7 +700,8 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
     Keymap.add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
     
-    Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+    // Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
+    Keymap.add_proc(k, "Cut", Cut);
 
     Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
     Keymap.add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
@@ -694,7 +717,10 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
     Keymap.add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
 
-    // add_proc(k, "OpenWidget", OpenWidget);
+    Keymap.add_proc(k, "ExpandSelectionUp", ExpandSelectionUp);
+    Keymap.add_proc(k, "ExpandSelectionLeft", ExpandSelectionLeft);
+    Keymap.add_proc(k, "ExpandSelectionDown", ExpandSelectionDown);
+    Keymap.add_proc(k, "ExpandSelectionRight", ExpandSelectionRight);
 }
 
 init_keymaps :: () {

@@ -34,32 +34,38 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         Simp.set_shader_for_color(true);
 
         // Draw selection
-        sel_start, sel_end := selected_range(c);
-        if sel_start != sel_end {
+        if has_selection(c) {
+            sel_start, sel_end := selected_range(c);
             start_row := find_row_index(buffer, sel_start);
             end_row := find_row_index(buffer, sel_end);
+
+            s := slice(buffer, sel_start, sel_end - sel_start);
+            PrintDev(">> |%| <<", s);
 
             line_height := get_line_height();
             for row_index: start_row..end_row {
                 row := buffer.row_table[row_index];
                 row_start := row.pos-row.cols;
+                row_end   := row.pos;
 
-                left := 0;
-                if sel_start > row_start {
-                    // it's the first row of the selection
-                    t := slice(buffer, row_start, sel_start-row_start);
-                    left += Simp.prepare_text(my_font, t);
-                }
+                left  := -editor.left_offset;
+                width := 0.0;
 
-                start := max(sel_start, row_start);
-                end   := min(sel_end, row.pos);
-                // if sel_end < end then end = sel_end;
-                t := slice(buffer, start, end-start);
-                w := Simp.prepare_text(my_font, t);
+                t := slice(buffer, row_start, row.cols);
+
+                // Convert the first N unselected bytes in the row to pixels
+                start :=  max(sel_start, row_start) - row_start;
+                t1 := slice(t, 0, start);
+                if t1.count then left += Simp.prepare_text(my_font, t1);
+
+                // Convert the remained bytes in the row to pixels
+                t2 := advance(t, start);
+                t2.count -= row_end - min(sel_end, row_end);
+                if t2.count then width += Simp.prepare_text(my_font, t2);
+                            else width += my_font.em_width;
+
                 top := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-                PrintDev("> % % ; % % ; % % ; |%|", sel_start, sel_end, start, end, left, w, t);
-                
-                Simp.immediate_quad(cast(float) left, top + (ch-ch*0.1), xx w, top - (ch/2-(ch*0.2)), SELECTION_COLOR); 
+                Simp.immediate_quad(left, top + (ch-ch*0.1), left+width, top - (ch/2-(ch*0.2)), SELECTION_COLOR); 
             }
         }
 

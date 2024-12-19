@@ -16,10 +16,21 @@ last_rendering_time  : float64;
 
 font_width: s64;
 
+RgbToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 {
+    return Vector4.{
+        r/255.0, 
+        g/255.0, 
+        b/255.0, 
+        alpha
+    };
+}
+
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
+
 // CURSOR_COLOR :: Vector4.{.9, .0, .0, 1.0};
-CURSOR_COLOR :: Vector4.{.3, .5, .21, 1.0};
+// CURSOR_COLOR :: Vector4.{.8, .1, .1, 1.0};
+CURSOR_COLOR :: #run RgbToVec4(134, 224, 143);
 SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
 // @Todo: Blend with the text color
@@ -213,7 +224,7 @@ main :: () {
 
 
         draw_frame(text, second_elapsed, last_time);
-        Simp.swap_buffers(my_window);
+        Simp.swap_buffers(my_window, vsync=false);
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
@@ -321,6 +332,7 @@ char_byte_offset :: inline (s: string, start: s64) -> s64 {
     return start + 1 + trailingBytesForUTF8[byte];
 }
 
+// @Cleanup: naming
 next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
     assert(start < s.count); // Do we want to assert this?
     byte := s[start];
