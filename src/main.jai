@@ -18,7 +18,9 @@ font_width: s64;
 
 bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
-CURSOR_COLOR :: Vector4.{.9, .0, .0, 1.0}; // RED
+// CURSOR_COLOR :: Vector4.{.9, .0, .0, 1.0};
+CURSOR_COLOR :: Vector4.{.3, .5, .21, 1.0};
+SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
 // @Todo: Blend with the text color
 // CURSOR_COLOR :: Vector4.{134.0/255, 224.0/255, 143.0/255, 3.0};

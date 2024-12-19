@@ -29,18 +29,9 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     // Draw cursor
     if editor_in_focus {
         c := *buffer._cursor;
-
-        row_index := find_row_index(buffer, c.pos);
-        top  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-        cx   := get_cursor_x(buffer, c) - editor.left_offset;
-        cw   := cx + my_font.em_width;
-        ch   := my_font.character_height;
+        ch := my_font.character_height;
 
         Simp.set_shader_for_color(true);
-        Simp.immediate_quad(xx cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
-        // Simp.immediate_flush();
-
-        // print("> c: %\n", c.*);
 
         // Draw selection
         sel_start, sel_end := selected_range(c);
@@ -56,7 +47,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
                 left := 0;
                 if sel_start > row_start {
                     // it's the first row of the selection
-                    t := slice(buffer, row_start, sel_start);
+                    t := slice(buffer, row_start, sel_start-row_start);
                     left += Simp.prepare_text(my_font, t);
                 }
 
@@ -66,11 +57,18 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
                 t := slice(buffer, start, end-start);
                 w := Simp.prepare_text(my_font, t);
                 top := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-                PrintDev("> % % ; % % ; % %", sel_start, sel_end, start, end, left, w);
+                PrintDev("> % % ; % % ; % % ; |%|", sel_start, sel_end, start, end, left, w, t);
                 
-                Simp.immediate_quad(xx left, top + (ch-ch*0.1), xx w, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
+                Simp.immediate_quad(cast(float) left, top + (ch-ch*0.1), xx w, top - (ch/2-(ch*0.2)), SELECTION_COLOR); 
             }
         }
+
+        row_index := find_row_index(buffer, c.pos);
+        top  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+        cx   := get_cursor_x(buffer, c) - editor.left_offset;
+        cw   := cx + my_font.em_width;
+
+        Simp.immediate_quad(cast(float) cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
 
     }
 

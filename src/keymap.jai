@@ -614,7 +614,9 @@ ExpandSelectionDown :: inline () {
     c := *_cursor;
     current_col := 0;
 
-    success, next_row_index := find_next_row_index(buffer, c.pos);
+    cpos := max(c.pos, c.sel);
+
+    success, next_row_index := find_next_row_index(buffer, cpos);
     if !success return;
 
     curr_row_index := find_row_index(buffer, c.pos);
