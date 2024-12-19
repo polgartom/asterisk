@@ -42,11 +42,11 @@ Tab InsertTab
 C-x Cut
 C-k DeleteEverythingFromLeft
 
-Delete DeleteCharFromLeft
+Delete DeleteFromLeft
 C-Delete DeleteWordFromLeft
 A-Delete DeleteSubwordFromLeft
 
-Backspace DeleteCharFromRight
+Backspace DeleteFromRight
 C-Backspace DeleteWordFromRight
 A-Backspace DeleteSubwordFromRight
 

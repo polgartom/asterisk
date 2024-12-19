@@ -325,52 +325,38 @@ Cut :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    c := *_cursor;
+    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
+    
+    // Full line cut
+    row_index := find_row_index(buffer, _cursor.pos);
+    row       := row_table[row_index];
+    start     := row_first_byte_offset(row);
+    end       := row.pos;
+    
+    set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
 
-    if (has_selection(c)) {
-        start, end := selected_range(c);
-        s := to_string(buffer);
-        s = advance(s, start);
-        s.count = end - start;
-        print("\n[Cut/selection]: |%|\n\n", s);
-
-        shift_left(buffer, start, end);
-
-        assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
-
-        set_cursor_pos(buffer, c, start, horizontal=true, with_selection=true);
-
-    } else {
-        // Full line cut
-        row_index := find_row_index(buffer, _cursor.pos);
-        row       := row_table[row_index];
-        start     := row_first_byte_offset(row);
-        end       := row.pos;
-        
-        set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
-
-        if row_index+1 < row_table.count {
-            next_row := row_table[row_index+1];
-            end = row_first_byte_offset(next_row);
-        }
-
-        s := to_string(buffer);
-        s = advance(s, start);
-        s.count = end - start;
-        // print("\n[Cut/whole_line]: |%|\n\n", s);
-
-        shift_left(buffer, start, end);
-
-        assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
-
-        if _cursor.pos > 0 && _cursor.pos == buffer.count then _cursor.pos -= 1;
+    if row_index+1 < row_table.count {
+        next_row := row_table[row_index+1];
+        end = row_first_byte_offset(next_row);
     }
 
+    s := to_string(buffer);
+    s = advance(s, start);
+    s.count = end - start;
+    // print("\n[Cut/whole_line]: |%|\n\n", s);
+
+    shift_left(buffer, start, end);
+
+    assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
+
+    if _cursor.pos > 0 && _cursor.pos == buffer.count then _cursor.pos -= 1;
 }
 
 DeleteEverythingFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
+
+    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
 
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
@@ -380,9 +366,11 @@ DeleteEverythingFromLeft :: () {
     shift_left(buffer, start, end);
 }
 
-DeleteCharFromRight :: () {
+DeleteFromRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
+
+    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
 
     if _cursor.pos == 0 return;
 
@@ -430,6 +418,8 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
+    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+
     text := to_string(buffer);
     if text.count == 0 || _cursor.pos == text.count return;
 
@@ -458,9 +448,11 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
     shift_left(buffer, _cursor.pos, text.count); // We have no separator character at the end
 }
 
-DeleteCharFromLeft :: () {
+DeleteFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
+
+    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
 
     assert(_cursor.pos <= buffer.count);
     if _cursor.pos == buffer.count return;
@@ -487,8 +479,10 @@ DeleteSubwordFromRight :: inline () {
 
 delete_word_or_subword_from_right :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
-    using buffer;
     using editor;
+    using buffer;
+
+    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
 
     if _cursor.pos == 0 return;
 
@@ -513,7 +507,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     }
 
     if is_separator_char(text[_cursor.pos-1], subword_mode) {
-        DeleteCharFromRight();
+        DeleteFromRight();
         return;
     }
 
@@ -535,6 +529,8 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
 InsertLine :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
+
+    MaybeDeleteSelectedText(buffer, *buffer._cursor);
 
     text := to_string(buffer);
     rebuild_row_table = true;
@@ -697,10 +693,9 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
     Keymap.add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
 
-    Keymap.add_proc(k, "DeleteCharFromRight", DeleteCharFromRight);
-    Keymap.add_proc(k, "DeleteCharFromLeft", DeleteCharFromLeft);
+    Keymap.add_proc(k, "DeleteFromRight", DeleteFromRight);
+    Keymap.add_proc(k, "DeleteFromLeft", DeleteFromLeft);
     
-    // Keymap.add_proc(k, "DeleteTheWholeLine", DeleteTheWholeLine);
     Keymap.add_proc(k, "Cut", Cut);
 
     Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);

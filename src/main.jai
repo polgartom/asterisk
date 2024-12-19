@@ -440,7 +440,9 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
 //     buffer.rebuild_row_table = true;
 // }
 
-insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {
+insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {    
+    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+
     maybe_grow(buffer, s.count);
 
     insert_at      := buffer.data  + _cursor.pos;

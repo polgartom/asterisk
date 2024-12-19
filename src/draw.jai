@@ -54,7 +54,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
                 t := slice(buffer, row_start, row.cols);
 
                 // Convert the first N unselected bytes in the row to pixels
-                start :=  max(sel_start, row_start) - row_start;
+                start := max(sel_start, row_start) - row_start;
                 t1 := slice(t, 0, start);
                 if t1.count then left += Simp.prepare_text(my_font, t1);
 

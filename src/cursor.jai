@@ -24,7 +24,7 @@ count_selected_bytes :: inline (using c: *Cursor) -> s64 {
     return max(pos, sel) - min(pos, sel);
 }
 
-has_selection :: inline (using c: *Cursor) -> bool {
+has_selection :: inline (using c: Cursor) -> bool {
     return pos != sel;
 }
 
