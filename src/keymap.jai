@@ -321,13 +321,24 @@ ScrollViewPortDown :: () {
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
+Paste :: () {
+    editor, buffer := get_active_editor_and_buffer();
+
+    os_clipboard_paste_text_at_cursor(buffer);
+}
+
 Cut :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
-    
-    // Full line cut
+    if has_selection(buffer._cursor) {
+        start, end := selected_range(*_cursor);
+        os_clipboard_copy_range(buffer, start, end);
+        delete_selected_range(buffer, *_cursor);
+        return;
+    }
+
+    // Cut the whole line
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
     start     := row_first_byte_offset(row);
@@ -340,16 +351,10 @@ Cut :: () {
         end = row_first_byte_offset(next_row);
     }
 
-    s := to_string(buffer);
-    s = advance(s, start);
-    s.count = end - start;
-    // print("\n[Cut/whole_line]: |%|\n\n", s);
+    _cursor.sel = end;
 
-    shift_left(buffer, start, end);
-
-    assert(_cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", _cursor.pos, buffer.count);
-
-    if _cursor.pos > 0 && _cursor.pos == buffer.count then _cursor.pos -= 1;
+    os_clipboard_copy_range(buffer, start, end);
+    delete_selected_range(buffer, *_cursor);
 }
 
 DeleteEverythingFromLeft :: () {
@@ -696,6 +701,7 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "DeleteFromRight", DeleteFromRight);
     Keymap.add_proc(k, "DeleteFromLeft", DeleteFromLeft);
     
+    Keymap.add_proc(k, "Paste", Paste);
     Keymap.add_proc(k, "Cut", Cut);
 
     Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);

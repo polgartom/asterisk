@@ -1,4 +1,3 @@
-
 shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for "to" and "from"
     if to == from return;
     assert(to < from);
@@ -62,6 +61,46 @@ get_row_as_string :: (using buffer: *Buffer, index: s64) -> bool, string {
     s := slice(buffer, row.pos - row.cols, row.cols);
     
     return true, s;
+}
+
+os_clipboard_copy_range :: (buffer: *Buffer, start: s64, end: s64) {
+    s := slice(buffer, start, end - start);
+    os_clipboard_set_text(s);
+}
+
+os_clipboard_paste_text_at_cursor :: (using buffer: *Buffer) -> bool {
+    s := os_clipboard_get_text();
+    if !s.count return false;
+
+    // @Incomplete: Validate the input!
+    // if !Simp.isLegalUTF8(s.data, s.count) {
+    //     log_error("OS Clipboard contains invalid utf8 data!\n");
+    //     return false;
+    // }
+
+    insert_text_at_cursor(buffer, s);
+
+    return true;
+}
+
+insert_text_at_cursor :: (using buffer: *Buffer, s: string) {
+    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+
+    maybe_grow(buffer, s.count);
+
+    insert_at      := buffer.data  + _cursor.pos;
+    new_right      := insert_at    + s.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
+
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
+    copy(insert_at, s.data, s.count);
+
+    buffer.count += s.count;
+    buffer.rebuild_row_table = true;
+
+    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count, horizontal=true);
+
+    buffer.dirty = true;
 }
 
 Buffer :: struct {

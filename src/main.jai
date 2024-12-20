@@ -472,42 +472,6 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
     return cx;
 }
 
-// insert_text :: (buffer: *Buffer, pos: s64, text: string) {
-//     maybe_grow(buffer, text.count);
-
-//     left := buffer.data;
-//     insert_at := left + pos;
-//     new_right := insert_at + text.count;
-//     right_rem_size := buffer.count - (insert_at-left);
-
-//     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
-
-//     memcpy(insert_at, text.data, text.count);
-
-//     buffer.count += text.count;
-//     buffer.rebuild_row_table = true;
-// }
-
-insert_text_at_cursor :: inline (using buffer: *Buffer, s: string) {    
-    MaybeDeleteSelectedText(buffer, *buffer._cursor);
-
-    maybe_grow(buffer, s.count);
-
-    insert_at      := buffer.data  + _cursor.pos;
-    new_right      := insert_at    + s.count;
-    right_rem_size := buffer.count - (insert_at - buffer.data);
-
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
-    copy(insert_at, s.data, s.count);
-
-    buffer.count += s.count;
-    buffer.rebuild_row_table = true;
-
-    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count, horizontal=true);
-
-    buffer.dirty = true;
-}
-
 //  @Cleanup: Naming
 find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
     assert(start_index > -1 && start_index < s.count);
@@ -667,6 +631,7 @@ Simp :: #import "Simp";
 #import "GetRect";
 #import "Memory";
 #import "Command_Line";
+#import "Clipboard";
 
 c_malloc  :: (size: u64) -> *void                #foreign crt "malloc";
 c_free    :: (memory: *void)                     #foreign crt "free";
