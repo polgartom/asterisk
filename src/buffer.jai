@@ -91,15 +91,13 @@ copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
     Clipboard.os_clipboard_set_text(text);
 }
 
-cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) -> (success: bool) {
-    if !has_selection(cursor) return false;
+cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
+    if !has_selection(cursor) return;
 
     text := get_selection_as_string(buffer, cursor);
     Clipboard.os_clipboard_set_text(text);
 
     delete_selected_range(buffer, cursor);
-
-    return true;
 }
 
 insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
@@ -166,13 +164,16 @@ delete_selected_range :: (buffer: *Buffer, cursor: *Cursor) {
     start, end := selected_range(cursor);
     shift_left(buffer, start, end);
 
-    assert(cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", cursor.pos, buffer.count); // ???
-
     set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
+
+    assert(cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", cursor.pos, buffer.count);
 }
 
-next_character_pos :: (buffer: *Buffer, at: s64) -> (pos: s64) {
-    assert(at > -1 && at <= buffer.count);
+next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
+    assert(at > -1 || at <= buffer.count);
+
+    if at == buffer.count return at;
+
     byte := buffer.data[at];
     return at + 1 + trailingBytesForUTF8[byte];
 }
