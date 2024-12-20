@@ -1,9 +1,3 @@
 .vs
-.vscode
-
-*.exe
-*.pdb
-
 .build
-
 main.sln
