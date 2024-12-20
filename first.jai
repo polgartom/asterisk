@@ -8,21 +8,23 @@
 
     options.arithmetic_overflow_check = .FATAL;
     set_optimization(*options, .DEBUG);
-    options.output_path = "";
-    options.output_executable_name = "asterisk_debug";
+    options.output_path = "build";
+    options.output_executable_name = "asterisk_devbuild";
+    window_name := "Asterisk (dev build)";
 
     do_optimization := false;
 
     for arg: args {
         if arg == {
-          case "release";
-            do_optimization = true;
-            set_optimization(*options, .VERY_OPTIMIZED);
-            options.llvm_options.enable_split_modules = false;
-            options.array_bounds_check = .ON;
-            options.null_pointer_check = .ON;
-            options.arithmetic_overflow_check = .OFF;
-            options.output_executable_name = "asterisk";
+            case "release";
+                do_optimization = true;
+                set_optimization(*options, .VERY_OPTIMIZED);
+                options.llvm_options.enable_split_modules = false;
+                options.array_bounds_check = .ON;
+                options.null_pointer_check = .ON;
+                options.arithmetic_overflow_check = .OFF;
+                options.output_executable_name = "asterisk";
+                window_name = "Asterisk";
         }
     }
 
@@ -39,9 +41,11 @@
     add_build_file("src/main.jai", w);
     
     build_constants := tprint(#string STRING
-            DEBUG   :: %;
+            DEBUG       :: %;
+            WINDOW_NAME :: "%";
         STRING,
-            ifx do_optimization then "false" else "true"
+            ifx do_optimization then "false" else "true",
+            window_name
     );
     add_build_string(build_constants, w);
 

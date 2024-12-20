@@ -40,7 +40,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             end_row := find_row_index(buffer, sel_end);
 
             s := slice(buffer, sel_start, sel_end - sel_start);
-            PrintDev(">> |%| <<", s);
+            // PrintDev(">> |%| <<", s);
 
             line_height := get_line_height();
             for row_index: start_row..end_row {
@@ -79,16 +79,16 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw mouse
     if editor_in_focus {
-        mx, my, ok := get_mouse_pointer_position(right_handed=false);
-        if (ok) {
-            row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
-            if row_index != -1 {
-                ok, row_str := get_row_as_string(buffer, row_index);
-                width := measure_text_width(row_str);
-                bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-                ch      := my_font.character_height;
-                Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
-            }
+        // mx, my, ok := get_mouse_pointer_position(right_handed=false);
+        // if (ok) {
+        //     row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
+        //     if row_index != -1 {
+        //         ok, row_str := get_row_as_string(buffer, row_index);
+        //         width := measure_text_width(row_str);
+        //         bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+        //         ch      := my_font.character_height;
+        //         Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
+        //     }
 
             // approx_row := cast(s64)floor((my+editor.top_offset) / get_line_height());
 
@@ -126,7 +126,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             //         break;
             //     }
             // }
-        }
+        // }
     }
 
     // Draw lines

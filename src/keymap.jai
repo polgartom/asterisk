@@ -103,8 +103,6 @@ move_down_by_one_row :: ($with_selection := true) {
             steps         := min(next_row_cols, _cursor.col);
             pos           := row_first_byte_offset(next_row);
 
-            print("cursor.col: % ; next_row_cols: %\n", _cursor.col, next_row_cols);
-
             while steps {
                 byte := buffer.data[pos];
                 bytes := 1 + trailingBytesForUTF8[byte];
@@ -321,40 +319,35 @@ ScrollViewPortDown :: () {
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
+Copy :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    copy_selection_to_os_clipboard(buffer, *buffer._cursor);
+}
+
 Paste :: () {
     editor, buffer := get_active_editor_and_buffer();
-
-    os_clipboard_paste_text_at_cursor(buffer);
+    insert_os_clipboard_text_at_cursor(buffer, *buffer._cursor);
 }
 
 Cut :: () {
     editor, buffer := get_active_editor_and_buffer();
-    using buffer;
+    using,except(rebuild_row_table) buffer;
 
     if has_selection(buffer._cursor) {
-        start, end := selected_range(*_cursor);
-        os_clipboard_copy_range(buffer, start, end);
-        delete_selected_range(buffer, *_cursor);
+        cut_selection_and_copy_to_os_clipboard(buffer, *_cursor);
         return;
     }
 
     // Cut the whole line
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
-    start     := row_first_byte_offset(row);
-    end       := row.pos;
-    
-    set_cursor_pos(buffer, *_cursor, start); // jump to first col in the row
+    start     := row.pos - row.cols;
+    end       := next_character_pos(buffer, row.pos);
 
-    if row_index+1 < row_table.count {
-        next_row := row_table[row_index+1];
-        end = row_first_byte_offset(next_row);
-    }
-
+    _cursor.pos = start;
     _cursor.sel = end;
 
-    os_clipboard_copy_range(buffer, start, end);
-    delete_selected_range(buffer, *_cursor);
+    cut_selection_and_copy_to_os_clipboard(buffer, *_cursor);
 }
 
 DeleteEverythingFromLeft :: () {
@@ -701,6 +694,7 @@ register_keymap_procedures :: () {
     Keymap.add_proc(k, "DeleteFromRight", DeleteFromRight);
     Keymap.add_proc(k, "DeleteFromLeft", DeleteFromLeft);
     
+    Keymap.add_proc(k, "Copy", Copy);
     Keymap.add_proc(k, "Paste", Paste);
     Keymap.add_proc(k, "Cut", Cut);
 
@@ -726,7 +720,7 @@ register_keymap_procedures :: () {
 
 init_keymaps :: () {
     register_keymap_procedures();
-    success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
+    success := Keymap.load_from_file(*default_keymap, "default", ".\\..\\default.keymap", false);
     assert(success, "Failed to load the 'default.keymap'");
 }
 

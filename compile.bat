@@ -1,3 +1,6 @@
+@echo off
+
 @REM x64 backend for faster compile time
-rm .\asterisk_debug.exe
-jai .\first.jai -x64
+del .\build\*.exe .\build\*.pdb > NUL 2> NUL
+
+jai .\first.jai -x64 -natvis

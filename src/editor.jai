@@ -37,10 +37,10 @@ open_file :: (editor: *Editor, filepath: string) {
     
     maybe_grow(buffer, file_data.count);
     
-    copy(buffer.data, file_data.data, file_data.count);
+    SlowMemcpy(buffer.data, file_data.data, file_data.count);
     buffer.count = file_data.count;
 
-    buffer.rebuild_row_table = true;
+    rebuild_row_table(buffer);
 
     // editor.active_buffer = buffer;
     change_active_buffer(editor, buffer);
@@ -101,6 +101,7 @@ create_an_editor_instance :: () -> *Editor {
     buffer := array_add(*editor.buffers);
     editor.active_buffer = buffer;
     maybe_grow(buffer, 0);
+    rebuild_row_table(buffer);
 
     return editor;
 }
@@ -169,34 +170,6 @@ rebuild_row_table :: (using buffer: *Buffer) {
     }
 
     row_table_recalc_time = (seconds_since_init()-row_table_recalc_time)*1000;
-}
-
-////////////////////////////
-
-MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
-    if has_selection(buffer._cursor) {
-        delete_selected_range(buffer, *buffer._cursor);
-        return true;
-    }
-    return false;
-}
-
-delete_selected_range :: (buffer: *Buffer, cursor: *Cursor) {
-    start, end := selected_range(cursor);
-    delete_range(buffer, start, end);
-
-    assert(cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", cursor.pos, buffer.count); // ???
-
-    set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
-}
-
-delete_range :: (buffer: *Buffer, start: s64, end: s64) {
-    assert(end >= start && start > -1 && end > -1); // what a mess!!
-
-    s := to_string(buffer);
-    s = advance(s, start);
-    s.count = end - start;
-    shift_left(buffer, start, end);
 }
 
 ////////////////////////////

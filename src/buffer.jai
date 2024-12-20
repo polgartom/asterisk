@@ -1,4 +1,21 @@
-shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for "to" and "from"
+Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
+    return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
+}
+
+SlowMemcpy :: (destination: *void, source: *void, count: s64) {
+    d := cast(*u8) destination;  s := cast(*u8) source;
+
+    overlapping := destination > source && destination < source + count;
+    if !overlapping {
+        for 0 .. count - 1
+            d[it] = s[it];
+    } else {
+        for #v2 < count - 1 .. 0
+            d[it] = s[it];
+    }
+}
+
+shift_left :: (using buffer: *Buffer, to: s64, from: s64) {
     if to == from return;
     assert(to < from);
 
@@ -10,28 +27,29 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // another names for
     count -= (from - to);
 
     rebuild_row_table = true;
-
-    dirty = true; // @Cleanup: Remove this from here
+    dirty = true;
 }
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
     assert(size > -1);
 
     MAGNITUDE :: 3; // @temporary
-    
+
     desired_size := buffer.count + size;
     if desired_size == 0 {
         desired_size = 1024*MAGNITUDE; // @temporary
     }
 
     if desired_size >= buffer.allocated {
-        new_size := buffer.allocated + (desired_size * MAGNITUDE);
+        reserve  := buffer.allocated + (desired_size * MAGNITUDE);
+        new_size := Align(reserve, 4096);
+
         new_data := cast(*u8)c_malloc(xx new_size);
         assert(new_data != null);
         memset(new_data, 0, xx new_size);
 
         if buffer.data {
-            copy(new_data, buffer.data, buffer.allocated);
+            SlowMemcpy(new_data, buffer.data, buffer.allocated);
             c_free(buffer.data);
         }
 
@@ -63,44 +81,100 @@ get_row_as_string :: (using buffer: *Buffer, index: s64) -> bool, string {
     return true, s;
 }
 
-os_clipboard_copy_range :: (buffer: *Buffer, start: s64, end: s64) {
-    s := slice(buffer, start, end - start);
-    os_clipboard_set_text(s);
+get_selection_as_string :: (buffer: *Buffer, cursor: *Cursor) -> string {
+    start, end := selected_range(cursor);
+    return slice(buffer, start, end - start);
 }
 
-os_clipboard_paste_text_at_cursor :: (using buffer: *Buffer) -> bool {
-    s := os_clipboard_get_text();
-    if !s.count return false;
+copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
+    text := get_selection_as_string(buffer, cursor);
+    Clipboard.os_clipboard_set_text(text);
+}
 
-    // @Incomplete: Validate the input!
-    // if !Simp.isLegalUTF8(s.data, s.count) {
-    //     log_error("OS Clipboard contains invalid utf8 data!\n");
-    //     return false;
-    // }
+cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) -> (success: bool) {
+    if !has_selection(cursor) return false;
 
-    insert_text_at_cursor(buffer, s);
+    text := get_selection_as_string(buffer, cursor);
+    Clipboard.os_clipboard_set_text(text);
+
+    delete_selected_range(buffer, cursor);
 
     return true;
 }
 
-insert_text_at_cursor :: (using buffer: *Buffer, s: string) {
+insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
+    // @Incomplete: Validate if the input data is valid utf8!
+    
+    text := Clipboard.os_clipboard_get_text();
+    defer free(text);
+
+    insert_text_at_cursor(buffer, text);
+}
+
+insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
+    MaybeDeleteSelectedText(buffer, cursor);
+
+    maybe_grow(buffer, text.count);
+
+    insert_at      := buffer.data  + cursor.pos;
+    new_right      := insert_at    + text.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
+
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+    SlowMemcpy(insert_at, text.data, text.count);
+
+    buffer.count += text.count;
+    buffer.rebuild_row_table = true;
+    buffer.dirty = true;
+
+    set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
+}
+
+// @Todo: Remove this and use the version above!
+insert_text_at_cursor :: (buffer: *Buffer, s: string) {
     MaybeDeleteSelectedText(buffer, *buffer._cursor);
 
     maybe_grow(buffer, s.count);
 
-    insert_at      := buffer.data  + _cursor.pos;
+    c := *buffer._cursor;
+
+    insert_at      := buffer.data  + c.pos;
     new_right      := insert_at    + s.count;
     right_rem_size := buffer.count - (insert_at - buffer.data);
 
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size); // @Cleanup shift_right procedure
-    copy(insert_at, s.data, s.count);
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+    SlowMemcpy(insert_at, s.data, s.count);
 
     buffer.count += s.count;
     buffer.rebuild_row_table = true;
-
-    set_cursor_pos(buffer, *_cursor, _cursor.pos+s.count, horizontal=true);
-
     buffer.dirty = true;
+
+    set_cursor_pos(buffer, c, c.pos + s.count, horizontal=true);
+}
+
+MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
+    if has_selection(buffer._cursor) {
+        delete_selected_range(buffer, *buffer._cursor);
+        return true;
+    }
+    return false;
+}
+
+delete_selected_range :: (buffer: *Buffer, cursor: *Cursor) {
+    if !has_selection(cursor) return;
+
+    start, end := selected_range(cursor);
+    shift_left(buffer, start, end);
+
+    assert(cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", cursor.pos, buffer.count); // ???
+
+    set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
+}
+
+next_character_pos :: (buffer: *Buffer, at: s64) -> (pos: s64) {
+    assert(at > -1 && at <= buffer.count);
+    byte := buffer.data[at];
+    return at + 1 + trailingBytesForUTF8[byte];
 }
 
 Buffer :: struct {
@@ -116,6 +190,5 @@ Buffer :: struct {
     row_table: [..] Row_Info;
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
-
     filepath: string;
 }

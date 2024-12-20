@@ -78,7 +78,7 @@ main :: () {
     print("\n--------------\n\n");
 
     base_path := path_strip_filename(get_path_of_running_executable());
-    my_window = create_window(window_name="Asterisk", width=window_width, height=window_height);
+    my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
     Simp.set_render_target(my_window);
 
     my_init_fonts();
@@ -508,7 +508,7 @@ my_init_fonts :: () {
     // pixel_height := 15;
     pixel_height := font_size;
 
-    my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+    my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
     print("font: %\n", my_font.*);
     // print("%\n\n", my_font.*);
@@ -611,7 +611,6 @@ utf8_count_chars :: inline (s: string) -> s64 {
     return count;
 }
 
-#load "unicode.jai";
 #load "editor.jai";
 #load "keymap.jai";
 #load "draw.jai";
@@ -625,13 +624,13 @@ utf8_count_chars :: inline (s: string) -> s64 {
 #import "Math";
 #import "Window_Creation";
 #import "Input";
-Keymap :: #import "Keymap";
 #import "Unicode";
-Simp :: #import "Simp";
 #import "GetRect";
-#import "Memory";
 #import "Command_Line";
-#import "Clipboard";
+
+Keymap    :: #import "Keymap";
+Simp      :: #import "Simp";
+Clipboard :: #import "Clipboard";
 
 c_malloc  :: (size: u64) -> *void                #foreign crt "malloc";
 c_free    :: (memory: *void)                     #foreign crt "free";
