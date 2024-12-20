@@ -25,16 +25,17 @@ RgbToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 {
     };
 }
 
-bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
-text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
-
-// CURSOR_COLOR :: Vector4.{.9, .0, .0, 1.0};
-// CURSOR_COLOR :: Vector4.{.8, .1, .1, 1.0};
-CURSOR_COLOR :: #run RgbToVec4(134, 224, 143);
+// Blackboard theme
+bg_color        :: #run RgbToVec4(12, 16, 33);
+text_color      :: #run RgbToVec4(248, 248, 248);
+CURSOR_COLOR    :: #run RgbToVec4(255, 255, 255, .65);
 SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
-// @Todo: Blend with the text color
-// CURSOR_COLOR :: Vector4.{134.0/255, 224.0/255, 143.0/255, 3.0};
+// Main theme 
+// bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
+// text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
+// CURSOR_COLOR :: #run RgbToVec4(134, 224, 143);
+// SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
 line_height :: 0.0;
 font_size :: 15;
@@ -220,8 +221,10 @@ main :: () {
             t := "";
             c := utf8_count_chars(t);
             PrintDev("chars: %\n", c);
-        }
 
+            mx, my, ok := get_mouse_pointer_position(right_handed=false);
+            PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
+        }
 
         draw_frame(text, second_elapsed, last_time);
         Simp.swap_buffers(my_window, vsync=false);
@@ -324,6 +327,51 @@ get_col_index :: (using buffer: *Buffer, pos: s64) -> s64 {
     }
 
     return 0;
+}
+
+get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
+    editor, buffer := get_active_editor_and_buffer();
+
+    if y_is_relative {
+        y += editor.top_offset;
+    }
+
+    approx_index := cast(s64)floor(y / get_line_height());
+    if (approx_index > buffer.row_table.count - 1) || (approx_index < 0) return -1;
+
+    return approx_index;
+}
+
+get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (col: s64, bytes_from_left: s64) {
+    editor, buffer := get_active_editor_and_buffer();
+    
+    if x_is_relative {
+        x += editor.left_offset;
+    }
+
+    ok, s := get_row_as_string(buffer, row_index);
+    assert(ok);
+
+    bytes_from_left := 0;
+    col             := 0;
+    left            := 0.0;
+    while s.count {
+        cw := Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
+        if cast(float)x <= left break;
+                
+        byte_step := 1 + trailingBytesForUTF8[s[0]];
+        s = advance(s, byte_step);
+        
+        left += cw;
+        col += 1;
+        bytes_from_left += byte_step;
+    }
+
+    return col, bytes_from_left;
+}
+
+measure_text_width :: (text: string) -> s64 {
+    return Simp.prepare_text(my_font, text);
 }
 
 char_byte_offset :: inline (s: string, start: s64) -> s64 {
@@ -493,7 +541,8 @@ my_init_fonts :: () {
 
     set_working_directory(path);
     // pixel_height := font_size; // print(">>> %\n", window_height/40);
-    pixel_height := 15;
+    // pixel_height := 15;
+    pixel_height := font_size;
 
     my_font = Simp.get_font_at_size("data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
@@ -586,6 +635,16 @@ load_file_from_command_line :: (editor: *Editor) {
     // }
 
     // assert(free_args.count > 1);
+}
+
+utf8_count_chars :: inline (s: string) -> s64 {
+    count := 0;
+    while s {
+        advance(*s, 1 + trailingBytesForUTF8[s[0]]);
+        count += 1;
+    }
+
+    return count;
 }
 
 #load "unicode.jai";

@@ -75,7 +75,58 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         cw   := cx + my_font.em_width;
 
         Simp.immediate_quad(cast(float) cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
+    }
 
+    // Draw mouse
+    if editor_in_focus {
+        mx, my, ok := get_mouse_pointer_position(right_handed=false);
+        if (ok) {
+            row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
+            if row_index != -1 {
+                ok, row_str := get_row_as_string(buffer, row_index);
+                width := measure_text_width(row_str);
+                bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+                ch      := my_font.character_height;
+                Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
+            }
+
+            // approx_row := cast(s64)floor((my+editor.top_offset) / get_line_height());
+
+            // first := first_visible_row_index(editor, buffer);
+            // last  := last_visible_row_index(buffer);
+            // for i: first..last {
+            //     if i == approx_row {
+            //         success, s := get_row_as_string(buffer, i);
+            //         assert(success);
+
+            //         ch      := my_font.character_height;
+            //         bottom  := (r.h+r.y) - get_line_height(approx_row+1) + editor.top_offset;
+            //         // width   := Simp.prepare_text(my_font, s);
+            //         // Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
+
+            //         cw := 0;
+            //         left := 0.0;
+            //         while s.count {
+            //             cw = Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
+            //             if cast(float)mx <= left break;
+                        
+            //             left += cw;
+                        
+            //             bytes := 1 + trailingBytesForUTF8[s[0]];
+            //             s = advance(s, bytes);
+            //         }
+                    
+            //         if cw == 0 {
+            //             cw = my_font.em_width;
+            //             Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), cast(float)cw, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
+            //         } else {
+            //             Simp.immediate_quad(left-cw, bottom + (ch-ch*0.1), left, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
+            //         }
+
+            //         break;
+            //     }
+            // }
+        }
     }
 
     // Draw lines
@@ -107,11 +158,6 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             left := -left_offset;
             t := slice(text, row.pos-row.cols, row.cols);
             left += draw_text(t, xx left, xx bottom, text_color);
-
-            if draw_special_chars {
-                s := tprint("¶");
-                draw_text(s, xx left, xx bottom, .{1.0, 1.0, 1.0, .4});
-            }
 
             avg_row_render_time += (seconds_since_init()*1000 - time);
             rendered_rows += 1;

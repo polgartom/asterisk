@@ -53,6 +53,17 @@ slice :: inline (buffer: *Buffer, index: s64, count: s64) -> string {
     return slice(s, index, count);
 }
 
+get_row_as_string :: (using buffer: *Buffer, index: s64) -> bool, string {
+    if index >= row_table.count {
+        return false, "";
+    }
+
+    row := row_table[index];
+    s := slice(buffer, row.pos - row.cols, row.cols);
+    
+    return true, s;
+}
+
 Buffer :: struct {
     count:     s64;
     allocated: s64;

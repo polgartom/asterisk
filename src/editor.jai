@@ -105,6 +105,7 @@ create_an_editor_instance :: () -> *Editor {
     return editor;
 }
 
+// Active editor
 editor: *Editor; // @Temporary?
 
 Editor :: struct {
