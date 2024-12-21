@@ -13,15 +13,10 @@ window_height := 1200;
 
 should_quit := false;
 
-// background_color : Vector4 = .{.0, .155, .125, 1};
-my_font: *Simp.Dynamic_Font;
-
 last_time : float64;
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
-
-font_width: s64;
 
 RgbToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 {
     return Vector4.{
@@ -44,8 +39,10 @@ SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 // CURSOR_COLOR :: #run RgbToVec4(134, 224, 143);
 // SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
+my_font: *Simp.Dynamic_Font;
+font_width: s64;
 line_height :: 0.0;
-font_size :: 15;
+font_size   :: 15;
 
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
@@ -236,8 +233,8 @@ main :: () {
         }
 
         draw_frame(text, second_elapsed, last_time);
-        Simp.swap_buffers(my_window, vsync=false);
-
+        swap_buffers(my_window);
+        
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
     }
@@ -518,6 +515,8 @@ my_init_fonts :: () {
     pixel_height := font_size;
 
     my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+    // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
+
     // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
     // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
     // print("font: %\n", my_font.*);
@@ -638,6 +637,7 @@ Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
     return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
 }
 
+#load "render.jai";
 #load "editor.jai";
 #load "keymap.jai";
 #load "draw.jai";
