@@ -611,6 +611,23 @@ utf8_count_chars :: inline (s: string) -> s64 {
     return count;
 }
 
+SlowMemcpy :: (destination: *void, source: *void, count: s64) {
+    d := cast(*u8) destination;  s := cast(*u8) source;
+
+    overlapping := destination > source && destination < source + count;
+    if !overlapping {
+        for 0 .. count - 1
+            d[it] = s[it];
+    } else {
+        for #v2 < count - 1 .. 0
+            d[it] = s[it];
+    }
+}
+
+Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
+    return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
+}
+
 #load "editor.jai";
 #load "keymap.jai";
 #load "draw.jai";

@@ -1,20 +1,3 @@
-Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
-    return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
-}
-
-SlowMemcpy :: (destination: *void, source: *void, count: s64) {
-    d := cast(*u8) destination;  s := cast(*u8) source;
-
-    overlapping := destination > source && destination < source + count;
-    if !overlapping {
-        for 0 .. count - 1
-            d[it] = s[it];
-    } else {
-        for #v2 < count - 1 .. 0
-            d[it] = s[it];
-    }
-}
-
 shift_left :: (using buffer: *Buffer, to: s64, from: s64) {
     if to == from return;
     assert(to < from);
@@ -32,17 +15,13 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) {
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
     assert(size > -1);
-
-    MAGNITUDE :: 3; // @temporary
-
+    
+    if size == 0 then size = BUFFER_PAGE_SIZE;
     desired_size := buffer.count + size;
-    if desired_size == 0 {
-        desired_size = 1024*MAGNITUDE; // @temporary
-    }
 
     if desired_size >= buffer.allocated {
-        reserve  := buffer.allocated + (desired_size * MAGNITUDE);
-        new_size := Align(reserve, 4096);
+        new_size := buffer.allocated + desired_size;
+        new_size  = Align(new_size, BUFFER_PAGE_SIZE);
 
         new_data := cast(*u8)c_malloc(xx new_size);
         assert(new_data != null);
@@ -178,6 +157,16 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
     return at + 1 + trailingBytesForUTF8[byte];
 }
 
+create_buffer :: (editor: *Editor) -> *Buffer {
+    buffer := array_add(*editor.buffers);
+    maybe_grow(buffer, 0);
+    rebuild_row_table(buffer);
+
+    return buffer;
+}
+
+BUFFER_PAGE_SIZE :: 4096; // It is too large?
+
 Buffer :: struct {
     count:     s64;
     allocated: s64;
@@ -192,4 +181,7 @@ Buffer :: struct {
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
     filepath: string;
+
+    // @Todo: It's mainly for the system buffers like logs or console output etc..
+    read_only := false;
 }

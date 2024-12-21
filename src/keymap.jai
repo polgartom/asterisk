@@ -26,11 +26,11 @@ PrevBuffer :: () {
     using editor;
 
     current_index := get_active_buffer_index(editor);
-    next_index    := current_index-1;
-    if next_index < 0 then next_index = buffers.count-1;
-    next_buffer   := *buffers[next_index];
+    prev_index    := current_index-1;
+    if prev_index < 0 then prev_index = buffers.count-1;
+    prev_buffer   := *buffers[prev_index];
 
-    change_active_buffer(editor, next_buffer);
+    editor.active_buffer = prev_buffer;
 }
 
 NextBuffer :: () {
@@ -41,7 +41,7 @@ NextBuffer :: () {
     next_index    := (current_index + 1) % buffers.count;
     next_buffer   := *buffers[next_index];
     
-    change_active_buffer(editor, next_buffer);
+    editor.active_buffer = next_buffer;
 }
 
 Quit :: () {

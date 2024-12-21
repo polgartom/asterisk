@@ -42,15 +42,6 @@ open_file :: (editor: *Editor, filepath: string) {
 
     rebuild_row_table(buffer);
 
-    // editor.active_buffer = buffer;
-    change_active_buffer(editor, buffer);
-}
-
-change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
-    // if buffer.cursors.count == 0 {
-    //     array_add(*buffer.cursors);
-    // }
-
     editor.active_buffer = buffer;
 }
 
@@ -71,12 +62,11 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
 
     if editor.buffers.count == 0 {
         // Create a new empty (initial) buffer
-        new_buffer := array_add(*editor.buffers);
-        maybe_grow(new_buffer, 0);
-        change_active_buffer(editor, new_buffer);
+        new_buffer := create_buffer(editor);
+        editor.active_buffer = new_buffer;
     } else {
         last_index := editor.buffers.count-1;
-        change_active_buffer(editor, *editor.buffers[last_index]);
+        editor.active_buffer = *editor.buffers[last_index];
     }
 }
 
@@ -98,10 +88,8 @@ get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
 
 create_an_editor_instance :: () -> *Editor {
     editor := New(Editor);
-    buffer := array_add(*editor.buffers);
+    buffer := create_buffer(editor);
     editor.active_buffer = buffer;
-    maybe_grow(buffer, 0);
-    rebuild_row_table(buffer);
 
     return editor;
 }
