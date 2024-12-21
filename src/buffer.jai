@@ -37,25 +37,13 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
-to_string :: inline (buffer: *Buffer) -> string {
-    s: string = ---;
-    s.count = buffer.count;
-    s.data = buffer.data;
-    return s;
-}
-
-slice :: inline (buffer: *Buffer, index: s64, count: s64) -> string {
-    s := to_string(buffer);
-    return slice(s, index, count);
-}
-
 get_row_as_string :: (using buffer: *Buffer, index: s64) -> bool, string {
     if index >= row_table.count {
         return false, "";
     }
 
     row := row_table[index];
-    s := slice(buffer, row.pos - row.cols, row.cols);
+    s := slice(buffer, row.start, row.size);
     
     return true, s;
 }
@@ -85,7 +73,7 @@ insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
     text := Clipboard.os_clipboard_get_text();
     defer free(text);
 
-    insert_text_at_cursor(buffer, text);
+    insert_text_at_cursor(buffer, cursor, text);
 }
 
 insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
@@ -108,26 +96,26 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
 }
 
 // @Todo: Remove this and use the version above!
-insert_text_at_cursor :: (buffer: *Buffer, s: string) {
-    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+// insert_text_at_cursor :: (buffer: *Buffer, s: string) {
+//     MaybeDeleteSelectedText(buffer, *buffer._cursor);
 
-    maybe_grow(buffer, s.count);
+//     maybe_grow(buffer, s.count);
 
-    c := *buffer._cursor;
+//     c := *buffer._cursor;
 
-    insert_at      := buffer.data  + c.pos;
-    new_right      := insert_at    + s.count;
-    right_rem_size := buffer.count - (insert_at - buffer.data);
+//     insert_at      := buffer.data  + c.pos;
+//     new_right      := insert_at    + s.count;
+//     right_rem_size := buffer.count - (insert_at - buffer.data);
 
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
-    SlowMemcpy(insert_at, s.data, s.count);
+//     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+//     SlowMemcpy(insert_at, s.data, s.count);
 
-    buffer.count += s.count;
-    buffer.rebuild_row_table = true;
-    buffer.dirty = true;
+//     buffer.count += s.count;
+//     buffer.rebuild_row_table = true;
+//     buffer.dirty = true;
 
-    set_cursor_pos(buffer, c, c.pos + s.count, horizontal=true);
-}
+//     set_cursor_pos(buffer, c, c.pos + s.count, horizontal=true);
+// }
 
 MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
     if has_selection(buffer._cursor) {
@@ -165,12 +153,54 @@ create_buffer :: (editor: *Editor) -> *Buffer {
     return buffer;
 }
 
-BUFFER_PAGE_SIZE :: 4096; // It is too large?
+rebuild_row_table :: (using buffer: *Buffer) {
+    rebuild_row_table = false;
+
+    row_table_recalc_time = seconds_since_init();
+
+    // array_reset(*row_table); // @speed can reuse the same memory
+    array_reset_keeping_memory(*row_table);
+
+    s := to_string(buffer);
+    pos := 0;
+    while true {
+        ln_index := find_index_from_left(s, #char "\n");
+        if ln_index == -1 {
+            array_add(*row_table, .{start=pos, end=pos+s.count, size=s.count});
+            break;
+        }
+
+        size := ln_index;
+        pos += size;
+        array_add(*row_table, .{start=pos-size, end=pos, size=size});
+
+        ln_index += 1;
+        advance(*s, ln_index);
+
+        pos += 1; // because of the line end
+    }
+
+    row_table_recalc_time = (seconds_since_init()-row_table_recalc_time)*1000;
+}
+
+slice :: inline (buffer: *Buffer, start: s64, count: s64) -> string {
+    s := to_string(buffer);
+    return slice(s, start, count);
+}
+
+to_string :: inline (buffer: *Buffer) -> string {
+    s: string = ---;
+    s.count = buffer.count;
+    s.data = buffer.data;
+    return s;
+}
+
+BUFFER_PAGE_SIZE :: 4096;
 
 Buffer :: struct {
+    data:      *u8;
     count:     s64;
     allocated: s64;
-    data:      *u8;
 
     dirty := false;
 
@@ -184,4 +214,10 @@ Buffer :: struct {
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     read_only := false;
+}
+
+Row_Info :: struct {
+    start: s64;
+    end:   s64;
+    size:  s64;
 }

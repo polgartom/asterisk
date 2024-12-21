@@ -109,59 +109,6 @@ Editor :: struct {
     left_offset := 0.0; // s64?
 }
 
-////////////////////////////
-
-row_to_string :: (buffer: *Buffer, row: Row_Info) -> string {
-    s := to_string(buffer);
-    start := row_first_byte_offset(row);
-    end := row_first_byte_offset(row);
-    
-    return slice(s, start, end-start);
-}
-
-Row_Info :: struct {
-    // @Cleanup: ambiguity
-    pos: s64;  // end byte index of the row
-    cols: s64; // bytes in the row
-
-    #place pos;
-    end_byte_offset: s64;
-    bytes:           s64;
-}
-
-rebuild_row_table :: (using buffer: *Buffer) {
-    rebuild_row_table = false;
-
-    row_table_recalc_time = seconds_since_init();
-
-    // array_reset(*row_table); // @speed can reuse the same memory
-    array_reset_keeping_memory(*row_table);
-
-    s := to_string(buffer);
-    pos := 0;
-    while true {
-        ln_index := find_index_from_left(s, #char "\n");
-        if ln_index == -1 {
-            chars := s.count;
-            array_add(*row_table, .{pos=pos+chars, cols=chars});
-            break;
-        }
-
-        chars := ln_index;
-        pos += chars;
-        array_add(*row_table, .{pos=pos, cols=chars});
-
-        ln_index += 1;
-        advance(*s, ln_index);
-
-        pos += 1; // because of the line end
-    }
-
-    row_table_recalc_time = (seconds_since_init()-row_table_recalc_time)*1000;
-}
-
-////////////////////////////
-
 replace_tabs_with_spaces :: inline (s: string) -> (result: string, ocurrences: int) {
     result, ocurrences := replace(s, "\t", TAB_SPACE_CHARS);
     return result, ocurrences;

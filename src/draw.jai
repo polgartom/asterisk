@@ -45,13 +45,13 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             line_height := get_line_height();
             for row_index: start_row..end_row {
                 row := buffer.row_table[row_index];
-                row_start := row.pos-row.cols;
-                row_end   := row.pos;
+                row_start := row.end-row.size;
+                row_end   := row.end;
 
                 left  := -editor.left_offset;
                 width := 0.0;
 
-                t := slice(buffer, row_start, row.cols);
+                t := slice(buffer, row_start, row.size);
 
                 // Convert the first N unselected bytes in the row to pixels
                 start := max(sel_start, row_start) - row_start;
@@ -148,7 +148,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
         for row_index: start_row..end_row {
             row := row_table[row_index];
-            if row.cols == 0 continue;
+            if row.size == 0 continue;
 
             time := seconds_since_init()*1000;
 
@@ -156,7 +156,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             bottom := (r.h+r.y) - (line_height*(row_index+1)) + top_offset;
 
             left := -left_offset;
-            t := slice(text, row.pos-row.cols, row.cols);
+            t := slice(text, row.end-row.size, row.size);
             left += draw_text(t, xx left, xx bottom, text_color);
 
             avg_row_render_time += (seconds_since_init()*1000 - time);
@@ -196,7 +196,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 
         row := find_row_index(buffer, buffer._cursor.pos)+1;
-        col := get_cursor_col(buffer, *buffer._cursor);
+        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
         row_col_info := tprint("Row % Col %", row, col);
         w = Simp.prepare_text(my_font, row_col_info);
         Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});

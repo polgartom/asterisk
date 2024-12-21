@@ -12,7 +12,7 @@ set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, hor
 
     // Explain!
     if horizontal {
-        cursor.col = get_cursor_col(buffer, cursor);
+        cursor.col = byte_pos_to_col_pos(buffer, cursor.pos);
     }
 }
 
@@ -33,7 +33,7 @@ count_selected_chars :: inline (buffer: *Buffer, using c: *Cursor) -> s64 {
     if end - start == 0 return 0;
 
     s: string = ---;
-    s.data = buffer.data + start;
+    s.data = buffer.data + cast(s64)start;
     s.count = end - start;
 
     return utf8_count_chars(s);

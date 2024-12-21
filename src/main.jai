@@ -171,7 +171,7 @@ main :: () {
                 character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
                 editor, buffer := get_active_editor_and_buffer(); // @Temporary
-                insert_text_at_cursor(buffer, string_for_utf32_to_utf8);
+                insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
             }
 
         }
@@ -215,7 +215,7 @@ main :: () {
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
  
             row := find_row_index(buffer, buffer._cursor.pos);
-            col := get_cursor_col(buffer, *buffer._cursor);
+            col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
             cx  := get_cursor_x(buffer, *buffer._cursor);
             cy  := get_cursor_y(buffer, *buffer._cursor);
 
@@ -253,12 +253,11 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
     return c;
 }
 
-row_first_byte_offset :: inline (row: Row_Info) -> s64 {
-    return row.end_byte_offset - row.bytes;
-}
-
-row_last_byte_offset :: inline (row: Row_Info) -> s64 {
-    return row.end_byte_offset;
+find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
+    index := find_row_index(buffer, byte_pos);
+    assert(index < row_table.count);
+    
+    return row_table[index];
 }
 
 find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
@@ -266,7 +265,7 @@ find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
 
     assert(row_table.count != 0);
     for row, row_index: row_table {
-        if offset <= row.pos {
+        if offset <= row.end {
             return row_index;
         }
     }
@@ -301,7 +300,7 @@ get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     assert(row_table.count != 0);
     
     for row, row_index: row_table {
-        if cursor.pos <= row.pos {
+        if cursor.pos <= row.end {
             return row_index + 1;
         }
     }
@@ -309,30 +308,26 @@ get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     return row_table.count;
 }
 
-get_cursor_col :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
-    return get_col_index(buffer, cursor.pos);
-}
+// get_col_index_at_cursor :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
+//     return get_col_index(buffer, cursor.pos);
+// }
 
-get_col_index :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
-    return get_col_index(buffer, cursor.pos);
-}
+// Return the relative column index
+byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
+    assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
-get_col_index :: (using buffer: *Buffer, pos: s64) -> s64 {
-    for row, row_index: row_table {
-        if pos <= row.pos {
-            cols   := 0;
-            offset := row_first_byte_offset(row);
-            while offset < pos {
-                byte := data[offset];
-                offset += 1 + trailingBytesForUTF8[byte];
-                cols += 1;
-            }
-
-            return cols;
-        }
+    col := 0;
+    
+    row := find_row(buffer, byte_pos);
+    at  := row.start;
+    while at < byte_pos {
+        byte := buffer.data[at];
+        at += 1 + trailingBytesForUTF8[byte];
+        col += 1;
     }
+    assert(at == byte_pos);
 
-    return 0;
+    return col;
 }
 
 get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
@@ -420,28 +415,30 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
 }
 
 num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
-    pos   := row_first_byte_offset(row);
-    end   := row.pos;
-    assert(row.pos <= buffer.count, "% %", row.pos, buffer.count);
+    assert(row.end <= buffer.count, "% %", row.end, buffer.count);
 
     chars := 0;
-    while pos < end {
-        byte := buffer.data[pos];
-        pos  += 1 + trailingBytesForUTF8[byte];
+
+    at := row.start;
+    while at < row.end {
+        byte  := buffer.data[at];
+        at    += 1 + trailingBytesForUTF8[byte];
         chars += 1;
     } 
+
+    assert(at == row.end);
 
     return chars;
 }
 
-byte_offset_to_col_index :: (buffer: *Buffer, offset: s64) -> s64 {
-    index := find_row_index(buffer, offset);
-    row := buffer.row_table[index];
-    start := row_first_byte_offset(row);
+// byte_offset_to_col_index :: (buffer: *Buffer, offset: s64) -> s64 {
+//     index := find_row_index(buffer, offset);
+//     row := buffer.row_table[index];
+//     start := row.start;
     
-    t := slice(buffer, start, offset-start);
-    return utf8_count_chars(t);
-}
+//     t := slice(buffer, start, offset-start);
+//     return utf8_count_chars(t);
+// }
 
 get_cursor_rel_x :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
     x := get_cursor_x(buffer, cursor);
@@ -468,7 +465,7 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
 
     row_index := find_row_index(buffer, cursor.pos);
     row := buffer.row_table[row_index];
-    first_byte := row.pos-row.cols;
+    first_byte := row.end-row.size;
     text := to_string(buffer);
     text = slice(text, first_byte, cursor.pos-first_byte);
     cx := Simp.prepare_text(my_font, text);

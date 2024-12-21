@@ -65,13 +65,13 @@ move_up_by_one_row :: ($with_selection := true) {
     using buffer;
 
     for row, row_index: row_table {
-        if _cursor.pos <= row.pos {
+        if _cursor.pos <= row.end {
             if row_index == 0 break; // no more row above
 
             prev_row      := row_table[row_index-1];
             prev_row_cols := num_of_chars_in_row(buffer, prev_row);
             steps         := min(prev_row_cols, _cursor.col);
-            pos           := row_first_byte_offset(prev_row);
+            pos           := prev_row.start;
 
             while steps {
                 byte := buffer.data[pos];
@@ -95,13 +95,13 @@ move_down_by_one_row :: ($with_selection := true) {
     using buffer;
 
     for row, row_index: row_table {
-        if _cursor.pos <= row.pos {
+        if _cursor.pos <= row.end {
             if row_index == row_table.count-1 break; // no more row below
 
             next_row      := row_table[row_index+1];
             next_row_cols := num_of_chars_in_row(buffer, next_row);
             steps         := min(next_row_cols, _cursor.col);
-            pos           := row_first_byte_offset(next_row);
+            pos           := next_row.start;
 
             while steps {
                 byte := buffer.data[pos];
@@ -128,10 +128,6 @@ move_left_by_one_character :: ($with_selection := true) {
     offset := prev_char_byte_offset(buffer, buffer._cursor.pos);
     
     set_cursor_pos(buffer, *buffer._cursor, offset, horizontal=true, with_selection=with_selection);
-
-    // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
-    // also we should update this value every time except when we move up or down
-    // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
 MoveLeft :: () {
@@ -147,10 +143,6 @@ move_right_by_one_character :: ($with_selection := true) {
     steps := 1 + trailingBytesForUTF8[byte];
     
     set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps, horizontal=true, with_selection=with_selection);
-
-    // @Temporary @Cleanup keep the cursor on the same col when we move up or down (just like in vscode)
-    // also we should update this value every time except when we move up or down
-    // buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
 }
 
 MoveRight :: () {
@@ -171,12 +163,12 @@ move_left_word :: ($subword_mode: bool) {
     row_index := find_row_index(buffer, _cursor.pos);    
     row := row_table[row_index];
 
-    offset := row_first_byte_offset(row);
+    offset := row.start;
     if offset == _cursor.pos {
         if row_index == 0 return; // no more row above
 
         row = row_table[row_index-1];
-        offset = row_first_byte_offset(row);
+        offset = row.start;
     }
 
     text := to_string(buffer);
@@ -293,15 +285,15 @@ ScrollViewPortUp :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    text := to_string(buffer);
-
     start := first_visible_row_index(editor, buffer);
     end := last_visible_row_index(buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
+    
     current_row := find_row_index(buffer, _cursor.pos);
     dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
     dest_row := row_table[dest_row_index];
-    pos := row_last_byte_offset(dest_row);
+    
+    pos := dest_row.end;
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
@@ -312,10 +304,12 @@ ScrollViewPortDown :: () {
     start := first_visible_row_index(editor, buffer);
     end := last_visible_row_index(buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
+    
     current_row := find_row_index(buffer, _cursor.pos);
     dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
     dest_row := row_table[dest_row_index];
-    pos := row_last_byte_offset(dest_row);
+    
+    pos := dest_row.end;
     set_cursor_pos(buffer, *_cursor, pos);
 }
 
@@ -341,11 +335,9 @@ Cut :: () {
     // Cut the whole line
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
-    start     := row.pos - row.cols;
-    end       := next_character_pos(buffer, row.pos);
-
-    _cursor.pos = start;
-    _cursor.sel = end;
+    
+    _cursor.pos = row.start;
+    _cursor.sel = next_character_pos(buffer, row.end);
 
     cut_selection_and_copy_to_os_clipboard(buffer, *_cursor);
 }
@@ -359,7 +351,7 @@ DeleteEverythingFromLeft :: () {
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
     start     := _cursor.pos;
-    end       := row.pos;
+    end       := row.end;
 
     shift_left(buffer, start, end);
 }
@@ -463,7 +455,7 @@ DeleteFromLeft :: () {
     assert(_cursor.pos + bytes_to_del <= text.count);
 
     to   := _cursor.pos;
-    from := _cursor.pos+bytes_to_del;
+    from := _cursor.pos + bytes_to_del;
     shift_left(buffer, to, from);
 }
 
@@ -534,7 +526,7 @@ InsertLine :: () {
     rebuild_row_table = true;
 
     if _cursor.pos == 0 {
-        insert_text_at_cursor(buffer, "\n");
+        insert_text_at_cursor(buffer, *buffer._cursor, "\n");
         return;
     }
 
@@ -543,12 +535,12 @@ InsertLine :: () {
 
     current_row_index := find_row_index(buffer, _cursor.pos);
     row := row_table[current_row_index];
-    start := row_first_byte_offset(row);
+    start := row.start;
     end := find_index_from_left_until_not(text, #char " ", start);
 
     if end == -1 {
         // In this case we only have one row with only whitespace characters
-        insert_text_at_cursor(buffer, "\n");
+        insert_text_at_cursor(buffer, *buffer._cursor, "\n");
         return;
     }
 
@@ -558,12 +550,12 @@ InsertLine :: () {
         set_cursor_pos(buffer, *_cursor, end);
     }
 
-    insert_text_at_cursor(buffer, "\n");
+    insert_text_at_cursor(buffer, *buffer._cursor, "\n");
 
     spaces := end - start;
     assert(spaces > -1);
     while spaces != 0 {
-        insert_text_at_cursor(buffer, " ");
+        insert_text_at_cursor(buffer, *buffer._cursor, " ");
         spaces -= 1;
     }
 }
@@ -577,18 +569,18 @@ InsertLineBelow :: () {
 
     current_row_index := find_row_index(buffer, _cursor.pos);
     row := row_table[current_row_index];
-    set_cursor_pos(buffer, *_cursor, row.pos);    // set cursor to the last character of the current row
-    insert_text_at_cursor(buffer, "\n");          // also increment the cursor by a character in this procedure
+    set_cursor_pos(buffer, *_cursor, row.end);    // set cursor to the last character of the current row
+    insert_text_at_cursor(buffer, *buffer._cursor, "\n");          // also increment the cursor by a character in this procedure
 
     // :SmartIndentFeature @Cleanup
     // A basic smart indent count characters in the current row until the first non-space character.
-    row_first_byte_index := row_first_byte_offset(row);
+    row_first_byte_index := row.start;
     first_non_whitespace_byte_index := find_index_from_left_until_not(text, #char " ", row_first_byte_index);
     if first_non_whitespace_byte_index != -1 {
         spaces := first_non_whitespace_byte_index - row_first_byte_index;
         assert(spaces > -1);
         while spaces != 0 {
-            insert_text_at_cursor(buffer, " ");
+            insert_text_at_cursor(buffer, *buffer._cursor, " ");
             spaces -= 1;
         }
     }
@@ -609,23 +601,18 @@ InsertTab :: inline () {
 
     editor, buffer := get_active_editor_and_buffer();
 
-    insert_text_at_cursor(buffer, TAB_SPACE_CHARS);
-    buffer._cursor.col = get_cursor_col(buffer, *buffer._cursor);
+    insert_text_at_cursor(buffer, *buffer._cursor, TAB_SPACE_CHARS);
 }
 
 GotoFirstCharOFCurrentRow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    index := find_row_index(buffer, _cursor.pos);
-    row   := row_table[index];
-    start := row_first_byte_offset(row);
-
-    for start..row.pos {
-        if buffer.data[it] != #char " " { // skip the indentation
-            new_pos := it;
-            if it == _cursor.pos new_pos = start;
-            set_cursor_pos(buffer, *_cursor, new_pos, horizontal=true);
+    row := find_row(buffer, _cursor.pos);
+    for at: row.start..row.end {
+        if buffer.data[at] != #char " " { // skip the indentation
+            if at == _cursor.pos then at = row.start;
+            set_cursor_pos(buffer, *_cursor, at, horizontal=true);
             return;
         }
     }
@@ -635,11 +622,9 @@ GotoLastCharOfCurrentRow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    index  := find_row_index(buffer, _cursor.pos);
-    row    := row_table[index];
-    offset := row_last_byte_offset(row);
-    
-    set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
+    row := find_row(buffer, _cursor.pos);
+
+    set_cursor_pos(buffer, *_cursor, row.end, horizontal=true);
 }
 
 ExpandSelectionUp :: () {

@@ -58,7 +58,7 @@
 [] Search from the top (Ctrl+F)
 [] Search and replace
 [] Goto line (Ctrl+G)
-[] Range selection
+[X] Range selection
 [] Copy / paste
 [] Undo / Redo
 [] Markers, also do some visualization for them
