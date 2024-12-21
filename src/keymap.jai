@@ -658,6 +658,28 @@ ExpandSelectionLeft :: () {
     move_left_by_one_character(with_selection=false);
 }
 
+// HACKY!
+ExpandSelectionLeftByWord :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    tmp := _cursor.sel;
+    defer _cursor.sel = tmp;
+
+    move_left_word(subword_mode=false);
+}
+
+// HACKY!
+ExpandSelectionRightbyWord :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    tmp := _cursor.sel;
+    defer _cursor.sel = tmp;
+
+    move_right_word(subword_mode=false);
+}
+
 ////////////////////////////////////
 //
 
@@ -720,6 +742,9 @@ register_keymap_procedures :: () {
     Add(ExpandSelectionLeft);
     Add(ExpandSelectionDown);
     Add(ExpandSelectionRight);
+
+    Add(ExpandSelectionLeftByWord);
+    Add(ExpandSelectionRightbyWord);
 }
 
 init_keymaps :: () {
@@ -730,10 +755,16 @@ init_keymaps :: () {
 }
 
 handle_keymaps_event :: (event: Event) -> (handled: bool) {
+    current_keymap_event = *event;
     return Keymap.keymap_handle_event(default_keymap, event);
 }
 
 default_keymap: Keymap.Keymap;
+current_keymap_event: *Event = null;
+
+ShiftHeld :: () -> bool #expand {
+    return current_keymap_event.shift_pressed;
+}
 
 #scope_module
 Keymap :: #import "Keymap";

@@ -1,9 +1,9 @@
 // @Cleanup: Rename the $with_selection param because the opposite is happening right now!
-set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, $with_selection := true) {
+set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
     target_pos = max(target_pos, 0);
     target_pos = min(target_pos, buffer.count);
 
-    #if with_selection {
+    if with_selection {
         cursor.pos = target_pos;
         cursor.sel = target_pos;
     } else {

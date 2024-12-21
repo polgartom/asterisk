@@ -58,3 +58,6 @@ S-ArrowUp ExpandSelectionUp
 S-ArrowLeft ExpandSelectionLeft
 S-ArrowDown ExpandSelectionDown
 S-ArrowRight ExpandSelectionRight
+
+C-S-ArrowLeft ExpandSelectionLeftByWord
+C-S-ArrowRight ExpandSelectionRightbyWord

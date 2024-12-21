@@ -520,7 +520,7 @@ my_init_fonts :: () {
     my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
     // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
-    print("font: %\n", my_font.*);
+    // print("font: %\n", my_font.*);
     // print("%\n\n", my_font.*);
     assert(my_font != null);
 }
