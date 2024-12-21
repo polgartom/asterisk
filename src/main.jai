@@ -79,8 +79,6 @@ footer_height: float;
 event_find_next_occurence := false; // @Temporary
 
 main :: () {
-    print("\n--------------\n\n");
-
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
         Windows.SetProcessDPIAware();
@@ -88,13 +86,16 @@ main :: () {
         // Windows is very bad at thread-switching by default unless you do this. Sad.
         Windows.timeBeginPeriod(1);
     }
-
+    
     base_path := path_strip_filename(get_path_of_running_executable());
+    set_working_directory(base_path);
+
+    init_keymaps();
+
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
     Simp.set_render_target(my_window);
 
     my_init_fonts();
-    init_keymaps();
     ui_init(); // GetRect
 
     {
@@ -502,21 +503,12 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 }
 
 my_init_fonts :: () {
-    // So that we can load our font, set to path of running executable.
-    // @Incomplete: Pack a default font into Simp.
-    path := path_strip_filename(get_path_of_running_executable());
-
-    set_working_directory(path);
-    // pixel_height := font_size; // print(">>> %\n", window_height/40);
-    // pixel_height := 15;
     pixel_height := font_size;
 
     my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
 
     // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
-    // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
-    // print("font: %\n", my_font.*);
     // print("%\n\n", my_font.*);
     assert(my_font != null);
 }
