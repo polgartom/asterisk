@@ -95,28 +95,6 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
-// @Todo: Remove this and use the version above!
-// insert_text_at_cursor :: (buffer: *Buffer, s: string) {
-//     MaybeDeleteSelectedText(buffer, *buffer._cursor);
-
-//     maybe_grow(buffer, s.count);
-
-//     c := *buffer._cursor;
-
-//     insert_at      := buffer.data  + c.pos;
-//     new_right      := insert_at    + s.count;
-//     right_rem_size := buffer.count - (insert_at - buffer.data);
-
-//     if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
-//     SlowMemcpy(insert_at, s.data, s.count);
-
-//     buffer.count += s.count;
-//     buffer.rebuild_row_table = true;
-//     buffer.dirty = true;
-
-//     set_cursor_pos(buffer, c, c.pos + s.count, horizontal=true);
-// }
-
 MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
     if has_selection(buffer._cursor) {
         delete_selected_range(buffer, *buffer._cursor);
