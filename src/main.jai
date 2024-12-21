@@ -76,6 +76,14 @@ event_find_next_occurence := false; // @Temporary
 
 main :: () {
     print("\n--------------\n\n");
+    
+    #if OS == .WINDOWS {
+        Windows :: #import "Windows";
+        Windows.SetProcessDPIAware();
+
+        // Windows is very bad at thread-switching by default unless you do this. Sad.
+        Windows.timeBeginPeriod(1);
+    }
 
     base_path := path_strip_filename(get_path_of_running_executable());
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
