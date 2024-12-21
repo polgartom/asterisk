@@ -286,7 +286,7 @@ ScrollViewPortUp :: () {
     using buffer;
 
     start := first_visible_row_index(editor, buffer);
-    end := last_visible_row_index(buffer);
+    end := last_visible_row_index(editor, buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
     
     current_row := find_row_index(buffer, _cursor.pos);
@@ -302,7 +302,7 @@ ScrollViewPortDown :: () {
     using buffer;
 
     start := first_visible_row_index(editor, buffer);
-    end := last_visible_row_index(buffer);
+    end := last_visible_row_index(editor, buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
     
     current_row := find_row_index(buffer, _cursor.pos);

@@ -93,7 +93,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             // approx_row := cast(s64)floor((my+editor.top_offset) / get_line_height());
 
             // first := first_visible_row_index(editor, buffer);
-            // last  := last_visible_row_index(buffer);
+            // last  := last_visible_row_index(editor, buffer);
             // for i: first..last {
             //     if i == approx_row {
             //         success, s := get_row_as_string(buffer, i);
@@ -144,7 +144,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
         // end_row: s64 = xx ((top_offset + (r.h)) / line_height);
         // end_row = clamp(end_row + 1, end_row, row_table.count-1);
-        end_row := last_visible_row_index(editor.active_buffer);
+        end_row := last_visible_row_index(editor, buffer);
 
         for row_index: start_row..end_row {
             row := row_table[row_index];

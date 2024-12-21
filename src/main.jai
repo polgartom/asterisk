@@ -526,7 +526,7 @@ first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s6
     return start_row;
 }
 
-last_visible_row_index :: inline (using buffer: *Buffer) -> s64 {
+last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     viewport_h := window_height-footer_height*2; // @Hacky
 
     line_height := get_line_height();

@@ -41,13 +41,15 @@
 [x] Move cursor related data to the Buffer struct - later we want multiple cursor support, so refact that way 
 [X] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
 [X] Validate UTF-8 before we load the file data into the buffer
+[X] Range selection
+[X] Save the buffer (file)
+[] System reserved read-only buffers for debugging or for the console output 
 [] Fix word/subword movement if the cursor surrounded with multiple line breaks
 [] Improve word/subword movement mainly because the left and right movement not exactly the same
 [] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
 [] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
 [] Draw spaces. We should remove the current thing because that replaces the spaces with ~ characters which is not gooood!
 [] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
-[X] Save the buffer (file)
 [] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
 [] Keep the cursor center after new occurence has found
 [] Smart movement check { } positions, also we should check the current language
@@ -58,7 +60,6 @@
 [] Search from the top (Ctrl+F)
 [] Search and replace
 [] Goto line (Ctrl+G)
-[X] Range selection
 [] Copy / paste
 [] Undo / Redo
 [] Markers, also do some visualization for them
