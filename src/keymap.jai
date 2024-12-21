@@ -666,62 +666,74 @@ register_keymap_procedures :: () {
     // Editor keymaps   
     k := *default_keymap;
 
-    Keymap.add_proc(k, "ToggleDevInfo", ToggleDevInfo);
-    Keymap.add_proc(k, "DrawSpecialChars", DrawSpecialChars);
+    Add :: (ident: Code) #expand {
+        Keymap.add_proc(k, #run CodeInspect.get_identifier_name(ident), #insert ident);
+    }
 
-    Keymap.add_proc(k, "Quit", Quit);
-    Keymap.add_proc(k, "Save", Save);
+    Add(ToggleDevInfo);
+    Add(DrawSpecialChars);
 
-    Keymap.add_proc(k, "CloseCurrentBuffer", CloseCurrentBuffer);
-    Keymap.add_proc(k, "PrevBuffer", PrevBuffer);
-    Keymap.add_proc(k, "NextBuffer", NextBuffer);
+    Add(Quit);
+    Add(Save);
+
+    Add(CloseCurrentBuffer);
+    Add(PrevBuffer);
+    Add(NextBuffer);
 
     ///////////////////////////
 
-    Keymap.add_proc(k, "MoveUp", MoveUp);
-    Keymap.add_proc(k, "MoveDown", MoveDown);
-    Keymap.add_proc(k, "MoveLeft", MoveLeft);
-    Keymap.add_proc(k, "MoveRight", MoveRight);
+    Add(MoveUp);
+    Add(MoveDown);
+    Add(MoveLeft);
+    Add(MoveRight);
 
-    Keymap.add_proc(k, "MoveLeftWord", MoveLeftWord);
-    Keymap.add_proc(k, "MoveLeftSubword", MoveLeftSubword);
-    Keymap.add_proc(k, "MoveRightWord", MoveRightWord);
-    Keymap.add_proc(k, "MoveRightSubword", MoveRightSubword);
+    Add(MoveLeftWord);
+    Add(MoveLeftSubword);
+    Add(MoveRightWord);
+    Add(MoveRightSubword);
 
-    Keymap.add_proc(k, "ScrollViewPortUp", ScrollViewPortUp);
-    Keymap.add_proc(k, "ScrollViewPortDown", ScrollViewPortDown);
+    Add(ScrollViewPortUp);
+    Add(ScrollViewPortDown);
 
-    Keymap.add_proc(k, "DeleteFromRight", DeleteFromRight);
-    Keymap.add_proc(k, "DeleteFromLeft", DeleteFromLeft);
+    Add(DeleteFromRight);
+    Add(DeleteFromLeft);
     
-    Keymap.add_proc(k, "Copy", Copy);
-    Keymap.add_proc(k, "Paste", Paste);
-    Keymap.add_proc(k, "Cut", Cut);
+    Add(Copy);
+    Add(Paste);
+    Add(Cut);
 
-    Keymap.add_proc(k, "DeleteEverythingFromLeft", DeleteEverythingFromLeft);
-    Keymap.add_proc(k, "DeleteWordFromRight", DeleteWordFromRight);
-    Keymap.add_proc(k, "DeleteSubwordFromRight", DeleteSubwordFromRight);
+    Add(DeleteEverythingFromLeft);
+    Add(DeleteWordFromRight);
+    Add(DeleteSubwordFromRight);
     
-    Keymap.add_proc(k, "DeleteWordFromLeft", DeleteWordFromLeft);
-    Keymap.add_proc(k, "DeleteSubwordFromLeft", DeleteSubwordFromLeft);
+    Add(DeleteWordFromLeft);
+    Add(DeleteSubwordFromLeft);
 
-    Keymap.add_proc(k, "InsertTab", InsertTab);
-    Keymap.add_proc(k, "InsertLine", InsertLine);
-    Keymap.add_proc(k, "InsertLineBelow", InsertLineBelow);
+    Add(InsertTab);
+    Add(InsertLine);
+    Add(InsertLineBelow);
 
-    Keymap.add_proc(k, "GotoFirstCharOFCurrentRow", GotoFirstCharOFCurrentRow);
-    Keymap.add_proc(k, "GotoLastCharOfCurrentRow", GotoLastCharOfCurrentRow);
+    Add(GotoFirstCharOFCurrentRow);
+    Add(GotoLastCharOfCurrentRow);
 
-    Keymap.add_proc(k, "ExpandSelectionUp", ExpandSelectionUp);
-    Keymap.add_proc(k, "ExpandSelectionLeft", ExpandSelectionLeft);
-    Keymap.add_proc(k, "ExpandSelectionDown", ExpandSelectionDown);
-    Keymap.add_proc(k, "ExpandSelectionRight", ExpandSelectionRight);
+    Add(ExpandSelectionUp);
+    Add(ExpandSelectionLeft);
+    Add(ExpandSelectionDown);
+    Add(ExpandSelectionRight);
 }
 
 init_keymaps :: () {
     register_keymap_procedures();
-    success := Keymap.load_from_file(*default_keymap, "default", ".\\..\\default.keymap", false);
+    // success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
+    success := Keymap.load_from_file(*default_keymap, "default", "./../default.keymap", false);
     assert(success, "Failed to load the 'default.keymap'");
 }
 
+handle_keymaps_event :: (event: Event) -> (handled: bool) {
+    return Keymap.keymap_handle_event(default_keymap, event);
+}
+
 default_keymap: Keymap.Keymap;
+
+#scope_module
+Keymap :: #import "Keymap";

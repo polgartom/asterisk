@@ -1,5 +1,12 @@
-// window_width := 1280;
-// window_height := 720;
+// #import "Compiler";
+// DEFAULT_FONT_DATA :: #run -> [] u8 {
+//     filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
+//     font_binary, success := read_entire_file(filename);
+//     if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
+
+//     result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
+//     return result;
+// }
 
 window_width := 1200;
 window_height := 1200;
@@ -76,7 +83,7 @@ event_find_next_occurence := false; // @Temporary
 
 main :: () {
     print("\n--------------\n\n");
-    
+
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
         Windows.SetProcessDPIAware();
@@ -158,22 +165,16 @@ main :: () {
 
             getrect_handle_event(event);
 
-            if editor_in_focus {
-                handled := Keymap.keymap_handle_event(default_keymap, event);
-                if handled continue;
+            handled := Keymap.keymap_handle_event(default_keymap, event);
+            if handled continue;
 
-                if event.type == .TEXT_INPUT {
-                    if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
-                    memset(string_for_utf32_to_utf8.data, 0, 4);
-                    character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
+            if event.type == .TEXT_INPUT {
+                if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
+                memset(string_for_utf32_to_utf8.data, 0, 4);
+                character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
-                    insert_text_at_cursor(buffer, string_for_utf32_to_utf8);
-                }
-            } else {
-                if event.key_code == .ESCAPE {
-                    editor_in_focus = true;
-                }
+                editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                insert_text_at_cursor(buffer, string_for_utf32_to_utf8);
             }
 
         }
@@ -517,6 +518,7 @@ my_init_fonts :: () {
     pixel_height := font_size;
 
     my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+    // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
     // my_font = Simp.get_font_at_size("data", "local/CascadiaCode.ttf", pixel_height);
     print("font: %\n", my_font.*);
     // print("%\n\n", my_font.*);
@@ -642,6 +644,8 @@ Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
 #load "buffer.jai";
 #load "cursor.jai";
 
+CodeInspect :: #import,file "code_inspect.jai";
+
 #import "System";
 #import "Basic";
 #import "File";
@@ -653,7 +657,6 @@ Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
 #import "GetRect";
 #import "Command_Line";
 
-Keymap    :: #import "Keymap";
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";
 
