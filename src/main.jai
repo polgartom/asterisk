@@ -68,7 +68,8 @@ frametime: float64;
 editor_in_focus := true;
 
 // GETRECT - START
-current_theme: s32 = xx Default_Themes.Default;
+// current_theme: s32 = xx Default_Themes.Default;
+current_theme: s32 = xx Default_Themes.Bentonite;
 my_theme: Overall_Theme;  // This gets filled out by calling the Theme_Proc for current_theme.
 // GETRECT - END
 
@@ -76,9 +77,11 @@ my_window: Window_Type;
 
 footer_height: float;
 
-event_find_next_occurence := false; // @Temporary
-
 main :: () {
+    format := *context.print_style.default_format_struct;
+    format.use_newlines_if_long_form = true;
+    format.indentation_width = 2;
+
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
         Windows.SetProcessDPIAware();
@@ -148,6 +151,11 @@ main :: () {
         c := bg_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
 
+        {
+            enable(*keymap_set, editor_keymap, mode == .EDITOR);
+            enable(*keymap_set, widget_keymap, mode == .WIDGET);
+        }
+
         for event : events_this_frame {
             if event.type == .QUIT {
                 // print("quit!\n");
@@ -156,23 +164,28 @@ main :: () {
             }
 
             #if DEBUG {
-                if event.key_code == .ESCAPE {
+                if mode == .EDITOR && event.key_code == .ESCAPE {
                     if event.key_pressed should_quit = true;
                 }
             }
 
-            getrect_handle_event(event);
-
-            handled := Keymap.keymap_handle_event(default_keymap, event);
+            last_input_event = event;
+            handled := handle_event(*keymap_set, event);
             if handled continue;
 
-            if event.type == .TEXT_INPUT {
-                if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
-                memset(string_for_utf32_to_utf8.data, 0, 4);
-                character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
+            if mode == .WIDGET {
+                getrect_handle_event(event);
+            }
+            
+            if mode == .EDITOR {
+                if event.type == .TEXT_INPUT {
+                    if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
+                    memset(string_for_utf32_to_utf8.data, 0, 4);
+                    character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                editor, buffer := get_active_editor_and_buffer(); // @Temporary
-                insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
+                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                    insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
+                }
             }
 
         }
@@ -280,22 +293,6 @@ find_next_row_index :: (using buffer: *Buffer, offset: s64) -> (success: bool, i
     return true, index+1;
 }
 
-// get_cursor_row :: (using editor: *Editor) -> s64 {
-//     if cursor_pos == 0 return 1; // @Ambiguity: use start at 0 just like we do in get_cursor_col()
-
-//     buffer := editor.active_buffer;
-//     using buffer;
-
-//     assert(row_table.count != 0);
-//     for row_table {
-//         if cursor_pos <= it.pos {
-//             return it_index+1;
-//         }
-//     }
-
-//     return row_table.count;
-// }
-
 get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     if cursor.pos == 0 return 1;
     assert(row_table.count != 0);
@@ -308,10 +305,6 @@ get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
 
     return row_table.count;
 }
-
-// get_col_index_at_cursor :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
-//     return get_col_index(buffer, cursor.pos);
-// }
 
 // Return the relative column index
 byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
@@ -351,8 +344,7 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
         x += editor.left_offset;
     }
 
-    ok, s := get_row_as_string(buffer, row_index);
-    assert(ok);
+    s := get_row_as_string(buffer, row_index);
 
     bytes_from_left := 0;
     col             := 0;
@@ -388,6 +380,8 @@ next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
     byte := s[start];
     return start + 1 + trailingBytesForUTF8[byte];
 }
+
+
 
 prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
@@ -625,6 +619,14 @@ SlowMemcpy :: (destination: *void, source: *void, count: s64) {
 Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
     return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
 }
+
+Program_Mode :: enum u8 {
+    // CORE;
+    EDITOR;
+    WIDGET;
+};
+
+mode := Program_Mode.EDITOR;
 
 #load "render.jai";
 #load "editor.jai";

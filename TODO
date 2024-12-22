@@ -43,6 +43,7 @@
 [X] Validate UTF-8 before we load the file data into the buffer
 [X] Range selection
 [X] Save the buffer (file)
+[] Indent to left and right action
 [] System reserved read-only buffers for debugging or for the console output 
 [] Fix word/subword movement if the cursor surrounded with multiple line breaks
 [] Improve word/subword movement mainly because the left and right movement not exactly the same

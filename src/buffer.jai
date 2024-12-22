@@ -37,15 +37,16 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
-get_row_as_string :: (using buffer: *Buffer, index: s64) -> bool, string {
-    if index >= row_table.count {
-        return false, "";
-    }
+get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
+    assert(index < row_table.count);
 
-    row := row_table[index];
+    s := get_row_as_string(buffer, row_table[index]);
+    return s;
+}
+
+get_row_as_string :: inline (using buffer: *Buffer, row: Row_Info) -> string {
     s := slice(buffer, row.start, row.size);
-    
-    return true, s;
+    return s;
 }
 
 get_selection_as_string :: (buffer: *Buffer, cursor: *Cursor) -> string {

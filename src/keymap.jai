@@ -1,3 +1,27 @@
+// [Core]
+
+Quit :: () {
+    should_quit = true;
+}
+
+// [Widget]
+
+CloseCurrentWidget :: () {
+    mode = .EDITOR;
+    print("mode changed to: %\n", mode);
+
+    if last_widget_state {
+        print("-> pending_result_actions: %\n", last_widget_state.pending_result_actions);
+    }
+}
+
+// [Editor]
+
+OpenSearchWidget :: () {
+    mode = .WIDGET;
+    print("mode changed to: %\n", mode);
+}
+
 Save :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -42,14 +66,6 @@ NextBuffer :: () {
     next_buffer   := *buffers[next_index];
     
     editor.active_buffer = next_buffer;
-}
-
-Quit :: () {
-    should_quit = true;
-}
-
-OpenWidget :: () {
-    editor_in_focus = false;
 }
 
 ToggleDevInfo :: () {
@@ -315,7 +331,23 @@ ScrollViewPortDown :: () {
 
 Copy :: () {
     editor, buffer := get_active_editor_and_buffer();
-    copy_selection_to_os_clipboard(buffer, *buffer._cursor);
+    using buffer;
+
+    // Should we move this whole logic into the copy_selection_to_os_clipboard() procedure?
+
+    if has_selection(_cursor) {
+        copy_selection_to_os_clipboard(buffer, *_cursor);
+        return;
+    }
+
+    row := find_row(buffer, _cursor.pos);
+    if row.size {
+        s := get_row_as_string(buffer, row);
+        Clipboard.os_clipboard_set_text(s);    
+        return;
+    }
+
+    Clipboard.os_clipboard_set_text("\n");
 }
 
 Paste :: () {
@@ -604,7 +636,7 @@ InsertTab :: inline () {
     insert_text_at_cursor(buffer, *buffer._cursor, TAB_SPACE_CHARS);
 }
 
-GotoFirstCharOFCurrentRow :: inline () {
+GotoFirstCharOfCurrentRow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
@@ -670,86 +702,94 @@ ExpandSelectionRightbyWord :: () {
 
 register_keymap_procedures :: () {
 
-    // Editor keymaps   
-    k := *default_keymap;
+    core_keymap   = add_keymap(*keymap_set, "Core");
+    widget_keymap = add_keymap(*keymap_set, "Widget");
+    editor_keymap = add_keymap(*keymap_set, "Editor");
 
-    Add :: (ident: Code) #expand {
-        Keymap.add_proc(k, #run CodeInspect.get_identifier_name(ident), #insert ident);
+    Add :: (k: *Keymap, ident: Code) #expand {
+        add_proc(k, #run CodeInspect.get_identifier_name(ident), #insert ident);
     }
 
-    Add(ToggleDevInfo);
-    Add(DrawSpecialChars);
-
-    Add(Quit);
-    Add(Save);
-
-    Add(CloseCurrentBuffer);
-    Add(PrevBuffer);
-    Add(NextBuffer);
-
-    ///////////////////////////
-
-    Add(MoveUp);
-    Add(MoveDown);
-    Add(MoveLeft);
-    Add(MoveRight);
-
-    Add(MoveLeftWord);
-    Add(MoveLeftSubword);
-    Add(MoveRightWord);
-    Add(MoveRightSubword);
-
-    Add(ScrollViewPortUp);
-    Add(ScrollViewPortDown);
-
-    Add(DeleteFromRight);
-    Add(DeleteFromLeft);
+    // Core
     
-    Add(Copy);
-    Add(Paste);
-    Add(Cut);
+    Add(core_keymap, Quit);
 
-    Add(DeleteEverythingFromLeft);
-    Add(DeleteWordFromRight);
-    Add(DeleteSubwordFromRight);
-    
-    Add(DeleteWordFromLeft);
-    Add(DeleteSubwordFromLeft);
+    // Widget
 
-    Add(InsertTab);
-    Add(InsertLine);
-    Add(InsertLineBelow);
+    Add(widget_keymap, CloseCurrentWidget);
 
-    Add(GotoFirstCharOFCurrentRow);
-    Add(GotoLastCharOfCurrentRow);
+    // Editor
 
-    Add(ExpandSelectionUp);
-    Add(ExpandSelectionLeft);
-    Add(ExpandSelectionDown);
-    Add(ExpandSelectionRight);
+    Add(editor_keymap, OpenSearchWidget);
 
-    Add(ExpandSelectionLeftByWord);
-    Add(ExpandSelectionRightbyWord);
+    Add(editor_keymap, ToggleDevInfo);
+    Add(editor_keymap, DrawSpecialChars);
+
+    Add(editor_keymap, Save);
+    Add(editor_keymap, CloseCurrentBuffer);
+    Add(editor_keymap, PrevBuffer);
+    Add(editor_keymap, NextBuffer);
+
+    Add(editor_keymap, InsertTab);
+    Add(editor_keymap, InsertLine);
+    Add(editor_keymap, InsertLineBelow);
+    Add(editor_keymap, Copy);
+    Add(editor_keymap, Paste);
+    Add(editor_keymap, Cut);
+
+    Add(editor_keymap, MoveUp);
+    Add(editor_keymap, MoveDown);
+    Add(editor_keymap, MoveLeft);
+    Add(editor_keymap, MoveRight);
+    Add(editor_keymap, MoveLeftWord);
+    Add(editor_keymap, MoveLeftSubword);
+    Add(editor_keymap, MoveRightWord);
+    Add(editor_keymap, MoveRightSubword);
+    Add(editor_keymap, ScrollViewPortUp);
+    Add(editor_keymap, ScrollViewPortDown);
+    Add(editor_keymap, GotoFirstCharOfCurrentRow);
+    Add(editor_keymap, GotoLastCharOfCurrentRow);
+
+    Add(editor_keymap, DeleteFromRight);
+    Add(editor_keymap, DeleteFromLeft);
+    Add(editor_keymap, DeleteEverythingFromLeft);
+    Add(editor_keymap, DeleteWordFromRight);
+    Add(editor_keymap, DeleteSubwordFromRight);    
+    Add(editor_keymap, DeleteWordFromLeft);
+    Add(editor_keymap, DeleteSubwordFromLeft);
+
+    Add(editor_keymap, ExpandSelectionUp);
+    Add(editor_keymap, ExpandSelectionLeft);
+    Add(editor_keymap, ExpandSelectionDown);
+    Add(editor_keymap, ExpandSelectionRight);
+    Add(editor_keymap, ExpandSelectionLeftByWord);
+    Add(editor_keymap, ExpandSelectionRightbyWord);
 }
 
 init_keymaps :: () {
     register_keymap_procedures();
-    // success := Keymap.load_from_file(*default_keymap, "default", "default.keymap", false);
-    success := Keymap.load_from_file(*default_keymap, "default", "./../default.keymap", false);
+    
+    // success := load_from_file(*default_keymap, "default", "default.keymap", false);
+    success := load_from_file(*keymap_set, "default", "./../default.keymap", false);
+    
     assert(success, "Failed to load the 'default.keymap'");
 }
 
-handle_keymaps_event :: (event: Event) -> (handled: bool) {
-    current_keymap_event = *event;
-    return Keymap.keymap_handle_event(default_keymap, event);
-}
+// handle_keymaps_event :: (event: Event) -> (handled: bool) {
+//     current_keymap_event = *event;
+//     return keymap_handle_event(default_keymap, event);
+// }
 
-default_keymap: Keymap.Keymap;
-current_keymap_event: *Event = null;
+keymap_set: Keymap_Set;
+
+core_keymap:   *Keymap;
+editor_keymap: *Keymap;
+widget_keymap: *Keymap;
+
+last_input_event: Event = ---;
 
 ShiftHeld :: () -> bool #expand {
-    return current_keymap_event.shift_pressed;
+    return last_input_event.shift_pressed;
 }
 
-#scope_module
-Keymap :: #import "Keymap";
+#import "Keymap";

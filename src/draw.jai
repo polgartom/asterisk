@@ -1,9 +1,6 @@
 draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     editor, buffer := get_active_editor_and_buffer();
 
-    proc := default_theme_procs[current_theme];
-    my_theme = proc();
-    set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
@@ -203,28 +200,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     }
 
     // Widgets
-    // if !editor_in_focus {
-    //     {
-    //         k := window_height * .1;
-    //         width := window_width * .15;
-    //         height := my_font.character_height*2.0;
-    //         top_pad := 0.2*k;
-    //         text_theme := my_theme.text_input_theme;
-    //         text_theme.font = my_font;
-    //         r := get_rect((window_width/2.0)-width, window_height-height-top_pad, width+width, my_font.character_height*2.0);
-    //         action, _, state := text_input(r, search_text, *text_theme, input_action=.ACTIVATE);
-    //         if action & .ENTERED {
-    //             add_editor_event(FindNextOccurence);
-    //         } else if action & .TEXT_MODIFIED {
-    //             last_occurance_offset = -1;
-    //             modify_string(*search_text, state.text);
-    //             add_editor_event(FindNextOccurence);
-    //         // } else if action & .ESCAPED {
-    //         //     // @TODO!
-    //         //     set_last_inert_text(state, "");
-    //         }
-    //     }
-    // }
+    draw_widgets();
 
     // Draw debug info
     if show_debug_info {
@@ -277,7 +253,50 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
         array_reset(*debug_infos);
     }
+}
 
+draw_widgets :: () {
+    if mode != .WIDGET return;
+
+    proc := default_theme_procs[current_theme];
+    my_theme = proc();
+    set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
+
+    {
+        k := window_height * .1;
+        width := window_width * .15;
+        height := my_font.character_height*2.0;
+        top_pad := 0.1*k;
+        text_theme := my_theme.text_input_theme;
+        text_theme.font = my_font;
+        // r := get_rect((window_width/2.0)-width, window_height-height-top_pad, width+width, my_font.character_height*2.0);
+        r := get_rect((window_width-width*2)-0.1*k, window_height-height-top_pad, width*2, my_font.character_height*2.0);
+        action, _, state := text_input(r, search_text, *text_theme, input_action=.ACTIVATE);
+        last_widget_state = state;
+        // print("input: % ; %\n", action, state.*);
+        if action & .ENTERED { // Enter pressed
+            
+        } else if action & .TEXT_MODIFIED {
+            modify_string(*search_text, state.text);
+        }
+        if action & .ESCAPED {
+            print("!!!!!! Widget Escape pressed!\n");
+            // modify_string(*state.text, "");
+            // modify_string(*state.pre_modification_text, "");
+            // modify_string(*state.last_saved_input, "");
+        }
+    }
+}
+
+last_widget_state: *Text_Input_State;
+
+// Temporary
+search_text: string;
+
+// Temporary
+modify_string :: (ps: *string, new_value: string) {
+    free(ps.*);
+    ps.* = copy_string(new_value);
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {

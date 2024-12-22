@@ -1,4 +1,8 @@
 #run {
+    format := *context.print_style.default_format_struct;
+    format.use_newlines_if_long_form = true;
+    format.indentation_width = 2;
+
     set_build_options_dc(.{do_output = false});
     args := get_build_options().compile_time_command_line;
 
@@ -36,6 +40,19 @@
         }
     }    
 
+    check_message := default_check_message;
+    is_dummy_compile := false;
+    if options.user_data_u64 {
+        check_message = <<cast(*type_of(default_check_message)) options.user_data_u64;
+        is_dummy_compile = true;
+    }
+
+    if !is_dummy_compile {
+        // extra work when you're actually building like choosing build mode
+        // that we want to skip when we're just using the compiler to parse the
+        // codebase.
+    }
+
     compiler_begin_intercept(w);
 
     add_build_file("src/main.jai", w);
@@ -49,7 +66,21 @@
     );
     add_build_string(build_constants, w);
 
+    while true {
+        message := compiler_wait_for_message();
+
+        valid, complete := check_message(message);
+        if complete  break;
+        if !valid    continue;
+    }
+
     compiler_end_intercept(w);
+}
+
+default_check_message :: (message: *Message) -> valid: bool, complete: bool {
+    if !message return false, false;
+    if message.kind == .COMPLETE return false, true;
+    return true, false;
 }
 
 #import "Compiler";
