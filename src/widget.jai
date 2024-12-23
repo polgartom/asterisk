@@ -18,7 +18,6 @@ update_search_widget :: () {
 
     search_widget_state = state;
     if action & .ENTERED { // Enter pressed
-        print("entered\n");    
         to_next_occurance();
 
     } else if action & .TEXT_MODIFIED {

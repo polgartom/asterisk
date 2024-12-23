@@ -1,4 +1,4 @@
-window_width := 1200;
+window_width  := 1200;
 window_height := 1200;
 
 should_quit := false;
@@ -65,6 +65,8 @@ draw_special_chars := false;
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
+should_recalc_editor_offset := false;
+
 show_debug_info := DEBUG;
 debug_infos: [..] string;
 
@@ -127,11 +129,13 @@ main :: () {
     load_file_from_command_line(editor); // @Temporary
 
     while !should_quit {
-        #if !DEBUG {
-            #if OS == .WINDOWS {
-                WaitMessage();
-            }
-        }
+        // #if !DEBUG {
+        //     #if OS == .WINDOWS {
+        //         WaitMessage();
+        //     }
+        // }
+
+        // WaitMessage();
 
         current_frame = frame;
         defer frame += 1;
@@ -373,8 +377,12 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
     return col, bytes_from_left;
 }
 
-measure_text_width :: (text: string) -> s64 {
+measure_text_width :: inline (text: string) -> s64 {
     return Simp.prepare_text(my_font, text);
+}
+
+measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
+    return Simp.prepare_text(font, text);
 }
 
 char_byte_offset :: inline (s: string, start: s64) -> s64 {
@@ -465,14 +473,15 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
 
     // @Speed !!!!!! the prepare_text is so slooow!
 
-    row_index := find_row_index(buffer, cursor.pos);
-    row := buffer.row_table[row_index];
-    first_byte := row.end-row.size;
-    text := to_string(buffer);
-    text = slice(text, first_byte, cursor.pos-first_byte);
-    cx := Simp.prepare_text(my_font, text);
+    cx := 0;
+    defer cursor.x_cache = cx; // @Temporary
 
-    cursor.x_cache = cx; // @Temporary
+    row := find_row(buffer, cursor.pos);
+    if row.start == cursor.pos return 0;
+
+    s := get_row_as_string(buffer, row);
+    s = slice(s, 0, cursor.pos - row.start);
+    cx = measure_text_width(my_font, s);
 
     return cx;
 }

@@ -2,4 +2,4 @@
 
 del .\build\*.exe .\build\*.pdb > NUL 2> NUL
 
-jai .\first.jai - release
+jai .\first.jai - release bake_font

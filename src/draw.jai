@@ -7,19 +7,31 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     r := get_rect(0.0, 0.0, xx width, xx height);
     r=, footer := cut_top(r, window_height-footer_height);
 
-    {
-        rel_x := get_cursor_rel_x(editor, buffer, *buffer._cursor);
-        if rel_x - window_width >= 0 {
-            editor.left_offset += rel_x - window_width;
-        } else if rel_x - my_font.em_width < 0 {
-            editor.left_offset -= (rel_x * -1) + my_font.em_width;
+    if should_recalc_editor_offset {
+        should_recalc_editor_offset = false;
+
+        cw := my_font.em_width;
+        ch := my_font.character_height;
+
+        x_pad := cw * 2;
+        y_pad := get_line_height() * 2;
+
+        mx    := get_cursor_x(buffer, *buffer._cursor);
+        relmx := mx - editor.left_offset - r.w;
+        if relmx + x_pad + cw > 0 {
+            editor.left_offset += abs(relmx + x_pad + cw);
+        } else if abs(relmx - x_pad) > r.w {
+            editor.left_offset -= abs(relmx - x_pad) - r.w;
+            if editor.left_offset < 0 then editor.left_offset = 0;
         }
 
-        rel_y := get_cursor_rel_y(editor, buffer, *buffer._cursor);
-        if xx rel_y < r.y {
-            editor.top_offset += abs(r.y-rel_y);
-        } else if rel_y + my_font.character_height > xx window_height {
-            editor.top_offset -= rel_y + my_font.character_height - window_height;
+        my    := get_line_height(find_row_index(buffer, buffer._cursor.pos));
+        relmy := r.h - my + editor.top_offset;
+        if relmy - y_pad < 0 {
+            editor.top_offset += abs(relmy - y_pad);
+        } else if relmy + y_pad > r.h + r.y {
+            editor.top_offset -= (relmy + y_pad) - (r.h+r.y);
+            if editor.top_offset < 0 then editor.top_offset = 0;
         }
     }
 
