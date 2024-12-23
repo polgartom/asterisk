@@ -1,3 +1,5 @@
+// #import "Project_Generator";
+
 #run {
     format := *context.print_style.default_format_struct;
     format.use_newlines_if_long_form = true;
@@ -40,19 +42,6 @@
         }
     }    
 
-    check_message := default_check_message;
-    is_dummy_compile := false;
-    if options.user_data_u64 {
-        check_message = <<cast(*type_of(default_check_message)) options.user_data_u64;
-        is_dummy_compile = true;
-    }
-
-    if !is_dummy_compile {
-        // extra work when you're actually building like choosing build mode
-        // that we want to skip when we're just using the compiler to parse the
-        // codebase.
-    }
-
     compiler_begin_intercept(w);
 
     add_build_file("src/main.jai", w);
@@ -68,10 +57,14 @@
 
     while true {
         message := compiler_wait_for_message();
+        
+        if message.kind == {
+            case .COMPLETE;
+                break;
+        }
 
-        valid, complete := check_message(message);
-        if complete  break;
-        if !valid    continue;
+        // Visual Studio
+        // Project_Generator.process_message(message);
     }
 
     compiler_end_intercept(w);

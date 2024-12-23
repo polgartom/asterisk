@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{679CD9BE-57D5-42F6-9853-2CE2BFAAD7AE}</ProjectGuid>
+    <RootNamespace>asterisk_devbuild</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CustomBuildStep>
+      <Command>C:/jai/bin/jai.exe </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>tests.exe</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="C:\jai\modules\Atomics.jai" />
+    <None Include="C:\jai\modules\Basic\Apollo_Time.jai" />
+    <None Include="C:\jai\modules\Basic\Array.jai" />
+    <None Include="C:\jai\modules\Basic\Int128.jai" />
+    <None Include="C:\jai\modules\Basic\Print.jai" />
+    <None Include="C:\jai\modules\Basic\Simple_String.jai" />
+    <None Include="C:\jai\modules\Basic\String_Builder.jai" />
+    <None Include="C:\jai\modules\Basic\float_to_string.jai" />
+    <None Include="C:\jai\modules\Basic\module.jai" />
+    <None Include="C:\jai\modules\Basic\string_to_float.jai" />
+    <None Include="C:\jai\modules\Basic\windows.jai" />
+    <None Include="C:\jai\modules\Bit_Operations.jai" />
+    <None Include="C:\jai\modules\Bucket_Array.jai" />
+    <None Include="C:\jai\modules\Clipboard\Clipboard.jai" />
+    <None Include="C:\jai\modules\Clipboard\module.jai" />
+    <None Include="C:\jai\modules\Command_Line.jai" />
+    <None Include="C:\jai\modules\Compiler\Compiler.jai" />
+    <None Include="C:\jai\modules\Compiler\module.jai" />
+    <None Include="C:\jai\modules\Default_Allocator\module.jai" />
+    <None Include="C:\jai\modules\File\module.jai" />
+    <None Include="C:\jai\modules\File\windows.jai" />
+    <None Include="C:\jai\modules\GL\GL.jai" />
+    <None Include="C:\jai\modules\GL\glad_core.jai" />
+    <None Include="C:\jai\modules\GL\module.jai" />
+    <None Include="C:\jai\modules\Gamepad\Gamepad.jai" />
+    <None Include="C:\jai\modules\Gamepad\Xinput.jai" />
+    <None Include="C:\jai\modules\Gamepad\module.jai" />
+    <None Include="C:\jai\modules\GetRect\module.jai" />
+    <None Include="C:\jai\modules\GetRect\system\active_widgets.jai" />
+    <None Include="C:\jai\modules\GetRect\system\occlusion.jai" />
+    <None Include="C:\jai\modules\GetRect\system\pointer_image.jai" />
+    <None Include="C:\jai\modules\GetRect\system\popups.jai" />
+    <None Include="C:\jai\modules\GetRect\system\state.jai" />
+    <None Include="C:\jai\modules\GetRect\system\system.jai" />
+    <None Include="C:\jai\modules\GetRect\system\themes.jai" />
+    <None Include="C:\jai\modules\GetRect\system\tooltips.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\button.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\checkbox.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\color_animation_editor.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\color_picker.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\dropdown.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\label.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\number_input.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\scrollable_region.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\slidable_region.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\slider.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\subwindow.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\text_input.jai" />
+    <None Include="C:\jai\modules\GetRect\widgets\widgets.jai" />
+    <None Include="C:\jai\modules\Hash.jai" />
+    <None Include="C:\jai\modules\Hash_Table.jai" />
+    <None Include="C:\jai\modules\Input\module.jai" />
+    <None Include="C:\jai\modules\Input\windows.jai" />
+    <None Include="C:\jai\modules\Keymap\module.jai" />
+    <None Include="C:\jai\modules\Math\cephes.jai" />
+    <None Include="C:\jai\modules\Math\matrix.jai" />
+    <None Include="C:\jai\modules\Math\module.jai" />
+    <None Include="C:\jai\modules\Math\plane.jai" />
+    <None Include="C:\jai\modules\Math\print.jai" />
+    <None Include="C:\jai\modules\Pool.jai" />
+    <None Include="C:\jai\modules\Preload.jai" />
+    <None Include="C:\jai\modules\Reflection.jai" />
+    <None Include="C:\jai\modules\Runtime_Support.jai" />
+    <None Include="C:\jai\modules\Runtime_Support_Crash_Handler.jai" />
+    <None Include="C:\jai\modules\Simp\backend\gl.jai" />
+    <None Include="C:\jai\modules\Simp\backend\gl_screenshot.jai" />
+    <None Include="C:\jai\modules\Simp\bitmap.jai" />
+    <None Include="C:\jai\modules\Simp\font.jai" />
+    <None Include="C:\jai\modules\Simp\immediate.jai" />
+    <None Include="C:\jai\modules\Simp\module.jai" />
+    <None Include="C:\jai\modules\Simp\shader.jai" />
+    <None Include="C:\jai\modules\Simp\texture.jai" />
+    <None Include="C:\jai\modules\Simp\texture_format.jai" />
+    <None Include="C:\jai\modules\Sort.jai" />
+    <None Include="C:\jai\modules\String\module.jai" />
+    <None Include="C:\jai\modules\System.jai" />
+    <None Include="C:\jai\modules\Text_File_Handler\module.jai" />
+    <None Include="C:\jai\modules\Thread\module.jai" />
+    <None Include="C:\jai\modules\Thread\primitives.jai" />
+    <None Include="C:\jai\modules\Thread\thread_group.jai" />
+    <None Include="C:\jai\modules\Unicode.jai" />
+    <None Include="C:\jai\modules\Window_Creation\module.jai" />
+    <None Include="C:\jai\modules\Window_Creation\windows.jai" />
+    <None Include="C:\jai\modules\Window_Type.jai" />
+    <None Include="C:\jai\modules\Windows.jai" />
+    <None Include="C:\jai\modules\Windows_Utf8.jai" />
+    <None Include="C:\jai\modules\\..\editor_support\msvc\jai.natvis" />
+    <None Include="C:\jai\modules\freetype-2.12.1\module.jai" />
+    <None Include="C:\jai\modules\freetype-2.12.1\windows.jai" />
+    <None Include="C:\jai\modules\stb_image\bindings.jai" />
+    <None Include="C:\jai\modules\stb_image\module.jai" />
+    <None Include="C:\jai\modules\stb_image_resize\bindings.jai" />
+    <None Include="C:\jai\modules\stb_image_resize\module.jai" />
+    <None Include="C:\jai\modules\stb_image_write\bindings.jai" />
+    <None Include="C:\jai\modules\stb_image_write\module.jai" />
+    <None Include="src\buffer.jai" />
+    <None Include="src\code_inspect.jai" />
+    <None Include="src\cursor.jai" />
+    <None Include="src\draw.jai" />
+    <None Include="src\editor.jai" />
+    <None Include="src\keymap.jai" />
+    <None Include="src\main.jai" />
+    <None Include="src\render.jai" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
