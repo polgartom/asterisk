@@ -9,6 +9,9 @@
             "windows": {
                 "command": ".\\run.bat"
             },
+            "linux": {
+                "command": "jai ./build/asterisk_devbuild.exe ./../.build/.added_strings_w3.jai"
+            },
             "problemMatcher": [],
             "group": {
                 "kind": "build",

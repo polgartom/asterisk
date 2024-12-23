@@ -13,17 +13,25 @@
     copy_commonly_propagated_fields(get_build_options(), *options);
 
     options.arithmetic_overflow_check = .FATAL;
-    set_optimization(*options, .DEBUG);
+    // set_optimization(*options, .DEBUG);
+    set_optimization(*options, .VERY_DEBUG);
     options.output_path = "build";
     options.output_executable_name = "asterisk_devbuild";
     window_name := "Asterisk (dev build)";
 
+    options.backend = .X64;
+
     do_optimization := false;
+    use_baked_font := false;
 
     for arg: args {
         if arg == {
+            case "bake_font";
+                use_baked_font = true;
+
             case "release";
                 do_optimization = true;
+                options.backend = .LLVM;
                 set_optimization(*options, .VERY_OPTIMIZED);
                 options.llvm_options.enable_split_modules = false;
                 options.array_bounds_check = .ON;
@@ -47,11 +55,13 @@
     add_build_file("src/main.jai", w);
     
     build_constants := tprint(#string STRING
-            DEBUG       :: %;
-            WINDOW_NAME :: "%";
+            DEBUG           :: %;
+            USE_BAKED_FONT  :: %;
+            WINDOW_NAME     :: "%";
         STRING,
             ifx do_optimization then "false" else "true",
-            window_name
+            ifx use_baked_font  then "true"  else "false",
+            window_name,
     );
     add_build_string(build_constants, w);
 

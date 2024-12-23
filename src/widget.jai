@@ -22,21 +22,23 @@ update_search_widget :: () {
         to_next_occurance();
 
     } else if action & .TEXT_MODIFIED {
-        // if state.text.count != && state.text[state.text.count-1] == 0x7F {
-        //     // if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
-        // }
-        modify_string(*search_text, state.text);
+        if state.text.count && state.text[state.text.count-1] == 0x7F {
+            // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
+            reset_search_widget();
+        } else {
+            modify_string(*search_text, state.text);
+            find_occurences(search_text);
+        }
         
-        find_occurences(search_text);
     } 
     // if action & .ESCAPED {
     // }
 }
 
-activate_search_widget :: () {
+reset_search_widget :: () {
     w := *search_widget;
     using w;
-    
+
     array_reset_keeping_memory(*occurences);
     current_occurance = -1;
 

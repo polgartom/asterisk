@@ -16,7 +16,8 @@ CloseCurrentWidget :: () {
 
 OpenSearchWidget :: () {
     mode = .WIDGET;
-    activate_search_widget();
+    
+    reset_search_widget();
 }
 
 Save :: () {

@@ -1,13 +1,3 @@
-// #import "Compiler";
-// DEFAULT_FONT_DATA :: #run -> [] u8 {
-//     filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
-//     font_binary, success := read_entire_file(filename);
-//     if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
-
-//     result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
-//     return result;
-// }
-
 window_width := 1200;
 window_height := 1200;
 
@@ -193,17 +183,13 @@ main :: () {
                 }
             }
 
-            // if mode == .WIDGET && event.key_code == .ESCAPE {
-            //     active_widget_deactivate_all();
-            // }
-
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
             if handled continue;
             
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT {
-                    if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
+                    if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
                     memset(string_for_utf32_to_utf8.data, 0, 4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
@@ -520,11 +506,23 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 my_init_fonts :: () {
     pixel_height := font_size;
 
-    my_font = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-    // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
+    #if USE_BAKED_FONT {
+        #import "Compiler";
+        _BAKED_FONT_DATA :: #run -> [] u8 {
+            filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
+            font_binary, success := read_entire_file(filename);
+            if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
 
-    // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
-    // print("%\n\n", my_font.*);
+            result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
+            return result;
+        }
+
+        my_font = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
+    } else {
+        my_font = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+        // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
+    }
+
     assert(my_font != null);
 }
 
@@ -659,7 +657,7 @@ Program_Mode :: enum u8 {
 };
 
 mode := Program_Mode.EDITOR;
-mode_at_next_frame := Program_Mode.EDITOR;
+
 
 #load "render.jai";
 #load "editor.jai";

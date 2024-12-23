@@ -1,11 +1,15 @@
 
 swap_buffers :: (window: Window_Type) {
-    // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
-    
     Simp.swap_buffers(my_window, vsync=false);
 
-    glFinish :: () #foreign;
-    if !vsync_on then glFinish();
+    {
+        glFinish :: () #foreign;
+        
+        #if BYPASS_FRAMERATE_LIMIT {
+            // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
+            glFinish(); // @Hacky
+        }
+    }
 }
 
-vsync_on := true;
+BYPASS_FRAMERATE_LIMIT :: false;
