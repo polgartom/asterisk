@@ -262,32 +262,10 @@ draw_widgets :: () {
     my_theme = proc();
     set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
 
-    {
-        k := window_height * .1;
-        width := window_width * .15;
-        height := my_font.character_height*2.0;
-        top_pad := 0.1*k;
-        text_theme := my_theme.text_input_theme;
-        text_theme.font = my_font;
-        // r := get_rect((window_width/2.0)-width, window_height-height-top_pad, width+width, my_font.character_height*2.0);
-        r := get_rect((window_width-width*2)-0.1*k, window_height-height-top_pad, width*2, my_font.character_height*2.0);
-        action, _, state := text_input(r, search_text, *text_theme, input_action=.ACTIVATE);
-        last_widget_state = state;
-        // print("input: % ; %\n", action, state.*);
-        if action & .ENTERED { // Enter pressed
-            
-        } else if action & .TEXT_MODIFIED {
-            modify_string(*search_text, state.text);
-        }
-        if action & .ESCAPED {
-            print("!!!!!! Widget Escape pressed!\n");
-            // modify_string(*state.text, "");
-            // modify_string(*state.pre_modification_text, "");
-            // modify_string(*state.last_saved_input, "");
-        }
-    }
+    update_search_widget();
 }
 
+// Temporary
 last_widget_state: *Text_Input_State;
 
 // Temporary

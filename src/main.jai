@@ -499,7 +499,7 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 my_init_fonts :: () {
     pixel_height := font_size;
 
-    my_font = Simp.get_font_at_size(".\\..\\data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+    my_font = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
     // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
 
     // my_font = Simp.get_font_at_size(DEFAULT_FONT_DATA, pixel_height);
@@ -634,6 +634,8 @@ mode := Program_Mode.EDITOR;
 #load "draw.jai";
 #load "buffer.jai";
 #load "cursor.jai";
+#load "event.jai";
+#load "widget.jai";
 
 CodeInspect :: #import,file "code_inspect.jai";
 

@@ -8,16 +8,16 @@ Quit :: () {
 
 CloseCurrentWidget :: () {
     mode = .EDITOR;
-    print("mode changed to: %\n", mode);
-
-    if last_widget_state {
-        print("-> pending_result_actions: %\n", last_widget_state.pending_result_actions);
-    }
+    
+    modify_string(*last_widget_state.text, "");
+    modify_string(*last_widget_state.pre_modification_text, "");
 }
 
 // [Editor]
 
 OpenSearchWidget :: () {
+    modify_string(*search_text, "");
+
     mode = .WIDGET;
     print("mode changed to: %\n", mode);
 }

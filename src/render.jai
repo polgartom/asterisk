@@ -4,10 +4,8 @@ swap_buffers :: (window: Window_Type) {
     
     Simp.swap_buffers(my_window, vsync=false);
 
-    #if OS == .WINDOWS {
-        glFinish :: () #foreign;
-        if !vsync_on then glFinish();
-    }
+    glFinish :: () #foreign;
+    if !vsync_on then glFinish();
 }
 
 vsync_on := true;
