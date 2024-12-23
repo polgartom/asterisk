@@ -9,17 +9,14 @@ Quit :: () {
 CloseCurrentWidget :: () {
     mode = .EDITOR;
     
-    modify_string(*last_widget_state.text, "");
-    modify_string(*last_widget_state.pre_modification_text, "");
+    active_widget_deactivate_all();
 }
 
 // [Editor]
 
 OpenSearchWidget :: () {
-    modify_string(*search_text, "");
-
     mode = .WIDGET;
-    print("mode changed to: %\n", mode);
+    activate_search_widget();
 }
 
 Save :: () {

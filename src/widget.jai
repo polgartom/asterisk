@@ -7,78 +7,115 @@ update_search_widget :: () {
     height := my_font.character_height*2.0;
     top_pad := 0.1*k;
     text_theme := my_theme.text_input_theme;
-    // text_theme.
     text_theme.font = my_font;
-    // r := get_rect((window_width/2.0)-width, window_height-height-top_pad, width+width, my_font.character_height*2.0);
     r := get_rect((window_width-width*2)-0.1*k, window_height-height-top_pad, width*2, my_font.character_height*2.0);
     action, _, state := text_input(r, search_text, *text_theme, input_action=.ACTIVATE, loc=loc);
     
     {
         hash := get_hash(loc, 0);
-        last_widget_state=, _ := find_or_create_state(Text_Input_State, hash, false);
+        search_widget_state=, _ := find_or_create_state(Text_Input_State, hash, false);
     }
 
-    last_widget_state = state;
-    // print("input: % ; %\n", action, state.*);
+    search_widget_state = state;
     if action & .ENTERED { // Enter pressed
         print("entered\n");    
-        find_next_occurance(search_text);
+        to_next_occurance();
+
     } else if action & .TEXT_MODIFIED {
+        // if state.text.count != && state.text[state.text.count-1] == 0x7F {
+        //     // if event.utf32 == 0x7F /* 127 */ continue;  // Prevent insertion of the "Delete character" @Hacky @Todo Ctrl-Backspace
+        // }
         modify_string(*search_text, state.text);
-    }
-    if action & .ESCAPED {
-
-    }
-    //     modify_string(*state.pre_modification_text, "");
-    //     memset(*state.input_buffer, 0, state.MAX_BUFFER_SIZE);
-    //     CloseCurrentWidget();
-
-    //     // getrect_handle_event(
-    //     // modify_string(*state.text, "");
-    //     // modify_string(*state.pre_modification_text, "");
-    //     // modify_string(*state.last_saved_input, "");
+        
+        find_occurences(search_text);
+    } 
+    // if action & .ESCAPED {
     // }
 }
 
-show_search_widget :: () {
+activate_search_widget :: () {
     w := *search_widget;
     using w;
     
-    current_occurance_pos = -1;
+    array_reset_keeping_memory(*occurences);
+    current_occurance = -1;
+
+    if search_widget_state {
+        if search_widget_state.text modify_string(*search_widget_state.text, "");
+        if search_widget_state.pre_modification_text modify_string(*search_widget_state.pre_modification_text, "");
+    }
+
+    if search_text modify_string(*search_text, "");
 }
 
-hide_search_widget :: () {
+find_occurences :: (text: string) {
     w := *search_widget;
     using w;
 
-    current_occurance_pos = -1;
+    array_reset_keeping_memory(*occurences);
+    current_occurance = -1;
+    if !text return;
+
+    _, buffer := get_active_editor_and_buffer();
+
+    s := to_string(buffer);
+    at := 0;
+    while true {
+        i := find_index_from_left_nocase(s, text, at);
+        if i == -1 {
+            break;
+        }
+        at = i + text.count;
+
+        array_add(*occurences, i);
+    }
 }
 
-find_next_occurance :: (text: string) {
-    editor, buffer := get_active_editor_and_buffer();
+to_next_occurance :: () {
+    _, buffer := get_active_editor_and_buffer();
     using buffer;
 
     w := *search_widget;
     using w;
 
-    if !text || !(_cursor.pos < buffer.count) {
-        current_occurance_pos = -1;
-        return;
-    }
-    
-    s := to_string(buffer);
-    i := find_index_from_left(s, text, _cursor.pos);
-    assert(i < buffer.count);
-    current_occurance_pos = i;
+    if occurences.count == 0 return;
 
-    if i != -1 {
-        set_cursor_pos(buffer, *_cursor, i, horizontal=true, with_selection=true);
+    if current_occurance != -1 {
+        current_occurance += 1;
+        if current_occurance == occurences.count then current_occurance = 0;        
+    } else {
+        for occurences {
+            if _cursor.pos <= it {
+                current_occurance = it_index;
+                break;
+            }
+        }
+
+        if current_occurance == -1 {
+            current_occurance = 0;
+        }
     }
+
+    pos := occurences[current_occurance]; 
+
+    assert(pos != -1, "occurences: % ; current: %\n", occurences, current_occurance);
+
+    set_cursor_pos(buffer, *buffer._cursor, pos, horizontal=true, with_selection=true);
 }
 
+search_widget_state: *Text_Input_State;
 search_widget: Search_Widget;
 
 Search_Widget :: struct {
-    has_occurence := false;
-    current_occurance_pos: s64;
+    occurences: [..] s64;
+    current_occurance: s64 = -1;
+}
+
+// Temporary
+search_text: string;
+
+// Temporary
+modify_string :: (ps: *string, new_value: string) {
+    free(ps.*);
+    ps.* = copy_string(new_value);
 }

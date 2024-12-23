@@ -82,7 +82,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         //     if row_index != -1 {
         //         ok, row_str := get_row_as_string(buffer, row_index);
         //         width := measure_text_width(row_str);
-        //         bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+        //         bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;c
         //         ch      := my_font.character_height;
         //         Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
         //     }
@@ -126,6 +126,44 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         // }
     }
 
+    // @Temporary
+    if mode == .WIDGET {
+        Simp.set_shader_for_color(true);
+
+        using editor;
+        using buffer;
+        
+        // bottom := (r.h+r.y) - (line_height*(row_index+1)) + top_offset;
+
+        if search_text {
+            width := measure_text_width(search_text);
+
+            start_row_index := first_visible_row_index(editor, buffer);
+            start_row := row_table[start_row_index];
+
+            end_row_index := last_visible_row_index(editor, buffer);
+            end_row := row_table[end_row_index];
+
+            for pos: search_widget.occurences {
+                if pos < start_row.start || pos > end_row.end continue;
+
+                row_index := find_row_index(buffer, pos);
+                row := row_table[row_index];
+                
+                left   := -left_offset;
+                bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+
+                if pos != row.start {
+                    t := get_row_as_string(buffer, row);
+                    t = slice(t, 0, pos - row.start);
+                    left += measure_text_width(t);
+                }
+
+                draw_character_height_aware_rect(my_font, left, cast(float32)width, bottom, HIGHLIGHT_COLOR);
+            }
+        }
+    }
+
     // Draw lines
     if text.count {
         using editor;
@@ -166,7 +204,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
     // Draw footer
     {
-        Simp.set_shader_for_color();
+        Simp.set_shader_for_color(true);
+
         Simp.immediate_quad(footer.x, footer.y, footer.w, footer.h, FOOTER_COLOR);
         // Simp.immediate_flush();
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
@@ -200,7 +239,9 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     }
 
     // Widgets
-    draw_widgets();
+    if mode == .WIDGET {
+        draw_widgets();
+    }
 
     // Draw debug info
     if show_debug_info {
@@ -256,8 +297,6 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 }
 
 draw_widgets :: () {
-    if mode != .WIDGET return;
-
     proc := default_theme_procs[current_theme];
     my_theme = proc();
     set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
@@ -265,22 +304,16 @@ draw_widgets :: () {
     update_search_widget();
 }
 
-// Temporary
-last_widget_state: *Text_Input_State;
-
-// Temporary
-search_text: string;
-
-// Temporary
-modify_string :: (ps: *string, new_value: string) {
-    free(ps.*);
-    ps.* = copy_string(new_value);
-}
-
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(my_font, s);
     Simp.draw_prepared_text(my_font, left, bottom, color);
     return w;
+}
+
+draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, width: float32, bottom: float32, color: Vector4) {
+    ch := font.character_height;
+
+    Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
 }
 
 DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};

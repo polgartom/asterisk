@@ -18,7 +18,7 @@ last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
-RgbToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 {
+RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
     return Vector4.{
         r/255.0, 
         g/255.0, 
@@ -27,16 +27,32 @@ RgbToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 {
     };
 }
 
+Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
+    r := (hex>>24) & 0xFF;
+    g := (hex>>16) & 0xFF;
+    b := (hex>>8)  & 0xFF;
+    a := (hex>>0)  & 0xFF;
+
+    return Vector4.{
+        r/255.0, 
+        g/255.0, 
+        b/255.0, 
+        a/255.0
+    };
+}
+
 // Blackboard theme
-bg_color        :: #run RgbToVec4(12, 16, 33);
-text_color      :: #run RgbToVec4(248, 248, 248);
-CURSOR_COLOR    :: #run RgbToVec4(255, 255, 255, .65);
-SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
+bg_color        :: #run RgbaToVec4(12, 16, 33);
+text_color      :: #run RgbaToVec4(248, 248, 248);
+CURSOR_COLOR    :: #run RgbaToVec4(255, 255, 255, .65);
+SELECTION_COLOR :: #run Hex4ToVec4Rgba(0x253b76b8);
+HIGHLIGHT_COLOR :: #run Hex4ToVec4Rgba(0xffffff40);
+
 
 // Main theme 
 // bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
 // text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
-// CURSOR_COLOR :: #run RgbToVec4(134, 224, 143);
+// CURSOR_COLOR :: #run RgbaToVec4(134, 224, 143);
 // SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
 
 my_font: *Simp.Dynamic_Font;
@@ -76,6 +92,9 @@ my_theme: Overall_Theme;  // This gets filled out by calling the Theme_Proc for 
 my_window: Window_Type;
 
 footer_height: float;
+
+frame := 0;
+current_frame := 0;
 
 main :: () {
     format := *context.print_style.default_format_struct;
@@ -124,6 +143,9 @@ main :: () {
             }
         }
 
+        current_frame = frame;
+        defer frame += 1;
+
         last_time = seconds_since_init();
 
         second_elapsed = false;
@@ -163,19 +185,21 @@ main :: () {
                 break;
             }
 
+            getrect_handle_event(event);
+
             #if DEBUG {
                 if mode == .EDITOR && event.key_code == .ESCAPE {
                     if event.key_pressed should_quit = true;
                 }
             }
 
+            // if mode == .WIDGET && event.key_code == .ESCAPE {
+            //     active_widget_deactivate_all();
+            // }
+
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
             if handled continue;
-
-            if mode == .WIDGET {
-                getrect_handle_event(event);
-            }
             
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT {
@@ -187,7 +211,6 @@ main :: () {
                     insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
                 }
             }
-
         }
 
         text := to_string(editor.active_buffer);
@@ -274,12 +297,12 @@ find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     return row_table[index];
 }
 
-find_row_index :: (using buffer: *Buffer, offset: s64) -> s64 {
-    if offset == 0 return 0;
+find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
+    if byte_pos == 0 return 0;
 
     assert(row_table.count != 0);
     for row, row_index: row_table {
-        if offset <= row.end {
+        if byte_pos <= row.end {
             return row_index;
         }
     }
@@ -380,8 +403,6 @@ next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
     byte := s[start];
     return start + 1 + trailingBytesForUTF8[byte];
 }
-
-
 
 prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
@@ -603,6 +624,17 @@ utf8_count_chars :: inline (s: string) -> s64 {
     return count;
 }
 
+find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found:bool {
+    if s.count < substring.count  return -1, false;
+
+    for start_index..s.count-substring.count {
+        t := slice(s, it, substring.count);
+        if equal_nocase(t, substring) return it, true;
+    }
+
+    return -1, false;
+}
+
 SlowMemcpy :: (destination: *void, source: *void, count: s64) {
     d := cast(*u8) destination;  s := cast(*u8) source;
 
@@ -627,6 +659,7 @@ Program_Mode :: enum u8 {
 };
 
 mode := Program_Mode.EDITOR;
+mode_at_next_frame := Program_Mode.EDITOR;
 
 #load "render.jai";
 #load "editor.jai";
