@@ -82,6 +82,21 @@ footer_height: float;
 frame := 0;
 current_frame := 0;
 
+
+Texture :: Simp.Texture;
+make_texture :: (filepath: string) -> Texture, bool {
+    result: Texture;
+    success := Simp.texture_load_from_file(*result, filepath);
+
+    return result, success;
+}
+
+lights_texture: Texture;
+lights_size, lights_pos: Vector2;
+lights_scale: float32;
+lights_alpha := 1.0;
+lights_ct := 1;
+
 main :: () {
     format := *context.print_style.default_format_struct;
     format.use_newlines_if_long_form = true;
@@ -106,12 +121,28 @@ main :: () {
     my_init_fonts();
     ui_init(); // GetRect
 
+    footer_height = get_line_height() * 1.5;
+
+    {
+        lights_texture=, ok := make_texture("./../data/lights.png");
+        assert(ok);
+
+        lights_scale = cast(float32)lights_texture.width / cast(float32)max(window_width, window_height) * 0.5;
+        lights_size = .{
+            cast(float32)lights_texture.width*lights_scale,
+            cast(float32)lights_texture.height*lights_scale,
+        };
+
+        lights_pos = .{
+            x = 0.0,
+            y = window_height - cast(float32)lights_size.y + 70.0
+        };
+    }
+
     {
         f := my_font.*;
         print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
     }
-
-    footer_height = my_font.character_height*1.5;
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -130,6 +161,9 @@ main :: () {
         // }
 
         // WaitMessage();
+
+        lights_ct = lights_ct + 1;
+        lights_ct = lights_ct%1000;
 
         current_frame = frame;
         defer frame += 1;

@@ -101,6 +101,8 @@ move_up_by_one_row :: ($with_selection := true) {
 }
 
 MoveUp :: () {
+    // lights_pos.y += 10.0;
+
     move_up_by_one_row();
 }
 
@@ -131,6 +133,8 @@ move_down_by_one_row :: ($with_selection := true) {
 }
 
 MoveDown :: () {
+    // lights_pos.y -= 10.0;
+
     move_down_by_one_row();
 }
 
@@ -145,6 +149,8 @@ move_left_by_one_character :: ($with_selection := true) {
 }
 
 MoveLeft :: () {
+    // lights_pos.x -= 10.0;
+
     move_left_by_one_character();
 }
 
@@ -160,6 +166,8 @@ move_right_by_one_character :: ($with_selection := true) {
 }
 
 MoveRight :: () {
+    // lights_pos.x += 10;
+
     move_right_by_one_character();
 }
 

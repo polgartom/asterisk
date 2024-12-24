@@ -4,7 +4,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
-    r := get_rect(0.0, 0.0, xx width, xx height);
+    r := get_rect(0.0, -30.0, xx width, xx height);
     r=, footer := cut_top(r, window_height-footer_height);
 
     if should_recalc_editor_offset {
@@ -259,6 +259,41 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
         array_reset(*debug_infos);
     }
+
+    {
+        {
+            pos := lights_pos;
+            pos.x = 0.0;
+            Simp.immediate_quad(pos.x, xx window_height, pos.x+cast(float)window_width, window_height-25.0, Vector4.{1.0, 1.0, 1.0, 1.0});
+        }
+
+        Simp.set_shader_for_images(*lights_texture);
+        unit_color :: Vector4.{1, 1, 1, 1.0};
+
+        scale := lights_size;
+        width  := scale.x;
+        height := scale.y;
+
+        x := 0.0;
+        while x <= cast(float)window_width {
+            pos := Vector2.{x, lights_pos.y};
+            Simp.immediate_quad(pos.x, pos.y, pos.x+width, pos.y+height, unit_color);
+            
+            x += lights_size.x;
+        }
+
+        // proc := default_theme_procs[current_theme];
+        // my_theme = proc();
+        // set_default_theme(my_theme);
+
+        // label_theme := my_theme.label_theme;
+        // label_theme.alignment = .Left;
+        // label_theme.font = my_font;
+
+        // t := tprint("[lights] pos: % % ; size: %x% ; scale: % %", lights_pos, pos, width, height, lights_scale, scale);
+        // label(r, t, *label_theme);
+    }
+
 }
 
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
@@ -323,7 +358,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 draw_widgets :: () {
     proc := default_theme_procs[current_theme];
     my_theme = proc();
-    set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
+    set_default_theme(my_theme);
 
     update_search_widget();
 }
