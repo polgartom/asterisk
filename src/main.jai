@@ -32,18 +32,12 @@ Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
 }
 
 // Blackboard theme
-bg_color        :: #run RgbaToVec4(12, 16, 33);
-text_color      :: #run RgbaToVec4(248, 248, 248);
-CURSOR_COLOR    :: #run RgbaToVec4(255, 255, 255, .65);
-SELECTION_COLOR :: #run Hex4ToVec4Rgba(0x253b76b8);
-HIGHLIGHT_COLOR :: #run Hex4ToVec4Rgba(0xffffff40);
-
-
-// Main theme 
-// bg_color :: Vector4.{5.0/255.0, 36.0/255.0, 33.0/255.0, 1.0};
-// text_color :: Vector4.{189.0/255.0, 179.0/255.0, 149.0/255.0, 1.0};
-// CURSOR_COLOR :: #run RgbaToVec4(134, 224, 143);
-// SELECTION_COLOR :: Vector4.{.3, .5, .6, .5};
+bg_color          :: #run RgbaToVec4(12, 16, 33);
+text_color        :: #run RgbaToVec4(248, 248, 248);
+CURSOR_COLOR      :: #run Hex4ToVec4Rgba(0xFBDE2Dc0);
+CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
+SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
+HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
 
 my_font: *Simp.Dynamic_Font;
 font_width: s64;

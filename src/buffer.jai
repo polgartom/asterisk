@@ -174,6 +174,17 @@ to_string :: inline (buffer: *Buffer) -> string {
     return s;
 }
 
+get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
+    // @Todo VALIDATIONS!
+    if at >= buffer.count return "";    
+    if buffer.data[at] == #char "\n" return ""; // @Hacky
+
+    s := slice(buffer, at, buffer.count - at);
+    bytes := 1 + trailingBytesForUTF8[s[0]];
+    s.count = bytes;
+    return s;
+}
+
 BUFFER_PAGE_SIZE :: 4096;
 
 Buffer :: struct {

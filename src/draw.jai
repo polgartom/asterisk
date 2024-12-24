@@ -35,57 +35,6 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         }
     }
 
-    // Draw cursor
-    if editor_in_focus {
-        c := *buffer._cursor;
-        ch := my_font.character_height;
-
-        Simp.set_shader_for_color(true);
-
-        // Draw selection
-        if has_selection(c) {
-            sel_start, sel_end := selected_range(c);
-            start_row := find_row_index(buffer, sel_start);
-            end_row := find_row_index(buffer, sel_end);
-
-            s := slice(buffer, sel_start, sel_end - sel_start);
-            // PrintDev(">> |%| <<", s);
-
-            line_height := get_line_height();
-            for row_index: start_row..end_row {
-                row := buffer.row_table[row_index];
-                row_start := row.end-row.size;
-                row_end   := row.end;
-
-                left  := -editor.left_offset;
-                width := 0.0;
-
-                t := slice(buffer, row_start, row.size);
-
-                // Convert the first N unselected bytes in the row to pixels
-                start := max(sel_start, row_start) - row_start;
-                t1 := slice(t, 0, start);
-                if t1.count then left += Simp.prepare_text(my_font, t1);
-
-                // Convert the remained bytes in the row to pixels
-                t2 := advance(t, start);
-                t2.count -= row_end - min(sel_end, row_end);
-                if t2.count then width += Simp.prepare_text(my_font, t2);
-                            else width += my_font.em_width;
-
-                top := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-                Simp.immediate_quad(left, top + (ch-ch*0.1), left+width, top - (ch/2-(ch*0.2)), SELECTION_COLOR); 
-            }
-        }
-
-        row_index := find_row_index(buffer, c.pos);
-        top  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-        cx   := get_cursor_x(buffer, c) - editor.left_offset;
-        cw   := cx + my_font.em_width;
-
-        Simp.immediate_quad(cast(float) cx, top + (ch-ch*0.1), xx cw, top - (ch/2-(ch*0.2)), CURSOR_COLOR); 
-    }
-
     // Draw mouse
     if editor_in_focus {
         // mx, my, ok := get_mouse_pointer_position(right_handed=false);
@@ -176,6 +125,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         }
     }
 
+    draw_selection(editor, buffer, r);
+
     // Draw lines
     if text.count {
         using editor;
@@ -213,6 +164,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
         PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
+
+    draw_cursor(editor, buffer, r);
 
     // Draw footer
     {
@@ -305,6 +258,65 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         }
 
         array_reset(*debug_infos);
+    }
+}
+
+draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
+    Simp.set_shader_for_color(true);
+    
+    c  := *buffer._cursor;
+    ch := my_font.character_height;
+
+    row_index := find_row_index(buffer, c.pos);
+    bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+    cx   := get_cursor_x(buffer, c) - editor.left_offset;
+    cw   := my_font.em_width;
+    Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
+
+    if buffer.count {
+        character := get_character_as_string_at(buffer, xx c.pos);
+        draw_text(character, xx cx, xx bottom, CURSOR_COLOR_TEXT);
+    }
+}
+
+draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
+    Simp.set_shader_for_color(true);
+    
+    c := *buffer._cursor;
+    if !has_selection(c) return;
+
+    ch := my_font.character_height;
+    sel_start, sel_end := selected_range(c);
+    start_row := find_row_index(buffer, sel_start);
+    end_row := find_row_index(buffer, sel_end);
+
+    s := slice(buffer, sel_start, sel_end - sel_start);
+    // PrintDev(">> |%| <<", s);
+
+    line_height := get_line_height();
+    for row_index: start_row..end_row {
+        row := buffer.row_table[row_index];
+        row_start := row.end-row.size;
+        row_end   := row.end;
+
+        left  := -editor.left_offset;
+        width := 0.0;
+
+        t := slice(buffer, row_start, row.size);
+
+        // Convert the first N unselected bytes in the row to pixels
+        start := max(sel_start, row_start) - row_start;
+        t1 := slice(t, 0, start);
+        if t1.count then left += Simp.prepare_text(my_font, t1);
+
+        // Convert the remained bytes in the row to pixels
+        t2 := advance(t, start);
+        t2.count -= row_end - min(sel_end, row_end);
+        if t2.count then width += Simp.prepare_text(my_font, t2);
+                    else width += my_font.em_width;
+
+        bottom := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
+        Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), SELECTION_COLOR); 
     }
 }
 

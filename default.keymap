@@ -10,7 +10,7 @@ ESC CloseCurrentWidget
 
 [Editor]
 
-C-p OpenSearchWidget
+C-f OpenSearchWidget
 
 F1 ToggleDevInfo
 # F2 DrawSpecialChars
