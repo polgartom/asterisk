@@ -60,3 +60,5 @@ S-ArrowDown ExpandSelectionDown
 S-ArrowRight ExpandSelectionRight
 C-S-ArrowLeft ExpandSelectionLeftByWord
 C-S-ArrowRight ExpandSelectionRightbyWord
+C-S-PageUp ExpandSelectionViewPortUp
+C-S-PageDown ExpandSelectionViewPortDown

@@ -295,7 +295,7 @@ MoveRightSubword :: inline () {
     move_right_word(true);
 }
 
-ScrollViewPortUp :: () {
+move_viewport_up :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
@@ -303,28 +303,66 @@ ScrollViewPortUp :: () {
     end := last_visible_row_index(editor, buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
     
-    current_row := find_row_index(buffer, _cursor.pos);
-    dest_row_index := clamp(current_row - max_row, 0, row_table.count-1);
-    dest_row := row_table[dest_row_index];
+    current_row_index := find_row_index(buffer, _cursor.pos);
+    if current_row_index == 0 return;
+
+    dest_row_index := clamp(current_row_index - max_row, 0, row_table.count-1);
+    dest_row    := row_table[dest_row_index];
+    dest_pos    := dest_row.start;
+    dest_col    := 0;
+    current_col := _cursor.col;
     
-    pos := dest_row.end;
-    set_cursor_pos(buffer, *_cursor, pos);
+    s := get_row_as_string(buffer, dest_row);
+    while s.count {
+        if dest_col == current_col break;
+
+        bytes := 1 + trailingBytesForUTF8[s[0]];
+        advance(*s, bytes);
+
+        dest_pos += bytes;
+        dest_col += 1;
+    }
+
+    set_cursor_pos(buffer, *_cursor, dest_pos, horizontal=false, with_selection=with_selection);
+}
+
+ScrollViewPortUp :: () {
+    move_viewport_up();
+}
+
+move_viewport_down :: ($with_selection := true) {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    start := first_visible_row_index(editor, buffer);
+    end := last_visible_row_index(editor, buffer);
+    max_row := clamp(end-start, 0, row_table.count-1);
+
+    current_row_index := find_row_index(buffer, _cursor.pos);
+    if current_row_index == row_table.count-1 return;
+
+    dest_row_index := clamp(current_row_index + max_row, 0, row_table.count-1);
+    dest_row    := row_table[dest_row_index];
+    dest_pos    := dest_row.start;
+    dest_col    := 0;
+    current_col := _cursor.col;
+
+    s := get_row_as_string(buffer, dest_row);
+    while s.count {
+        if dest_col == current_col break;
+
+        bytes := 1 + trailingBytesForUTF8[s[0]];
+        advance(*s, bytes);
+
+        dest_pos += bytes;
+        dest_col += 1;
+    }
+
+    set_cursor_pos(buffer, *_cursor, dest_pos, horizontal=false, with_selection=with_selection);
 }
 
 ScrollViewPortDown :: () {
-    editor, buffer := get_active_editor_and_buffer();
-    using buffer;
-
-    start := first_visible_row_index(editor, buffer);
-    end := last_visible_row_index(editor, buffer);
-    max_row := clamp(end-start, 0, row_table.count-1);
-    
-    current_row := find_row_index(buffer, _cursor.pos);
-    dest_row_index := clamp(current_row + max_row, 0, row_table.count-1);
-    dest_row := row_table[dest_row_index];
-    
-    pos := dest_row.end;
-    set_cursor_pos(buffer, *_cursor, pos);
+    move_viewport_down();
 }
 
 Copy :: () {
@@ -695,6 +733,14 @@ ExpandSelectionRightbyWord :: () {
     move_right_word(subword_mode=false);
 }
 
+ExpandSelectionViewPortUp :: () {
+    move_viewport_up(with_selection=false);
+}
+
+ExpandSelectionViewPortDown :: () {
+    move_viewport_down(with_selection=false);
+}
+
 ////////////////////////////////////
 //
 
@@ -762,6 +808,8 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ExpandSelectionRight);
     Add(editor_keymap, ExpandSelectionLeftByWord);
     Add(editor_keymap, ExpandSelectionRightbyWord);
+    Add(editor_keymap, ExpandSelectionViewPortUp);
+    Add(editor_keymap, ExpandSelectionViewPortDown);
 }
 
 init_keymaps :: () {
