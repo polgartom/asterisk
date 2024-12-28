@@ -272,7 +272,9 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
     cx   := get_cursor_x(buffer, c) - editor.left_offset;
     cw   := my_font.em_width;
+
     Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
+    // Simp.immediate_quad(cast(float32) cx, bottom - ch/2, cast(float32)(cx + cw), bottom + ch, CURSOR_COLOR);
 
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);
