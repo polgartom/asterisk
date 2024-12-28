@@ -15,7 +15,7 @@ set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, hor
         cursor.col = byte_pos_to_col_pos(buffer, cursor.pos);
     }
 
-    should_recalc_editor_offset = true;
+    should_recalc_editor_offsets = true;
 }
 
 selected_range :: inline (using c: *Cursor) -> (start: s64, end: s64) {

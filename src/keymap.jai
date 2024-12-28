@@ -47,23 +47,23 @@ PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_active_buffer_index(editor);
+    current_index := get_buffer_index(editor, active_buffer);
     prev_index    := current_index-1;
     if prev_index < 0 then prev_index = buffers.count-1;
     prev_buffer   := *buffers[prev_index];
 
-    editor.active_buffer = prev_buffer;
+    change_active_buffer(editor, prev_buffer);
 }
 
 NextBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_active_buffer_index(editor);
+    current_index := get_buffer_index(editor, active_buffer);
     next_index    := (current_index + 1) % buffers.count;
     next_buffer   := *buffers[next_index];
     
-    editor.active_buffer = next_buffer;
+    change_active_buffer(editor, next_buffer);
 }
 
 ToggleDevInfo :: () {

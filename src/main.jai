@@ -59,8 +59,6 @@ draw_special_chars := false;
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
-should_recalc_editor_offset := false;
-
 show_debug_info := DEBUG;
 debug_infos: [..] string;
 

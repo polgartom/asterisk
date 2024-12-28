@@ -7,8 +7,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     r := get_rect(0.0, 0.0, xx width, xx height);
     r=, footer := cut_top(r, window_height-footer_height);
 
-    if should_recalc_editor_offset {
-        should_recalc_editor_offset = false;
+    if should_recalc_editor_offsets {
+        should_recalc_editor_offsets = false;
 
         cw := my_font.em_width;
         ch := my_font.character_height;
@@ -192,7 +192,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 
         left += w;
-        index := tprint("| %/%", get_active_buffer_index(editor)+1, editor.buffers.count);
+        active_buffer_index := get_buffer_index(editor, editor.active_buffer);
+        index := tprint("| %/%", active_buffer_index + 1, editor.buffers.count);
         w = Simp.prepare_text(my_font, index);
         Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 

@@ -70,14 +70,16 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
     }
 }
 
-get_active_buffer_index :: (using editor: *Editor) -> s64 {
+get_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> s64 {
+    assert(editor.active_buffer != null);
+
     for * buffers {
-        if active_buffer == it {
+        if buffer == it {
             return it_index;
         }
     }
 
-    assert(false, "Buffer not in the list!");
+    assert(false); // @Temporary
     return -1;
 }
 
@@ -94,8 +96,18 @@ create_an_editor_instance :: () -> *Editor {
     return editor;
 }
 
+change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
+    i := get_buffer_index(editor, buffer);
+    assert(i != -1);
+
+    editor.active_buffer = buffer;
+    should_recalc_editor_offsets = true;
+}
+
 // Active editor
 editor: *Editor; // @Temporary?
+
+should_recalc_editor_offsets := false; // @Temporary
 
 Editor :: struct {
     buffers: [..] Buffer;
