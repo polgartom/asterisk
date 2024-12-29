@@ -96,6 +96,23 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
+insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
+    assert(at > -1);
+
+    maybe_grow(buffer, text.count);
+
+    insert_at      := buffer.data  + at;
+    new_right      := insert_at    + text.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
+
+    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+    SlowMemcpy(insert_at, text.data, text.count);
+
+    buffer.count += text.count;
+    buffer.rebuild_row_table = true;
+    buffer.dirty = true;
+}
+
 MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
     if has_selection(buffer._cursor) {
         delete_selected_range(buffer, *buffer._cursor);

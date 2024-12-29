@@ -741,6 +741,111 @@ ExpandSelectionViewPortDown :: () {
     move_viewport_down(with_selection=false);
 }
 
+// @Incomplete: It has some bugs!
+IndentLeft :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    if has_selection(_cursor) {
+        correction := 0; // @Explain!
+        rows := get_selected_rows(buffer, *_cursor);
+        for row: rows {
+            start  := row.start - correction;
+            spaces := 0;
+            t := slice(buffer, start, row.size);
+            while t {
+                if t[0] != #char " " {
+                    if spaces {
+                        del := 0;
+                        if (spaces % TAB_SIZE_IN_SPACES) != 0 {
+                            del = spaces % TAB_SIZE_IN_SPACES;
+                        } else {
+                            del = min(spaces, TAB_SIZE_IN_SPACES);
+                        }
+
+                        dest := start + spaces - del;
+                        src  := start + spaces;
+                        shift_left(buffer, dest, src);
+
+                        correction += del;
+                    }
+                    break;
+                }
+                spaces += 1;
+                advance(*t, 1);
+            }
+        }
+
+        set_cursor_pos(buffer, *_cursor, _cursor.pos - correction, horizontal=true, with_selection=false);
+    } else {
+        row := find_row(buffer, _cursor.pos);
+        t   := slice(buffer, row.start, row.size);
+        print("t: |%|\n", t);
+        spaces := 0;
+        while t {
+            if t[0] != #char " " break;
+            spaces += 1;
+            advance(*t, 1);
+        }
+
+        if spaces {
+            del := 0;
+            if (spaces % TAB_SIZE_IN_SPACES) != 0 {
+                del = spaces % TAB_SIZE_IN_SPACES;
+            } else {
+                del = min(spaces, TAB_SIZE_IN_SPACES);
+            }
+
+            dest := row.start + spaces - del;
+            src  := row.start + spaces;
+            shift_left(buffer, dest, src);
+
+            set_cursor_pos(buffer, *_cursor, _cursor.pos - del, horizontal=true);
+        }
+    }
+}
+
+// @Incomplete: It has some bugs!
+IndentRight :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    CreateSpaces :: (spaces: u16) -> string #expand {
+        builder: String_Builder;
+        builder.allocator = __temporary_allocator;
+        for 0..spaces-1 append(*builder, " ");
+        return builder_to_string(*builder,, allocator = __temporary_allocator);
+    }
+
+    if has_selection(_cursor) {
+        correction := 0; // @Explain!
+        rows := get_selected_rows(buffer, *_cursor);
+        for row: rows {
+            start  := row.start + correction;
+            spaces := 0;
+            t := slice(buffer, start, row.size);
+            while t {
+                if t[0] != #char " " {
+                    r := (spaces % TAB_SIZE_IN_SPACES);
+                    if r == 0 then r = TAB_SIZE_IN_SPACES;
+                    space_chars := CreateSpaces(cast(u16)r); // @Cleanup It's stupid but it works now!
+                    insert_text_at(buffer, start, space_chars);
+                    correction += space_chars.count;
+                    break;
+                }
+                spaces += 1;
+                advance(*t, 1);
+            }
+        }
+           
+        set_cursor_pos(buffer, *_cursor, _cursor.pos + correction, horizontal=true, with_selection=false);
+    } else {
+        row := find_row(buffer, _cursor.pos);
+        insert_text_at(buffer, row.start, TAB_SPACE_CHARS);
+        set_cursor_pos(buffer, *_cursor, _cursor.pos + TAB_SIZE_IN_SPACES, horizontal=true);
+    }
+}
+
 ////////////////////////////////////
 //
 
@@ -777,6 +882,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, InsertTab);
     Add(editor_keymap, InsertLine);
     Add(editor_keymap, InsertLineBelow);
+
     Add(editor_keymap, Copy);
     Add(editor_keymap, Paste);
     Add(editor_keymap, Cut);
@@ -810,6 +916,9 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ExpandSelectionRightbyWord);
     Add(editor_keymap, ExpandSelectionViewPortUp);
     Add(editor_keymap, ExpandSelectionViewPortDown);
+
+    Add(editor_keymap, IndentLeft);
+    Add(editor_keymap, IndentRight);
 }
 
 init_keymaps :: () {

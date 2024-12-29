@@ -62,3 +62,6 @@ C-S-ArrowLeft ExpandSelectionLeftByWord
 C-S-ArrowRight ExpandSelectionRightbyWord
 C-S-PageUp ExpandSelectionViewPortUp
 C-S-PageDown ExpandSelectionViewPortDown
+
+C-] IndentRight
+C-[ IndentLeft

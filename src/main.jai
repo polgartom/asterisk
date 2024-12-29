@@ -120,6 +120,8 @@ main :: () {
     editor = create_an_editor_instance();
     load_file_from_command_line(editor); // @Temporary
 
+
+
     while !should_quit {
         // #if !DEBUG {
         //     #if OS == .WINDOWS {
@@ -368,6 +370,22 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
 
     return col, bytes_from_left;
 }
+
+get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
+    rows: [..] Row_Info;
+    
+    if !has_selection(cursor) return rows;
+
+    start, end := selected_range(cursor);
+    at := start;
+    while at < end {
+        row := find_row(buffer, at);
+        array_add(*rows, row);
+        at = row.end + 1;
+    }
+
+    return rows;
+} 
 
 measure_text_width :: inline (text: string) -> s64 {
     return Simp.prepare_text(my_font, text);
