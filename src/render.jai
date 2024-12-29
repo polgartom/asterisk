@@ -12,4 +12,4 @@ swap_buffers :: (window: Window_Type) {
     }
 }
 
-BYPASS_FRAMERATE_LIMIT :: false;
+BYPASS_FRAMERATE_LIMIT :: true;

@@ -641,7 +641,7 @@ utf8_count_chars :: inline (s: string) -> s64 {
     return count;
 }
 
-find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found:bool {
+find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
     if s.count < substring.count  return -1, false;
 
     for start_index..s.count-substring.count {
@@ -655,13 +655,17 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
 SlowMemcpy :: (destination: *void, source: *void, count: s64) {
     d := cast(*u8) destination;  s := cast(*u8) source;
 
-    overlapping := destination > source && destination < source + count;
-    if !overlapping {
-        for 0 .. count - 1
-            d[it] = s[it];
+    #if 1 {
+        c_memmove(destination, source, xx count);
     } else {
-        for #v2 < count - 1 .. 0
-            d[it] = s[it];
+        overlapping := destination > source && destination < source + count;
+        if !overlapping {
+            for 0 .. count - 1
+                d[it] = s[it];
+        } else {
+            for #v2 < count - 1 .. 0
+                d[it] = s[it];
+        }
     }
 }
 
