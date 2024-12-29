@@ -36,9 +36,10 @@ PageDown ScrollViewPortDown
 Home GotoFirstCharOfCurrentRow
 A-Home GotoLastCharOfCurrentRow
 
+TAB InsertTab
 ENTER InsertLine
 C-ENTER InsertLineBelow
-TAB InsertTab
+C-j JoinLine
 
 C-c Copy
 C-v Paste

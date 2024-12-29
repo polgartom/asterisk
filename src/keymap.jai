@@ -652,10 +652,40 @@ InsertLineBelow :: () {
             spaces -= 1;
         }
     }
+}
+
+JoinLine :: () {
+    editor, buffer := get_active_editor_and_buffer();
+
+    if has_selection(buffer._cursor) {
+        // @Todo: Handle selection, join rows within the selected range
+
+    } else {
+        row := find_row(buffer, buffer._cursor.pos);
+        if row.end + 1 < buffer.count {
+            s := to_string(buffer);
+            assert(s[row.end] == #char "\n");
+
+            deleted := 0;
+            next_row := find_row(buffer, row.end + 1);
+            t1 := slice(buffer, next_row.start, next_row.size);
+            if t1 {
+                t2 := trim_left(t1, " ");
+                if t2 then deleted = t2.data - t1.data;
+            }
+
+            dest := row.end;
+            src  := next_row.start + deleted;
+            shift_left(buffer, dest, src);
+
+            set_cursor_pos(buffer, *buffer._cursor, dest, horizontal=true);
+            insert_text_at_cursor(buffer, *buffer._cursor, " ");
+        }
+    }
 
 }
 
-InsertTab :: inline () {
+InsertTab :: () {
     // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
     // text := builder_to_string(*builder, do_reset = false);
     // defer free(text);
@@ -882,6 +912,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, InsertTab);
     Add(editor_keymap, InsertLine);
     Add(editor_keymap, InsertLineBelow);
+    Add(editor_keymap, JoinLine);
 
     Add(editor_keymap, Copy);
     Add(editor_keymap, Paste);
