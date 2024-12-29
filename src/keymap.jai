@@ -777,12 +777,21 @@ IndentLeft :: () {
     using buffer;
 
     if has_selection(_cursor) {
+        c1 := *_cursor.pos;
+        c2 := *_cursor.sel;
+        if c2.* < c1.* {
+            tmp := c1;
+            c1 = c2;
+            c2 = tmp;
+        }
+
         correction := 0; // @Explain!
         rows := get_selected_rows(buffer, *_cursor);
         for row: rows {
             start  := row.start - correction;
             spaces := 0;
             t := slice(buffer, start, row.size);
+
             while t {
                 if t[0] != #char " " {
                     if spaces {
@@ -798,6 +807,13 @@ IndentLeft :: () {
                         shift_left(buffer, dest, src);
 
                         correction += del;
+
+                        if it_index == 0 && c1.* > row.start {
+                            c1.* = c1.* - del;
+                        }
+                        if it_index == rows.count-1 && c2.* > row.start {
+                            c2.* = c2.* - correction;
+                        }
                     }
                     break;
                 }
@@ -806,11 +822,9 @@ IndentLeft :: () {
             }
         }
 
-        set_cursor_pos(buffer, *_cursor, _cursor.pos - correction, horizontal=true, with_selection=false);
     } else {
         row := find_row(buffer, _cursor.pos);
         t   := slice(buffer, row.start, row.size);
-        print("t: |%|\n", t);
         spaces := 0;
         while t {
             if t[0] != #char " " break;
@@ -830,7 +844,9 @@ IndentLeft :: () {
             src  := row.start + spaces;
             shift_left(buffer, dest, src);
 
-            set_cursor_pos(buffer, *_cursor, _cursor.pos - del, horizontal=true);
+            if _cursor.pos > row.start {
+                set_cursor_pos(buffer, *_cursor, _cursor.pos - del, horizontal=true);
+            }
         }
     }
 }
@@ -868,7 +884,8 @@ IndentRight :: () {
             }
         }
            
-        set_cursor_pos(buffer, *_cursor, _cursor.pos + correction, horizontal=true, with_selection=false);
+        // set_cursor_pos(buffer, *_cursor, _cursor.pos + correction, horizontal=true, with_selection=false);
+
     } else {
         row := find_row(buffer, _cursor.pos);
         insert_text_at(buffer, row.start, TAB_SPACE_CHARS);
