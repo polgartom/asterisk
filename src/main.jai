@@ -691,6 +691,17 @@ Program_Mode :: enum u8 {
 
 mode := Program_Mode.EDITOR;
 
+IsAlpha :: (c: u32) -> bool #expand {
+    return (c >= #char "a" && c <= #char "z") || (c >= #char "A" && c <= #char "Z");
+}
+
+IsDigit :: (c: u32) -> bool #expand {
+    return (c >= #char "0" && c <= #char "9");
+}
+
+IsAlnum :: (c: u32) -> bool #expand {
+    return IsAlpha(c) || IsDigit(c) || c == #char "_";
+}
 
 #load "render.jai";
 #load "editor.jai";
@@ -700,6 +711,7 @@ mode := Program_Mode.EDITOR;
 #load "cursor.jai";
 #load "event.jai";
 #load "widget.jai";
+#load "language_support.jai";
 
 CodeInspect :: #import,file "code_inspect.jai";
 

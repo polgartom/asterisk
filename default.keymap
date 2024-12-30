@@ -65,5 +65,7 @@ C-S-ArrowRight ExpandSelectionRightbyWord
 C-S-PageUp ExpandSelectionViewPortUp
 C-S-PageDown ExpandSelectionViewPortDown
 
+C-d AddSelectionToNextFindMatch
+
 C-] IndentRight
 C-[ IndentLeft
