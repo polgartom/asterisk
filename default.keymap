@@ -55,6 +55,7 @@ Backspace DeleteFromRight
 C-Backspace DeleteWordFromRight
 A-Backspace DeleteSubwordFromRight
 
+C-l ExpandSelectionByLine
 S-ArrowUp ExpandSelectionUp
 S-ArrowLeft ExpandSelectionLeft
 S-ArrowDown ExpandSelectionDown

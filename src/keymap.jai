@@ -725,6 +725,38 @@ GotoLastCharOfCurrentRow :: inline () {
     set_cursor_pos(buffer, *_cursor, row.end, horizontal=true);
 }
 
+ExpandSelectionByLine :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    if has_selection(_cursor) {
+        row_index := find_row_index(buffer, _cursor.pos);
+        dest_cursor_pos := row_table[row_index].end;
+        if row_index + 1 < row_table.count {
+            dest_cursor_pos = row_table[row_index + 1].start;
+        }
+
+        set_cursor_pos(buffer, *_cursor, dest_cursor_pos, horizontal=true, with_selection=false);
+
+        row_index   = find_row_index(buffer, _cursor.sel);
+        _cursor.sel = row_table[row_index].start;
+
+    } else {
+        row_index := find_row_index(buffer, _cursor.pos);
+
+        dest_cursor_sel := row_table[row_index].start;
+        dest_cursor_pos := row_table[row_index].end;
+        
+        if row_index + 1 < row_table.count {
+            dest_cursor_pos = row_table[row_index + 1].start;
+        }
+
+        set_cursor_pos(buffer, *_cursor, dest_cursor_pos, horizontal=true, with_selection=false);
+        _cursor.sel = dest_cursor_sel;
+    }
+
+}
+
 ExpandSelectionUp :: () {
     move_up_by_one_row(with_selection=false);
 }
@@ -973,6 +1005,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, DeleteWordFromLeft);
     Add(editor_keymap, DeleteSubwordFromLeft);
 
+    Add(editor_keymap, ExpandSelectionByLine);
     Add(editor_keymap, ExpandSelectionUp);
     Add(editor_keymap, ExpandSelectionLeft);
     Add(editor_keymap, ExpandSelectionDown);
