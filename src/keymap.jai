@@ -810,9 +810,11 @@ IndentLeft :: () {
 
                         if it_index == 0 && c1.* > row.start {
                             c1.* = c1.* - correction;
+                            if c1.* < start then c1.* = start;
                         }
                         if it_index == rows.count-1 && c2.* > row.start {
                             c2.* = c2.* - correction;
+                            if c2.* < start then c2.* = start;
                         }
                     }
                     break;
@@ -845,8 +847,11 @@ IndentLeft :: () {
             shift_left(buffer, dest, src);
 
             if _cursor.pos > row.start {
-                set_cursor_pos(buffer, *_cursor, _cursor.pos - del, horizontal=true);
+                pos := _cursor.pos - del;
+                if pos < row.start then pos = row.start;
+                set_cursor_pos(buffer, *_cursor, pos, horizontal=true);
             }
+
         }
     }
 }
@@ -856,7 +861,7 @@ IndentRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    CreateSpaces :: (spaces: u16) -> string #expand {
+    CreateSpaces :: (spaces: s64) -> string #expand {
         builder: String_Builder;
         builder.allocator = __temporary_allocator;
         for 0..spaces-1 append(*builder, " ");
@@ -882,14 +887,14 @@ IndentRight :: () {
                 if t[0] != #char " " {
                     r := (spaces % TAB_SIZE_IN_SPACES);
                     if r == 0 then r = TAB_SIZE_IN_SPACES;
-                    space_chars := CreateSpaces(cast(u16)r); // @Cleanup It's stupid but it works now!
-                    insert_text_at(buffer, start, space_chars);
-                    correction += space_chars.count;
+                    space_string := CreateSpaces(r); // @Cleanup It's stupid but it works now!
+                    insert_text_at(buffer, start, space_string);
+                    correction += space_string.count;
 
-                    if it_index == 0 && c1.* > row.start {
+                    if it_index == 0 && c1.* >= row.start {
                         c1.* = c1.* + correction;
                     }
-                    if it_index == rows.count-1 && c2.* > row.start {
+                    if it_index == rows.count-1 && c2.* >= row.start {
                         c2.* = c2.* + correction;
                     }
 
@@ -902,10 +907,17 @@ IndentRight :: () {
 
     } else {
         row := find_row(buffer, _cursor.pos);
-        insert_text_at(buffer, row.start, TAB_SPACE_CHARS);
 
-        if _cursor.pos > row.start {
-            set_cursor_pos(buffer, *_cursor, _cursor.pos + TAB_SIZE_IN_SPACES, horizontal=true);
+        s := get_row_as_string(buffer, row);
+        spaces := count_whitespaces_from_left(s);
+        spaces  = (spaces % TAB_SIZE_IN_SPACES);
+        if spaces == 0 then spaces = TAB_SIZE_IN_SPACES;
+        space_string := CreateSpaces(spaces); // @Cleanup It's stupid but it works now!
+
+        insert_text_at(buffer, row.start, space_string);
+
+        if _cursor.pos >= row.start {
+            set_cursor_pos(buffer, *_cursor, _cursor.pos + space_string.count, horizontal=true);
         }
     }
 }

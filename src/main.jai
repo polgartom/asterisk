@@ -603,6 +603,16 @@ is_whitespace :: inline (c: s64) -> bool {
     return c == #char " " || c == #char "\n";
 }
 
+count_whitespaces_from_left :: (s: string) -> s64 {
+    count := 0;
+    for c: s {
+        if !is_whitespace(c) break;
+        count += 1;
+    }
+
+    return count;
+}
+
 #if OS == .WINDOWS {
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
