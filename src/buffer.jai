@@ -1,42 +1,3 @@
-shift_left :: (using buffer: *Buffer, to: s64, from: s64) {
-    if to == from return;
-    assert(to < from);
-
-    dest   := data  + to;
-    source := data  + from;
-    size   := count - from;
-
-    c_memmove(dest, source, xx size);
-    count -= (from - to);
-
-    rebuild_row_table = true;
-    dirty = true;
-}
-
-maybe_grow :: (buffer: *Buffer, size: s64) {
-    assert(size > -1);
-    
-    if size == 0 then size = BUFFER_PAGE_SIZE;
-    desired_size := buffer.count + size;
-
-    if desired_size >= buffer.allocated {
-        new_size := buffer.allocated + desired_size;
-        new_size  = Align(new_size, BUFFER_PAGE_SIZE);
-
-        new_data := cast(*u8)c_malloc(xx new_size);
-        assert(new_data != null);
-        memset(new_data, 0, xx new_size);
-
-        if buffer.data {
-            SlowMemcpy(new_data, buffer.data, buffer.allocated);
-            c_free(buffer.data);
-        }
-
-        buffer.data      = new_data;
-        buffer.allocated = new_size;
-    }
-}
-
 get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
     assert(index < row_table.count);
 
@@ -149,34 +110,46 @@ create_buffer :: (editor: *Editor) -> *Buffer {
     return buffer;
 }
 
+// @Speed:   We could implement something like a Quadtree. For example we might create a chunk after every 1000 rows (line ends)
+// @Cleanup: Rename this procedure to something like rescan_line_ends()
 rebuild_row_table :: (using buffer: *Buffer) {
     rebuild_row_table = false;
 
-    row_table_recalc_time = seconds_since_init();
+    timer :=  seconds_since_init();
+    defer row_table_recalc_time = (seconds_since_init() - timer) * 1000;
 
-    // array_reset(*row_table); // @speed can reuse the same memory
     array_reset_keeping_memory(*row_table);
 
     s := to_string(buffer);
     pos := 0;
     while true {
-        ln_index := find_index_from_left(s, #char "\n");
+        ln_index := inline find_index_from_left(s, #char "\n");
         if ln_index == -1 {
-            array_add(*row_table, .{start=pos, end=pos+s.count, size=s.count});
+            inline array_add(*row_table, .{start=pos, end=pos+s.count, size=s.count});
             break;
         }
 
         size := ln_index;
         pos += size;
-        array_add(*row_table, .{start=pos-size, end=pos, size=size});
+        inline array_add(*row_table, .{start=pos-size, end=pos, size=size});
 
         ln_index += 1;
-        advance(*s, ln_index);
+        inline advance(*s, ln_index);
 
         pos += 1; // because of the line end
     }
 
-    row_table_recalc_time = (seconds_since_init()-row_table_recalc_time)*1000;
+}
+
+get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
+    // @Todo VALIDATIONS!
+    if at >= buffer.count return "";    
+    if buffer.data[at] == #char "\n" return ""; // @Hacky
+
+    s := slice(buffer, at, buffer.count - at);
+    bytes := 1 + trailingBytesForUTF8[s[0]];
+    s.count = bytes;
+    return s;
 }
 
 slice :: inline (buffer: *Buffer, start: s64, count: s64) -> string {
@@ -191,18 +164,45 @@ to_string :: inline (buffer: *Buffer) -> string {
     return s;
 }
 
-get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
-    // @Todo VALIDATIONS!
-    if at >= buffer.count return "";    
-    if buffer.data[at] == #char "\n" return ""; // @Hacky
+// Shift the entire *used* buffer memory to the left, typically for "deleting" characters from the right
+shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
+    if to == from return;
+    assert(to < from);
 
-    s := slice(buffer, at, buffer.count - at);
-    bytes := 1 + trailingBytesForUTF8[s[0]];
-    s.count = bytes;
-    return s;
+    dest   := data  + to;
+    source := data  + from;
+    size   := count - from;
+
+    c_memmove(dest, source, xx size);
+    count -= (from - to);
+
+    rebuild_row_table = true;
+    dirty = true;
 }
 
-BUFFER_PAGE_SIZE :: 4096;
+maybe_grow :: (buffer: *Buffer, size: s64) {
+    assert(size > -1);
+    
+    if size == 0 then size = BUFFER_PAGE_SIZE;
+    desired_size := buffer.count + size;
+
+    if desired_size >= buffer.allocated {
+        new_size := buffer.allocated + desired_size;
+        new_size  = Align(new_size, BUFFER_PAGE_SIZE);
+
+        new_data := cast(*u8)c_malloc(xx new_size);
+        assert(new_data != null);
+        ZeroMemory(new_data, new_size);
+
+        if buffer.data {
+            SlowMemcpy(new_data, buffer.data, buffer.allocated);
+            c_free(buffer.data);
+        }
+
+        buffer.data      = new_data;
+        buffer.allocated = new_size;
+    }
+}
 
 Buffer :: struct {
     data:      *u8;
@@ -223,6 +223,9 @@ Buffer :: struct {
     read_only := false;
 }
 
+BUFFER_PAGE_SIZE :: 4096;
+
+// @Speed: Shrink the struct size because we use 3 × 8 bytes per row which is quite inefficient!
 Row_Info :: struct {
     start: s64;
     end:   s64;

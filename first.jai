@@ -29,12 +29,16 @@
 
             case "release";
                 do_optimization = true;
-                options.backend = .LLVM;
+
+                // @Investigate WTF? The row_table gentime is faster on the .X64 backend!!
+                // options.backend = .LLVM;
+                // options.llvm_options.enable_split_modules = false;
+                
                 set_optimization(*options, .VERY_OPTIMIZED);
-                options.llvm_options.enable_split_modules = false;
                 options.array_bounds_check = .ON;
                 options.null_pointer_check = .ON;
                 options.arithmetic_overflow_check = .OFF;
+
                 options.output_executable_name = "asterisk";
                 window_name = "Asterisk";
         }
@@ -65,8 +69,6 @@
 
     while true {
         message := compiler_wait_for_message();
-        
-        set_icon(message);
 
         if message.kind == {
             case .COMPLETE;

@@ -188,7 +188,7 @@ main :: () {
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT {
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
-                    memset(string_for_utf32_to_utf8.data, 0, 4);
+                    ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
                     editor, buffer := get_active_editor_and_buffer(); // @Temporary
@@ -241,7 +241,7 @@ main :: () {
             cy  := get_cursor_y(buffer, *buffer._cursor);
 
             PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
-            PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=2));
+            PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=4));
             s := to_string(buffer);
             PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
             
@@ -662,26 +662,6 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1, false;
 }
 
-SlowMemcpy :: (destination: *void, source: *void, count: s64) {
-    d := cast(*u8) destination;  s := cast(*u8) source;
-
-    #if 1 {
-        c_memmove(destination, source, xx count);
-    } else {
-        overlapping := destination > source && destination < source + count;
-        if !overlapping {
-            for 0 .. count - 1
-                d[it] = s[it];
-        } else {
-            for #v2 < count - 1 .. 0
-                d[it] = s[it];
-        }
-    }
-}
-
-Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
-    return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
-}
 
 Program_Mode :: enum u8 {
     // CORE;
@@ -691,18 +671,7 @@ Program_Mode :: enum u8 {
 
 mode := Program_Mode.EDITOR;
 
-IsAlpha :: (c: u32) -> bool #expand {
-    return (c >= #char "a" && c <= #char "z") || (c >= #char "A" && c <= #char "Z");
-}
-
-IsDigit :: (c: u32) -> bool #expand {
-    return (c >= #char "0" && c <= #char "9");
-}
-
-IsAlnum :: (c: u32) -> bool #expand {
-    return IsAlpha(c) || IsDigit(c) || c == #char "_";
-}
-
+#load "memory.jai";
 #load "render.jai";
 #load "editor.jai";
 #load "keymap.jai";
@@ -728,11 +697,6 @@ CodeInspect :: #import,file "code_inspect.jai";
 
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";
-
-c_malloc  :: (size: u64) -> *void                #foreign crt "malloc";
-c_free    :: (memory: *void)                     #foreign crt "free";
-c_realloc :: (memory: *void, size: u64) -> *void #foreign crt "realloc";
-c_memmove :: (dest: *void, src: *void, count: u64) -> *void #foreign crt "memmove";
 
 #if OS == .WINDOWS {
     crt :: #system_library "msvcrt";  // For malloc, free on Windows

@@ -16,3 +16,15 @@ utf8_extract_identifier :: (s: string) -> (success: bool, identifier: string) {
 
     return true, identifier;
 }
+
+IsAlpha :: (c: u32) -> bool #expand {
+    return (c >= #char "a" && c <= #char "z") || (c >= #char "A" && c <= #char "Z");
+}
+
+IsDigit :: (c: u32) -> bool #expand {
+    return (c >= #char "0" && c <= #char "9");
+}
+
+IsAlnum :: (c: u32) -> bool #expand {
+    return IsAlpha(c) || IsDigit(c) || c == #char "_";
+}
