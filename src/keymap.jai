@@ -777,13 +777,7 @@ IndentLeft :: () {
     using buffer;
 
     if has_selection(_cursor) {
-        c1 := *_cursor.pos;
-        c2 := *_cursor.sel;
-        if c2.* < c1.* {
-            tmp := c1;
-            c1 = c2;
-            c2 = tmp;
-        }
+        cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
         correction := 0; // @Explain!
         rows := get_selected_rows(buffer, *_cursor);
@@ -808,13 +802,13 @@ IndentLeft :: () {
 
                         correction += del;
 
-                        if it_index == 0 && c1.* > row.start {
-                            c1.* = c1.* - correction;
-                            if c1.* < start then c1.* = start;
+                        if it_index == 0 && cursor_min.* > row.start {
+                            cursor_min.* = cursor_min.* - correction;
+                            if cursor_min.* < start then cursor_min.* = start;
                         }
-                        if it_index == rows.count-1 && c2.* > row.start {
-                            c2.* = c2.* - correction;
-                            if c2.* < start then c2.* = start;
+                        if it_index == rows.count-1 && cursor_max.* > row.start {
+                            cursor_max.* = cursor_max.* - correction;
+                            if cursor_max.* < start then cursor_max.* = start;
                         }
                     }
                     break;
@@ -869,13 +863,7 @@ IndentRight :: () {
     }
 
     if has_selection(_cursor) {
-        c1 := *_cursor.pos;
-        c2 := *_cursor.sel;
-        if c2.* < c1.* {
-            tmp := c1;
-            c1 = c2;
-            c2 = tmp;
-        }
+        cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
         correction := 0; // @Explain!
         rows := get_selected_rows(buffer, *_cursor);
@@ -891,11 +879,11 @@ IndentRight :: () {
                     insert_text_at(buffer, start, space_string);
                     correction += space_string.count;
 
-                    if it_index == 0 && c1.* >= row.start {
-                        c1.* = c1.* + correction;
+                    if it_index == 0 && cursor_min.* >= row.start {
+                        cursor_min.* = cursor_min.* + correction;
                     }
-                    if it_index == rows.count-1 && c2.* >= row.start {
-                        c2.* = c2.* + correction;
+                    if it_index == rows.count-1 && cursor_max.* >= row.start {
+                        cursor_max.* = cursor_max.* + correction;
                     }
 
                     break;

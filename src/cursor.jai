@@ -41,6 +41,18 @@ count_selected_chars :: inline (buffer: *Buffer, using c: *Cursor) -> s64 {
     return utf8_count_chars(s);
 }
 
+get_cursor_min_max_indecies_as_pointers :: (cursor: *Cursor) -> (cursor_min_position: *s64, cursor_max_position: *s64) {
+    c1 := *cursor.pos;
+    c2 := *cursor.sel;
+    if c2.* < c1.* {
+        tmp := c1;
+        c1 = c2;
+        c2 = tmp;
+    }
+
+    return c1, c2;
+}
+
 Cursor :: struct {
     pos: s64 = 0;
     sel: s64 = 0;

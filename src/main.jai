@@ -378,7 +378,7 @@ get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
 
     start, end := selected_range(cursor);
     at := start;
-    while at < end {
+    while at <= end {
         row := find_row(buffer, at);
         array_add(*rows, row);
         at = row.end + 1;
