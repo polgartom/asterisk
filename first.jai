@@ -1,5 +1,3 @@
-// #import "Project_Generator";
-
 #run {
     format := *context.print_style.default_format_struct;
     format.use_newlines_if_long_form = true;
@@ -68,6 +66,8 @@
     while true {
         message := compiler_wait_for_message();
         
+        set_icon(message);
+
         if message.kind == {
             case .COMPLETE;
                 break;
@@ -80,11 +80,29 @@
     compiler_end_intercept(w);
 }
 
-default_check_message :: (message: *Message) -> valid: bool, complete: bool {
-    if !message return false, false;
-    if message.kind == .COMPLETE return false, true;
-    return true, false;
+set_icon :: (message: *Message) {
+    // Wait for a post_write_executable message. Then we
+    // modify the executable by writing the icon to it.
+    
+    if message.kind != .PHASE return;
+
+    phase := cast(*Message_Phase) message;
+    if phase.phase != .POST_WRITE_EXECUTABLE return;
+
+    exe_filename := tprint("%/%", get_build_options(message.workspace).output_path, phase.executable_name);
+    
+    #if OS == .WINDOWS {
+        #import "Windows_Resources";
+        success := set_icon_by_filename(exe_filename, ICON_FILEPATH);
+        if !success {
+            log_error("\n\n[Icon] Failed to set the icon for exe '%' to filename '%'.\n\n", exe_filename, ICON_FILEPATH);
+        }
+    }
 }
 
+ICON_FILEPATH :: "data/icon.ico";
+
+// #import "Project_Generator";
 #import "Compiler";
 #import "Basic";
+#import "Metaprogram_Plugins";
