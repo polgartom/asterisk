@@ -120,8 +120,6 @@ main :: () {
     editor = create_an_editor_instance();
     load_file_from_command_line(editor); // @Temporary
 
-
-
     while !should_quit {
         // #if !DEBUG {
         //     #if OS == .WINDOWS {
@@ -687,6 +685,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 #import "System";
 #import "Basic";
 #import "File";
+#import "File_Utilities";
 #import "String";
 #import "Math";
 #import "Window_Creation";

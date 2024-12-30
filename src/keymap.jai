@@ -1037,9 +1037,14 @@ register_keymap_procedures :: () {
 
 init_keymaps :: () {
     register_keymap_procedures();
-    
-    // success := load_from_file(*default_keymap, "default", "default.keymap", false);
-    success := load_from_file(*keymap_set, "default", "./../default.keymap", false);
+
+    // @Incomplete
+    // if !file_exists("default.keymap") {
+    //     write_entire_file("default.keymap", DEFAULT_KEYMAP_CONFIG);
+    // }
+    // success := load_from_file(*keymap_set, "default", "default.keymap", false);
+
+    success := load_from_memory(*keymap_set, DEFAULT_KEYMAP_CONFIG, "default");
     
     assert(success, "Failed to load the 'default.keymap'");
 }
@@ -1060,5 +1065,78 @@ last_input_event: Event = ---;
 ShiftHeld :: () -> bool #expand {
     return last_input_event.shift_pressed;
 }
+
+DEFAULT_KEYMAP_CONFIG :: #string DONE 
+[1]
+
+[Core]
+
+A-F4 Quit
+
+[Widget]
+
+ESC CloseCurrentWidget
+
+[Editor]
+
+C-f OpenSearchWidget
+
+F1 ToggleDevInfo
+
+C-s Save
+C-w CloseCurrentBuffer
+C-PageUp PrevBuffer
+C-PageDown NextBuffer
+
+ArrowLeft MoveLeft
+ArrowUp MoveUp
+ArrowDown MoveDown
+ArrowRight MoveRight
+
+C-ArrowLeft MoveLeftWord
+A-ArrowLeft MoveLeftSubword
+C-ArrowRight MoveRightWord
+A-ArrowRight MoveRightSubword
+
+PageUp ScrollViewPortUp
+PageDown ScrollViewPortDown
+
+Home GotoFirstCharOfCurrentRow
+A-Home GotoLastCharOfCurrentRow
+
+TAB InsertTab
+ENTER InsertLine
+C-ENTER InsertLineBelow
+C-j JoinLine
+
+C-c Copy
+C-v Paste
+C-x Cut
+
+C-k DeleteEverythingFromLeft
+
+Delete DeleteFromLeft
+C-Delete DeleteWordFromLeft
+A-Delete DeleteSubwordFromLeft
+
+Backspace DeleteFromRight
+C-Backspace DeleteWordFromRight
+A-Backspace DeleteSubwordFromRight
+
+C-l ExpandSelectionByLine
+S-ArrowUp ExpandSelectionUp
+S-ArrowLeft ExpandSelectionLeft
+S-ArrowDown ExpandSelectionDown
+S-ArrowRight ExpandSelectionRight
+C-S-ArrowLeft ExpandSelectionLeftByWord
+C-S-ArrowRight ExpandSelectionRightbyWord
+C-S-PageUp ExpandSelectionViewPortUp
+C-S-PageDown ExpandSelectionViewPortDown
+
+C-d AddSelectionToNextFindMatch
+
+C-] IndentRight
+C-[ IndentLeft
+DONE;
 
 #import "Keymap";

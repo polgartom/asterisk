@@ -12,4 +12,8 @@ swap_buffers :: (window: Window_Type) {
     }
 }
 
-BYPASS_FRAMERATE_LIMIT :: true;
+#if OS == .WINDOWS {
+    BYPASS_FRAMERATE_LIMIT :: true;
+} else {
+    BYPASS_FRAMERATE_LIMIT :: false;
+}

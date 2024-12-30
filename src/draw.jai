@@ -4,7 +4,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
-    r := get_rect(0.0, 0.0, xx width, xx height);
+    r := get_rect(xx my_font.em_width, 0.0, xx width, xx height);
     r=, footer := cut_top(r, window_height-footer_height);
 
     if should_recalc_editor_offsets {
@@ -111,7 +111,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
                 row_index := find_row_index(buffer, pos);
                 row := row_table[row_index];
                 
-                left   := -left_offset;
+                left   := -left_offset + r.x;
                 bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
 
                 if pos != row.start {
@@ -151,9 +151,9 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             time := seconds_since_init()*1000;
 
             // bottom := window_height - (line_height*(row_index+1)) + top_offset;
-            bottom := (r.h+r.y) - (line_height*(row_index+1)) + top_offset;
+            bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
 
-            left := -left_offset;
+            left := -left_offset + r.x;
             t := slice(text, row.end-row.size, row.size);
             left += draw_text(t, xx left, xx bottom, text_color);
 
@@ -171,7 +171,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     {
         Simp.set_shader_for_color(true);
 
-        Simp.immediate_quad(footer.x, footer.y, footer.w, footer.h, FOOTER_COLOR);
+        Simp.immediate_quad(0.0, footer.y, footer.w, footer.h, FOOTER_COLOR);
         // Simp.immediate_flush();
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
@@ -270,7 +270,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
     row_index := find_row_index(buffer, c.pos);
     bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-    cx   := get_cursor_x(buffer, c) - editor.left_offset;
+    cx   := get_cursor_x(buffer, c) - editor.left_offset + r.x;
     cw   := my_font.em_width;
 
     Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
@@ -302,7 +302,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         row_start := row.end-row.size;
         row_end   := row.end;
 
-        left  := -editor.left_offset;
+        left  := -editor.left_offset + r.x;
         width := 0.0;
 
         t := slice(buffer, row_start, row.size);
