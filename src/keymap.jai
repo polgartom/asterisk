@@ -809,7 +809,7 @@ IndentLeft :: () {
                         correction += del;
 
                         if it_index == 0 && c1.* > row.start {
-                            c1.* = c1.* - del;
+                            c1.* = c1.* - correction;
                         }
                         if it_index == rows.count-1 && c2.* > row.start {
                             c2.* = c2.* - correction;
@@ -864,6 +864,14 @@ IndentRight :: () {
     }
 
     if has_selection(_cursor) {
+        c1 := *_cursor.pos;
+        c2 := *_cursor.sel;
+        if c2.* < c1.* {
+            tmp := c1;
+            c1 = c2;
+            c2 = tmp;
+        }
+
         correction := 0; // @Explain!
         rows := get_selected_rows(buffer, *_cursor);
         for row: rows {
@@ -877,19 +885,28 @@ IndentRight :: () {
                     space_chars := CreateSpaces(cast(u16)r); // @Cleanup It's stupid but it works now!
                     insert_text_at(buffer, start, space_chars);
                     correction += space_chars.count;
+
+                    if it_index == 0 && c1.* > row.start {
+                        c1.* = c1.* + correction;
+                    }
+                    if it_index == rows.count-1 && c2.* > row.start {
+                        c2.* = c2.* + correction;
+                    }
+
                     break;
                 }
                 spaces += 1;
                 advance(*t, 1);
             }
         }
-           
-        // set_cursor_pos(buffer, *_cursor, _cursor.pos + correction, horizontal=true, with_selection=false);
 
     } else {
         row := find_row(buffer, _cursor.pos);
         insert_text_at(buffer, row.start, TAB_SPACE_CHARS);
-        set_cursor_pos(buffer, *_cursor, _cursor.pos + TAB_SIZE_IN_SPACES, horizontal=true);
+
+        if _cursor.pos > row.start {
+            set_cursor_pos(buffer, *_cursor, _cursor.pos + TAB_SIZE_IN_SPACES, horizontal=true);
+        }
     }
 }
 
