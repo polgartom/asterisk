@@ -171,37 +171,51 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
     {
         Simp.set_shader_for_color(true);
 
-        Simp.immediate_quad(0.0, footer.y, footer.w, footer.h, FOOTER_COLOR);
-        // Simp.immediate_flush();
-        // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
+        buffer := editor.active_buffer;
+        buffer_name: string = ---;
+
+        footer_bg_color := FOOTER_COLOR;
+        footer_fg_color := Vector4.{.0,.0,.0,1.0};
+
+        if buffer.type == .OUTPUT_STREAM {
+            footer_bg_color = RED_COLOR;
+            footer_fg_color = Vector4.{1.0, 1.0, 1.0, 1.0};
+        }
+
+        Simp.immediate_quad(0.0, footer.y, footer.w, footer.h, footer_bg_color);
 
         left := 10;
         center := footer.y + footer.h / 2 - my_font.character_height / 2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
-        buffer := editor.active_buffer;
-        opened_file: string = ---;
-        filepath := buffer.filepath;
-        if filepath {
-            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else "");
-        } else {
-            opened_file = tprint("<new file>");
+        if buffer.type == .DEFAULT {
+            filepath := buffer.filepath;
+            if filepath {
+                buffer_name = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else "");
+            } else {
+                buffer_name = tprint("<new file>");
+            }
+        } else if buffer.type == .OUTPUT_STREAM {
+            buffer_name = buffer.name;
         }
 
-        w := Simp.prepare_text(my_font, opened_file);
-        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+        w := Simp.prepare_text(my_font, buffer_name);
+        Simp.draw_prepared_text(my_font, left, xx center, footer_fg_color);
 
         left += w;
-        active_buffer_index := get_buffer_index(editor, editor.active_buffer);
-        index := tprint("| %/%", active_buffer_index + 1, editor.buffers.count);
-        w = Simp.prepare_text(my_font, index);
-        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+        
+        if buffer.type == .DEFAULT {
+            active_buffer_index := get_buffer_index(editor, editor.active_buffer);
+            index := tprint("| %/%", active_buffer_index + 1, editor.buffers.count);
+            w = Simp.prepare_text(my_font, index);
+            Simp.draw_prepared_text(my_font, left, xx center, footer_fg_color);
+        }
 
         row := find_row_index(buffer, buffer._cursor.pos)+1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
         row_col_info := tprint("Row % Col %", row, col);
         w = Simp.prepare_text(my_font, row_col_info);
-        Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});
+        Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, footer_fg_color);
     }
 
     // Widgets
@@ -273,12 +287,19 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     cx   := get_cursor_x(buffer, c) - editor.left_offset + r.x;
     cw   := my_font.em_width;
 
-    Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
     // Simp.immediate_quad(cast(float32) cx, bottom - ch/2, cast(float32)(cx + cw), bottom + ch, CURSOR_COLOR);
 
-    if buffer.count {
-        character := get_character_as_string_at(buffer, xx c.pos);
-        draw_text(character, xx cx, xx bottom, CURSOR_COLOR_TEXT);
+    if buffer.type == .DEFAULT {
+        Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
+
+        // Draw a contrast character behind the cursor for better visibility!
+        if buffer.count {
+            character := get_character_as_string_at(buffer, xx c.pos);
+            draw_text(character, xx cx, xx bottom, CURSOR_COLOR_TEXT);
+        }
+
+    } else if buffer.type == .OUTPUT_STREAM {
+        Simp.immediate_quad(cast(float32) cx, bottom - ch/2, cast(float32)(cx + 2), bottom + ch, CURSOR_COLOR);
     }
 }
 
@@ -342,7 +363,3 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
 
     Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
 }
-
-DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
-PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
-FOOTER_COLOR :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};

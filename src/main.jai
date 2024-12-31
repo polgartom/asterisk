@@ -34,10 +34,16 @@ Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
 // Blackboard theme
 bg_color          :: #run RgbaToVec4(12, 16, 33);
 text_color        :: #run RgbaToVec4(248, 248, 248);
+FOOTER_COLOR      :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};
 CURSOR_COLOR      :: #run Hex4ToVec4Rgba(0xFBDE2Dc0);
 CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
+
+DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
+PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
+RED_COLOR  :: #run Hex4ToVec4Rgba(0x94151bff);
+
 
 my_font: *Simp.Dynamic_Font;
 font_width: s64;
@@ -117,6 +123,16 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
+    {
+        // Init the editor managed log buffer
+        buffer := array_add(*system_buffers);
+        rebuild_row_table(buffer);
+        buffer.type = .OUTPUT_STREAM;
+        buffer.name = "*editor logs*";
+
+        report(buffer, "[DEFAULT FONT] %", my_font.*);
+    }
+
     editor = create_an_editor_instance();
     load_file_from_command_line(editor); // @Temporary
 
@@ -126,8 +142,6 @@ main :: () {
         //         WaitMessage();
         //     }
         // }
-
-        // WaitMessage();
 
         current_frame = frame;
         defer frame += 1;
@@ -184,7 +198,7 @@ main :: () {
             if handled continue;
             
             if mode == .EDITOR {
-                if event.type == .TEXT_INPUT {
+                if event.type == .TEXT_INPUT && editor.active_buffer.type == .DEFAULT {
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
                     ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
@@ -200,25 +214,25 @@ main :: () {
             rebuild_row_table(editor.active_buffer);
         }
 
-        if draw_special_chars {
-            // Tabs
-            spaces := 0;
-            for 0..text.count-1 {
-                ch := text.data[it];
-                if ch == #char " " {
-                    spaces += 1;
-                    if spaces == TAB_SIZE_IN_SPACES {
-                        tab := slice(text, it-spaces+1, it);
-                        for j: it-spaces+1..it {
-                            text.data[j] = #char "~";
-                        }
-                        spaces = 0;
-                    }
-                } else {
-                    spaces = 0;
-                }
-            }
-        }
+        // if draw_special_chars {
+        //     // Tabs
+        //     spaces := 0;
+        //     for 0..text.count-1 {
+        //         ch := text.data[it];
+        //         if ch == #char " " {
+        //             spaces += 1;
+        //             if spaces == TAB_SIZE_IN_SPACES {
+        //                 tab := slice(text, it-spaces+1, it);
+        //                 for j: it-spaces+1..it {
+        //                     text.data[j] = #char "~";
+        //                 }
+        //                 spaces = 0;
+        //             }
+        //         } else {
+        //             spaces = 0;
+        //         }
+        //     }
+        // }
 
         editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
         get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
@@ -630,6 +644,7 @@ load_file_from_command_line :: (editor: *Editor) {
 
     for free_args {
         open_file(editor, it);
+        report(*system_buffers[0], "[File] % opened!", it);
     }
 
     // if is_set.file {

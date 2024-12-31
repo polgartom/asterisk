@@ -199,10 +199,26 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
             c_free(buffer.data);
         }
 
+        if system_buffers.count && system_buffers[0].allocated {
+            report(*system_buffers[0], "maybe_grow() -> Memory reserved! desired size: % ; old size: % ; new size: %", desired_size, buffer.allocated, new_size);  
+        }
+
         buffer.data      = new_data;
         buffer.allocated = new_size;
     }
 }
+
+report :: (buffer: *Buffer, fmt: string, args: .. Any, prefix := "") #expand {
+    assert(buffer.type == .OUTPUT_STREAM);
+
+    s := tprint(fmt, ..args);
+    if prefix then s = tprint("% %", prefix, s);
+    s = tprint("%\n", s);
+
+    insert_text_at(buffer, buffer.count, s);
+} @PrintLike
+
+system_buffers: [..] Buffer;
 
 Buffer :: struct {
     data:      *u8;
@@ -217,10 +233,16 @@ Buffer :: struct {
     row_table: [..] Row_Info;
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
+
+    name: string;
     filepath: string;
 
-    // @Todo: It's mainly for the system buffers like logs or console output etc..
-    read_only := false;
+    type: Buffer_Type = .DEFAULT;
+}
+
+Buffer_Type :: enum u8 {
+    DEFAULT        :: 0;
+    OUTPUT_STREAM  :: 1;
 }
 
 BUFFER_PAGE_SIZE :: 4096;

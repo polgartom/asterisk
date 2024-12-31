@@ -79,7 +79,6 @@ get_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> s64 {
         }
     }
 
-    assert(false); // @Temporary
     return -1;
 }
 
@@ -97,8 +96,8 @@ create_an_editor_instance :: () -> *Editor {
 }
 
 change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
-    i := get_buffer_index(editor, buffer);
-    assert(i != -1);
+    // i := get_buffer_index(editor, buffer);
+    // assert(i != -1);
 
     editor.active_buffer = buffer;
     should_recalc_editor_offsets = true;

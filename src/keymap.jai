@@ -9,6 +9,8 @@ Quit :: () {
 CloseCurrentWidget :: () {
     mode = .EDITOR;
     
+    report(*system_buffers[0], "Mode changed to %", mode);
+
     active_widget_deactivate_all();
 }
 
@@ -16,7 +18,9 @@ CloseCurrentWidget :: () {
 
 OpenSearchWidget :: () {
     mode = .WIDGET;
-    
+
+    report(*system_buffers[0], "Mode changed to %", mode);
+
     reset_search_widget();
 }
 
@@ -24,8 +28,16 @@ Save :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    assert(!!filepath, "TODO");
-    
+    if !filepath {
+        report(*system_buffers[0], "The buffer cannot be saved without a valid filepath!", prefix="[ERROR]");
+        return;
+    }
+
+    if type != .DEFAULT {
+        report(*system_buffers[0], "The buffer managed by the editor, thus it's read-only for the user!", prefix="[EDITOR]");
+        return;
+    }
+
     s := to_string(buffer);
     write_entire_file(filepath, s);
 
@@ -47,23 +59,50 @@ PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_buffer_index(editor, active_buffer);
-    prev_index    := current_index-1;
-    if prev_index < 0 then prev_index = buffers.count-1;
-    prev_buffer   := *buffers[prev_index];
+    if active_buffer.type != .DEFAULT {
+        change_active_buffer(editor, *buffers[0]);
+    } else {
+        current_index := get_buffer_index(editor, active_buffer);
+        prev_index    := current_index-1;
+        if prev_index < 0 then prev_index = buffers.count-1;
+        prev_buffer   := *buffers[prev_index];
 
-    change_active_buffer(editor, prev_buffer);
+        change_active_buffer(editor, prev_buffer);
+    }
+
 }
 
 NextBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_buffer_index(editor, active_buffer);
-    next_index    := (current_index + 1) % buffers.count;
-    next_buffer   := *buffers[next_index];
-    
-    change_active_buffer(editor, next_buffer);
+    if active_buffer.type != .DEFAULT {
+        change_active_buffer(editor, *buffers[0]);
+    } else {
+        current_index := get_buffer_index(editor, active_buffer);
+        next_index    := (current_index + 1) % buffers.count;
+        next_buffer   := *buffers[next_index];
+        
+        change_active_buffer(editor, next_buffer);
+    }
+
+}
+
+NextSystemBuffer :: () {
+    if !system_buffers.count return; 
+
+    editor, _ := get_active_editor_and_buffer();
+    using editor;
+
+    next_index := 0;
+    for *buffer: system_buffers {
+        if buffer == active_buffer {
+            next_index = (next_index + 1) % system_buffers.count;
+            return;
+        }
+    }
+
+    change_active_buffer(editor, *system_buffers[next_index]);
 }
 
 ToggleDevInfo :: () {
@@ -988,6 +1027,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, CloseCurrentBuffer);
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);
+    Add(editor_keymap, NextSystemBuffer);
 
     Add(editor_keymap, InsertTab);
     Add(editor_keymap, InsertLine);
@@ -1087,6 +1127,7 @@ C-s Save
 C-w CloseCurrentBuffer
 C-PageUp PrevBuffer
 C-PageDown NextBuffer
+A-1 NextSystemBuffer
 
 ArrowLeft MoveLeft
 ArrowUp MoveUp
