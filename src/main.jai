@@ -197,7 +197,7 @@ main :: () {
 
         text := to_string(editor.active_buffer);
         if editor.active_buffer.rebuild_row_table {
-            rebuild_row_table(editor.active_buffer);
+            rescan_line_ends(editor.active_buffer);
         }
 
         if draw_special_chars {

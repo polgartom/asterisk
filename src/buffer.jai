@@ -105,14 +105,13 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
 create_buffer :: (editor: *Editor) -> *Buffer {
     buffer := array_add(*editor.buffers);
     maybe_grow(buffer, 0);
-    rebuild_row_table(buffer);
+    rescan_line_ends(buffer);
 
     return buffer;
 }
 
-// @Speed:   We could implement something like a Quadtree. For example we might create a chunk after every 1000 rows (line ends)
-// @Cleanup: Rename this procedure to something like rescan_line_ends()
-rebuild_row_table :: (using buffer: *Buffer) {
+// @Speed: We could implement something like a Quadtree. For example we might create a chunk after every 1000 rows (line ends)
+rescan_line_ends :: (using buffer: *Buffer) {
     rebuild_row_table = false;
 
     timer :=  seconds_since_init();

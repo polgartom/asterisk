@@ -40,7 +40,7 @@ open_file :: (editor: *Editor, filepath: string) {
     SlowMemcpy(buffer.data, file_data.data, file_data.count);
     buffer.count = file_data.count;
 
-    rebuild_row_table(buffer);
+    rescan_line_ends(buffer);
 
     editor.active_buffer = buffer;
 }
