@@ -850,6 +850,12 @@ IndentLeft :: () {
             }
         }
 
+        p1 := min(_cursor.pos, buffer.count);
+        set_cursor_pos(buffer, *_cursor, p1, horizontal=true, with_selection=false);
+
+        p2 := min(_cursor.sel, buffer.count);
+        _cursor.sel = p2;
+
     } else {
         row := find_row(buffer, _cursor.pos);
         t   := slice(buffer, row.start, row.size);
@@ -940,6 +946,15 @@ IndentRight :: () {
             set_cursor_pos(buffer, *_cursor, _cursor.pos + space_string.count, horizontal=true);
         }
     }
+
+    rescan_line_ends(buffer);
+
+    p1 := min(_cursor.pos, buffer.count);
+    set_cursor_pos(buffer, *_cursor, p1, horizontal=true, with_selection=false);
+
+    p2 := min(_cursor.sel, buffer.count);
+    _cursor.sel = p2;
+
 }
 
 AddSelectionToNextFindMatch :: () {
