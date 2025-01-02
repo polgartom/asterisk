@@ -808,6 +808,9 @@ IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
+    save_cursor_col(buffer, *_cursor);
+    defer try_restore_cursor_col(buffer, *_cursor);
+
     if has_selection(_cursor) {
         cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
@@ -833,15 +836,6 @@ IndentLeft :: () {
                         shift_left(buffer, dest, src);
 
                         correction += del;
-
-                        if it_index == 0 && cursor_min.* > row.start {
-                            cursor_min.* = cursor_min.* - correction;
-                            if cursor_min.* < start then cursor_min.* = start;
-                        }
-                        if it_index == rows.count-1 && cursor_max.* > row.start {
-                            cursor_max.* = cursor_max.* - correction;
-                            if cursor_max.* < start then cursor_max.* = start;
-                        }
                     }
                     break;
                 }
@@ -849,6 +843,8 @@ IndentLeft :: () {
                 advance(*t, 1);
             }
         }
+
+        rescan_line_ends(buffer);
 
     } else {
         row := find_row(buffer, _cursor.pos);
@@ -894,6 +890,9 @@ IndentRight :: () {
         return builder_to_string(*builder,, allocator = __temporary_allocator);
     }
 
+    save_cursor_col(buffer, *_cursor);
+    defer try_restore_cursor_col(buffer, *_cursor);
+
     if has_selection(_cursor) {
         cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
@@ -911,19 +910,14 @@ IndentRight :: () {
                     insert_text_at(buffer, start, space_string);
                     correction += space_string.count;
 
-                    if it_index == 0 && cursor_min.* >= row.start {
-                        cursor_min.* = cursor_min.* + correction;
-                    }
-                    if it_index == rows.count-1 && cursor_max.* >= row.start {
-                        cursor_max.* = cursor_max.* + correction;
-                    }
-
                     break;
                 }
                 spaces += 1;
                 advance(*t, 1);
             }
         }
+
+        rescan_line_ends(buffer);
 
     } else {
         row := find_row(buffer, _cursor.pos);

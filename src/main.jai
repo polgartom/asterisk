@@ -649,6 +649,22 @@ utf8_count_chars :: inline (s: string) -> s64 {
     return count;
 }
 
+utf8_advance_one_character :: (s: string) -> string {
+    assert(s.count > 0);
+    
+    size := 1 + trailingBytesForUTF8[s[0]];
+    t := advance(s, size);
+
+    return t;
+}
+
+utf8_advance_one_character :: (s: *string) {
+    assert(s.count > 0);
+    
+    size := 1 + trailingBytesForUTF8[s.data[0]];
+    advance(s, size);
+}
+
 find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
     if s.count < substring.count  return -1, false;
 
