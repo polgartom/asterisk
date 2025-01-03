@@ -186,8 +186,23 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             // Draw buffer's file info
             using buffer;
 
-            b: String_Builder;
-            init_string_builder(*b);
+            // b: String_Builder;
+            // init_string_builder(*b);
+
+            // path := filepath;
+            // workdir := get_working_directory();
+
+            // if begins_with(path, workdir) {
+            //     advance(*path, workdir.count + 1); // +1 separator
+            //     assert(path.count > 0);
+            // }
+            
+            // append(*b, path);
+
+            // if !exists_on_disk then append(*b, " <new file>");
+            // if dirty           then append(*b, " (unsaved)");
+
+            // fileinfo := builder_to_string(*b);
 
             path := filepath;
             workdir := get_working_directory();
@@ -196,13 +211,13 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
                 advance(*path, workdir.count + 1); // +1 separator
                 assert(path.count > 0);
             }
-            
-            append(*b, path);
 
-            if !exists_on_disk then append(*b, " <new file>");
-            if dirty           then append(*b, " (unsaved)");
-
-            fileinfo := builder_to_string(*b);
+            fileinfo := tprint(
+                "%1%2%3",
+                path, 
+                ifx !exists_on_disk then " <new file>" else "",
+                ifx dirty           then " (unsaved)"  else "",
+            );
 
             width = Simp.prepare_text(my_font, fileinfo);
             Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
