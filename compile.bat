@@ -1,6 +1,6 @@
 @echo off
 
 @REM x64 backend for faster compile time
-del .\build\*.exe .\build\*.pdb > NUL 2> NUL
+del .\build\asterisk_devbuild.exe .\build\asterisk_devbuild.pdb > NUL 2> NUL
 
-jai .\first.jai -natvis
+jai .\build.jai -natvis - bake_font

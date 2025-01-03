@@ -175,33 +175,50 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         // Simp.immediate_flush();
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
+        width := 0;
         left := 10;
         center := footer.y + footer.h / 2 - my_font.character_height / 2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
         buffer := editor.active_buffer;
-        opened_file: string = ---;
-        filepath := buffer.filepath;
-        if filepath {
-            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else "");
-        } else {
-            opened_file = tprint("<new file>");
+
+        {
+            // Draw buffer's file info
+            using buffer;
+
+            b: String_Builder;
+            init_string_builder(*b);
+
+            path := filepath;
+            workdir := get_working_directory();
+
+            if begins_with(path, workdir) {
+                advance(*path, workdir.count + 1); // +1 separator
+                assert(path.count > 0);
+            }
+            
+            append(*b, path);
+
+            if !exists_on_disk then append(*b, " <new file>");
+            if dirty           then append(*b, " (unsaved)");
+
+            fileinfo := builder_to_string(*b);
+
+            width = Simp.prepare_text(my_font, fileinfo);
+            Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
         }
 
-        w := Simp.prepare_text(my_font, opened_file);
-        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
-
-        left += w;
+        left += width;
         active_buffer_index := get_buffer_index(editor, editor.active_buffer);
-        index := tprint("| %/%", active_buffer_index + 1, editor.buffers.count);
-        w = Simp.prepare_text(my_font, index);
+        index := tprint(" | %/%", active_buffer_index + 1, editor.buffers.count);
+        width = Simp.prepare_text(my_font, index);
         Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 
-        row := find_row_index(buffer, buffer._cursor.pos)+1;
-        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
-        row_col_info := tprint("Row % Col %", row, col);
-        w = Simp.prepare_text(my_font, row_col_info);
-        Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});
+        row := find_row_index(buffer, buffer._cursor.pos) + 1;
+        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
+        row_col_info := tprint("Ln %, Col %", row, col);
+        width = Simp.prepare_text(my_font, row_col_info);
+        Simp.draw_prepared_text(my_font, xx (window_width - width * 1.25), xx center, .{.0,.0,.0,1.0});
     }
 
     // Widgets

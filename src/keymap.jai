@@ -27,7 +27,7 @@ Save :: () {
     assert(!!filepath, "TODO");
     
     s := to_string(buffer);
-    write_entire_file(filepath, s);
+    File.write_entire_file(filepath, s);
 
     dirty = false;
 }
@@ -808,10 +808,10 @@ IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    save_cursor_col(buffer, *_cursor);
-    defer try_restore_cursor_col(buffer, *_cursor);
-
     if has_selection(_cursor) {
+        save_cursor_col(buffer, *_cursor);
+        defer try_restore_cursor_col(buffer, *_cursor);
+
         cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
         correction := 0; // @Explain!
@@ -890,10 +890,10 @@ IndentRight :: () {
         return builder_to_string(*builder,, allocator = __temporary_allocator);
     }
 
-    save_cursor_col(buffer, *_cursor);
-    defer try_restore_cursor_col(buffer, *_cursor);
-
     if has_selection(_cursor) {
+        save_cursor_col(buffer, *_cursor);
+        defer try_restore_cursor_col(buffer, *_cursor);
+
         cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
 
         correction := 0; // @Explain!

@@ -8,29 +8,6 @@ last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
-RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
-    return Vector4.{
-        r/255.0, 
-        g/255.0, 
-        b/255.0, 
-        alpha
-    };
-}
-
-Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
-    r := (hex>>24) & 0xFF;
-    g := (hex>>16) & 0xFF;
-    b := (hex>>8)  & 0xFF;
-    a := (hex>>0)  & 0xFF;
-
-    return Vector4.{
-        r/255.0, 
-        g/255.0, 
-        b/255.0, 
-        a/255.0
-    };
-}
-
 // Blackboard theme
 bg_color          :: #run RgbaToVec4(12, 16, 33);
 text_color        :: #run RgbaToVec4(248, 248, 248);
@@ -38,6 +15,8 @@ CURSOR_COLOR      :: #run Hex4ToVec4Rgba(0xFBDE2Dc0);
 CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
+
+DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 my_font: *Simp.Dynamic_Font;
 font_width: s64;
@@ -80,10 +59,24 @@ footer_height: float;
 frame := 0;
 current_frame := 0;
 
+Args :: struct {
+    workdir: string;
+}
+
 main :: () {
-    format := *context.print_style.default_format_struct;
-    format.use_newlines_if_long_form = true;
-    format.indentation_width = 2;
+    print("\n\n");
+
+    {    
+        format := *context.print_style.default_format_struct;
+        format.use_newlines_if_long_form = true;
+        format.indentation_width = 2;
+    }
+
+    {
+        format := *context.print_style.default_format_int;
+        format.digits_per_comma = 3;
+        format.comma_string = ",";
+    }
 
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -92,9 +85,26 @@ main :: () {
         // Windows is very bad at thread-switching by default unless you do this. Sad.
         Windows.timeBeginPeriod(1);
     }
-    
-    base_path := path_strip_filename(get_path_of_running_executable());
-    set_working_directory(base_path);
+
+    args_success, args, is_set, files_from_cmdline := parse_arguments(Args);
+    if !args_success {
+        exit(1);
+    }
+
+    {
+        workdir := path_strip_filename(get_path_of_running_executable());
+        if args.workdir {
+            dir := File.get_absolute_path(args.workdir);
+            if is_directory(dir) {
+                workdir = dir;
+            } else {
+                log_error("Unable to locate the given directory's absolute location specified with the '-workdir %' argument! We'll use the path of the running executable.\n", dir);
+            }
+        }
+
+        print("Working directory: '%'\n", workdir);
+        set_working_directory(workdir);
+    }
 
     init_keymaps();
 
@@ -104,11 +114,6 @@ main :: () {
     my_init_fonts();
     ui_init(); // GetRect
 
-    {
-        f := my_font.*;
-        print("em_width: % ; character_height: %\n", f.em_width, f.character_height);
-    }
-
     footer_height = my_font.character_height*1.5;
 
     last_time = seconds_since_init();
@@ -117,8 +122,11 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
-    editor = create_an_editor_instance();
-    load_file_from_command_line(editor); // @Temporary
+    editor = create_editor();
+    
+    for filepath: files_from_cmdline {
+        open_file_or_create_empty_buffer(editor, filepath);
+    }
 
     while !should_quit {
         // #if !DEBUG {
@@ -126,8 +134,6 @@ main :: () {
         //         WaitMessage();
         //     }
         // }
-
-        // WaitMessage();
 
         current_frame = frame;
         defer frame += 1;
@@ -229,8 +235,6 @@ main :: () {
             editor, buffer := get_active_editor_and_buffer();
             using editor;
 
-            // PrintDev("F1 toggle dev | F2 hidden chars\n");
-            // PrintDev("----------------------------\n");
             PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
  
             row := find_row_index(buffer, buffer._cursor.pos);
@@ -239,7 +243,13 @@ main :: () {
             cy  := get_cursor_y(buffer, *buffer._cursor);
 
             PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
-            PrintDev("rows: % ; gentime: %ms\n", active_buffer.row_table.count, formatFloat(active_buffer.row_table_recalc_time, trailing_width=4));
+            
+            PrintDev("rows: % ; gentime: %ms ; row_table size: %\n", 
+                active_buffer.row_table.count, 
+                formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
+                cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
+            );
+
             s := to_string(buffer);
             PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
             
@@ -527,7 +537,7 @@ my_init_fonts :: () {
         #import "Compiler";
         _BAKED_FONT_DATA :: #run -> [] u8 {
             filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
-            font_binary, success := read_entire_file(filename);
+            font_binary, success := File.read_entire_file(filename);
             if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
 
             result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
@@ -618,19 +628,20 @@ count_whitespaces_from_left :: (s: string) -> s64 {
 
 // @Temporary
 load_file_from_command_line :: (editor: *Editor) {
-    Args :: struct {
-        file: string;
-    };
+    return;
+    // Args :: struct {
+    //     file: string;
+    // };
 
-    args_success, args, is_set, free_args := parse_arguments(Args);
-    // print("% % % %\n", args_success, args, is_set, free_args);
-    if !args_success {
-        exit(1);
-    }
+    // args_success, args, is_set, free_args := parse_arguments(Args);
+    // // print("% % % %\n", args_success, args, is_set, free_args);
+    // if !args_success {
+    //     exit(1);
+    // }
 
-    for free_args {
-        open_file(editor, it);
-    }
+    // for free_args {
+    //     open_file(editor, it);
+    // }
 
     // if is_set.file {
     //     open_file(editor, args.file);
@@ -676,6 +687,28 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1, false;
 }
 
+RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
+    return Vector4.{
+        r/255.0, 
+        g/255.0, 
+        b/255.0, 
+        alpha
+    };
+}
+
+Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
+    r := (hex>>24) & 0xFF;
+    g := (hex>>16) & 0xFF;
+    b := (hex>>8)  & 0xFF;
+    a := (hex>>0)  & 0xFF;
+
+    return Vector4.{
+        r/255.0, 
+        g/255.0, 
+        b/255.0, 
+        a/255.0
+    };
+}
 
 Program_Mode :: enum u8 {
     // CORE;
@@ -685,13 +718,14 @@ Program_Mode :: enum u8 {
 
 mode := Program_Mode.EDITOR;
 
-#load "memory.jai";
-#load "render.jai";
+#load "workspace.jai";
 #load "editor.jai";
 #load "keymap.jai";
-#load "draw.jai";
-#load "buffer.jai";
 #load "cursor.jai";
+#load "buffer.jai";
+#load "memory.jai";
+#load "render.jai";
+#load "draw.jai";
 #load "event.jai";
 #load "widget.jai";
 #load "language_support.jai";
@@ -700,7 +734,6 @@ CodeInspect :: #import,file "code_inspect.jai";
 
 #import "System";
 #import "Basic";
-#import "File";
 #import "File_Utilities";
 #import "String";
 #import "Math";
@@ -710,6 +743,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 #import "GetRect";
 #import "Command_Line";
 
+File      :: #import "File";
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";
 

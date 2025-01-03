@@ -1,3 +1,4 @@
+// Remove this @Cleanup
 SlowMemcpy :: (destination: *void, source: *void, count: s64) #expand {
     d := cast(*u8) destination;  s := cast(*u8) source;
 
