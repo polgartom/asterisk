@@ -244,35 +244,41 @@ main :: () {
         get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
 
         if show_debug_info {
-            last_simulation_time = (seconds_since_init()-last_time)*1000;
+            debug_time := seconds_since_init();
 
             editor, buffer := get_active_editor_and_buffer();
             using editor;
 
-            PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
- 
-            row := find_row_index(buffer, buffer._cursor.pos);
-            col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
-            cx  := get_cursor_x(buffer, *buffer._cursor);
-            cy  := get_cursor_y(buffer, *buffer._cursor);
+            #if 1 {
+                PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+    
+                row := find_row_index(buffer, buffer._cursor.pos);
+                col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
+                cx  := get_cursor_x(buffer, *buffer._cursor);
+                cy  := get_cursor_y(buffer, *buffer._cursor);
 
-            PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
-            
-            PrintDev("rows: % ; gentime: %ms ; row_table size: %\n", 
-                active_buffer.row_table.count, 
-                formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
-                cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
-            );
+                PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
+                
+                PrintDev("rows: % ; gentime: %ms ; row_table size: %\n", 
+                    active_buffer.row_table.count, 
+                    formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
+                    cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
+                );
 
-            s := to_string(buffer);
-            PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
-            
-            t := "";
-            c := utf8_count_chars(t);
-            PrintDev("chars: %\n", c);
+                #if 0 {
+                    // The utf8_count_chars() is very slow if we have a larger buffer
+                    s := to_string(buffer);
+                    PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
+                }
+                
+                mx, my, ok := get_mouse_pointer_position(right_handed=false);
+                PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
 
-            mx, my, ok := get_mouse_pointer_position(right_handed=false);
-            PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
+                debug_time = (seconds_since_init() - debug_time) * 1000;
+                PrintDev("[DEBUG TIME] %ms\n", formatFloat(debug_time, trailing_width=4));
+            }
+
+            last_simulation_time = (seconds_since_init()-last_time)*1000;
         }
 
         draw_frame(text, second_elapsed, last_time);
