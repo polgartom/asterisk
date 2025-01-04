@@ -24,7 +24,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
 
     rescan_line_ends(buffer);
 
-    editor.active_buffer = buffer;
+    change_active_buffer(editor, buffer);
 }
 
 sanitize_and_free_input_data :: (data: string) -> string {
@@ -57,8 +57,6 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
         new_buffer := create_buffer(editor);
         editor.active_buffer = new_buffer;
     } else {
-        print(">>> %\n", editor.buffers);
-        assert(false);
         last_index := editor.buffers.count-1;
         editor.active_buffer = *editor.buffers[last_index];
     }
@@ -92,7 +90,10 @@ change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     assert(i != -1);
 
     editor.active_buffer = buffer;
+    
     should_recalc_editor_offsets = true;
+    editor.left_offset = 0.0;
+    editor.top_offset  = 0.0;
 }
 
 editor: *Editor; // @Temporary
@@ -107,8 +108,8 @@ Editor :: struct {
     // cursor_moved := false;
     // last_cursor_col_for_up_down_movement: s64 = 0;
 
-    top_offset  := 0.0; // s64?
-    left_offset := 0.0; // s64?
+    top_offset  := 0.0;
+    left_offset := 0.0;
 }
 
 replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
