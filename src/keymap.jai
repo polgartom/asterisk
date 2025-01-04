@@ -20,21 +20,13 @@ OpenSearchWidget :: () {
     reset_search_widget();
 }
 
-Save :: () {
-    editor, buffer := get_active_editor_and_buffer();
-    using buffer;
-
-    assert(!!filepath, "TODO");
-    
-    s := to_string(buffer);
-    File.write_entire_file(filepath, s);
-
-    dirty = false;
+CreateBuffer :: () {
+    editor, _ := get_active_editor_and_buffer();
+    editor.active_buffer = create_buffer(editor);
 }
 
 CloseCurrentBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
-    
     assert(buffer != null);
 
     // @Todo: A confirm popup thing
@@ -64,6 +56,18 @@ NextBuffer :: () {
     next_buffer   := *buffers[next_index];
     
     change_active_buffer(editor, next_buffer);
+}
+
+Save :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    assert(!!filepath, "TODO");
+    
+    s := to_string(buffer);
+    File.write_entire_file(filepath, s);
+
+    dirty = false;
 }
 
 ToggleDevInfo :: () {
@@ -987,10 +991,12 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
 
-    Add(editor_keymap, Save);
+    Add(editor_keymap, CreateBuffer);
     Add(editor_keymap, CloseCurrentBuffer);
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);
+
+    Add(editor_keymap, Save);
 
     Add(editor_keymap, InsertTab);
     Add(editor_keymap, InsertLine);
@@ -1086,10 +1092,11 @@ C-f OpenSearchWidget
 
 F1 ToggleDevInfo
 
-C-s Save
+C-n CreateBuffer
 C-w CloseCurrentBuffer
 C-PageUp PrevBuffer
 C-PageDown NextBuffer
+C-s Save
 
 ArrowLeft MoveLeft
 ArrowUp MoveUp
