@@ -1,7 +1,11 @@
-open_file_or_create_empty_buffer :: (editor: *Editor, filepath: string) {
+open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
+    filepath := File.get_absolute_path(_filepath);
+    for editor.buffers {
+        if it.filepath == filepath return;
+    }
+
     buffer := create_buffer(editor);
-    
-    buffer.filepath = File.get_absolute_path(filepath);
+    buffer.filepath       = filepath;
     buffer.exists_on_disk = file_exists(filepath);
     
     if buffer.exists_on_disk {
