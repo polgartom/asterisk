@@ -1,11 +1,13 @@
 open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
     filepath := File.get_absolute_path(_filepath);
+    path_overwrite_separators(filepath, #char "/");
+
     for editor.buffers {
         if it.filepath == filepath return;
     }
 
     buffer := create_buffer(editor);
-    buffer.filepath       = filepath;
+    buffer.filepath       = copy_string(filepath);
     buffer.exists_on_disk = file_exists(filepath);
     
     if buffer.exists_on_disk {
@@ -46,15 +48,17 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
         if it != buffer then array_add(*editor.buffers, it);
     }
 
-    c_free(buffer.data);
     array_free(buffer.row_table);
-    // free(buffer.filepath); // @Todo
+    c_free(buffer.data);
+    if buffer.filepath then free(buffer.filepath);
 
     if editor.buffers.count == 0 {
         // Create a new empty (initial) buffer
         new_buffer := create_buffer(editor);
         editor.active_buffer = new_buffer;
     } else {
+        print(">>> %\n", editor.buffers);
+        assert(false);
         last_index := editor.buffers.count-1;
         editor.active_buffer = *editor.buffers[last_index];
     }

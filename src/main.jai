@@ -112,8 +112,10 @@ main :: () {
             }
         }
 
-        print("Working directory: '%'\n", workdir);
+        path_overwrite_separators(workdir, #char "/");
         set_working_directory(workdir);
+        
+        print("Working directory: '%'\n", workdir);
     }
 
     init_keymaps();
@@ -141,6 +143,14 @@ main :: () {
     if !editor.active_buffer {
         editor.active_buffer = create_buffer(editor);
     }
+
+    #if 1 {
+        mode = .WIDGET;
+        active_widget = File_Browser_Widget;
+
+        file_browser_change_directory(get_working_directory());
+    }
+
 
     while !should_quit {
         // #if !DEBUG {
@@ -707,6 +717,24 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1, false;
 }
 
+scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := true) -> [] string #must {
+    path := _path;
+
+    if path.count > 1 && ends_with(path, "/") then path.count -= 1;
+
+    assert(is_directory(path)); // Error hint for the user @Todo
+    
+    items : [..] string; // IS IT USING THE TEMP ALLOCATOR???
+
+    visitor :: (info: *File_Visit_Info, user_data: *[..] string) {
+        array_add(user_data, copy_string(info.full_name));
+    }
+
+    visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
+
+    return items;
+}
+
 RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
     return Vector4.{
         r/255.0, 
@@ -737,6 +765,7 @@ Program_Mode :: enum u8 {
 };
 
 mode := Program_Mode.EDITOR;
+
 
 #load "workspace.jai";
 #load "editor.jai";

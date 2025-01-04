@@ -189,13 +189,9 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             path := filepath;
             if path {
                 workdir := get_working_directory();
+                path_overwrite_separators(workdir, #char "/");
                 if begins_with(path, workdir) {
-                    steps := workdir.count;
-                    advance(*path, steps);
-                    
-                    separator :: #run -> string { #if OS == .WINDOWS return "\\"; else return "/"; };
-                    if begins_with(path, separator) advance(*path, 1);
-
+                    advance(*path, workdir.count + 1); // +1 for the path separator
                     assert(path.count > 0);
                 }
             } else {
@@ -361,7 +357,19 @@ draw_widgets :: () {
     my_theme = proc();
     set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
 
-    update_search_widget();
+    // print("> active_widget: %\n", active_widget);
+
+    if active_widget == {
+        case Search_Widget;
+            update_search_widget();
+        case File_Browser_Widget;
+            update_file_browser_widget();
+    }
+
+    // k := window_height * .1;
+    // w := window_width*0.5-4*k;
+    // Simp.immediate_quad(0.0, 9*k, w, 9*k+3, CURSOR_COLOR);
+    // Simp.immediate_quad(window_width - w, 9*k, xx window_width, 9*k+3, CURSOR_COLOR);
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {

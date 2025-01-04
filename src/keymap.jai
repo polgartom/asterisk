@@ -14,9 +14,17 @@ CloseCurrentWidget :: () {
 
 // [Editor]
 
-OpenSearchWidget :: () {
+UseSearchWidget :: () {
     mode = .WIDGET;
-    
+    active_widget = Search_Widget;
+
+    reset_search_widget();
+}
+
+UseFileBrowserWidget :: () {
+    mode = .WIDGET;
+    active_widget = File_Browser_Widget;
+
     reset_search_widget();
 }
 
@@ -986,7 +994,9 @@ register_keymap_procedures :: () {
 
     // Editor
 
-    Add(editor_keymap, OpenSearchWidget);
+    Add(editor_keymap, UseSearchWidget);
+    Add(editor_keymap, UseFileBrowserWidget);
+
 
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
@@ -1088,7 +1098,9 @@ ESC CloseCurrentWidget
 
 [Editor]
 
-C-f OpenSearchWidget
+C-f UseSearchWidget
+C-p UseFileBrowserWidget
+
 
 F1 ToggleDevInfo
 
