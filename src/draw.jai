@@ -286,15 +286,26 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     Simp.set_shader_for_color(true);
     
     c  := *buffer._cursor;
+    cx := get_cursor_x(buffer, c) - editor.left_offset + r.x;
     ch := my_font.character_height;
+    cw := my_font.em_width;
 
     row_index := find_row_index(buffer, c.pos);
-    bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-    cx   := get_cursor_x(buffer, c) - editor.left_offset + r.x;
-    cw   := my_font.em_width;
+    bottom    := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
 
     Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
     // Simp.immediate_quad(cast(float32) cx, bottom - ch/2, cast(float32)(cx + cw), bottom + ch, CURSOR_COLOR);
+
+    #if CURRENT_LINE_INDICATOR_STYLE == .FRAME {
+        color   :: CURRENT_LINE_INDICATOR_COLOR;
+        thick   :: CURRENT_LINE_INDICATOR_FRAME_WIDTH;
+        
+        p1 := bottom + (ch-ch*0.1);
+        p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+
+        Simp.immediate_quad(0, p1, r.w, p1 + thick, color); // top
+        Simp.immediate_quad(0, p2, r.w, p2 + thick, color); // bottom
+    }
 
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);

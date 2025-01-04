@@ -16,6 +16,16 @@ CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
 
+CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
+CURRENT_LINE_INDICATOR_COLOR       :: #run Hex4ToVec4Rgba(0x5D2A6DC0);
+CURRENT_LINE_INDICATOR_FRAME_WIDTH :: 2.0;
+
+Current_Line_Indicator_Style :: enum u32 {
+    NONE;
+    FRAME;
+    HIGHLIGHT;
+}
+
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 my_font: *Simp.Dynamic_Font;
