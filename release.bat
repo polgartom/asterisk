@@ -1,5 +1,5 @@
 @echo off
 
-del .\build\*.exe .\build\*.pdb > NUL 2> NUL
+del .\build\asterisk.exe .\build\asterisk.pdb > NUL 2> NUL
 
-jai .\first.jai - release bake_font
+jai .\build.jai - release bake_font

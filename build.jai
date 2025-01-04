@@ -26,6 +26,7 @@
         if arg == {
             case "bake_font";
                 use_baked_font = true;
+                log("\nWe will bake the font, see my_init_fonts() in main.jai\n\n");
 
             case "release";
                 do_optimization = true;
@@ -65,14 +66,20 @@
             ifx use_baked_font  then "true"  else "false",
             window_name,
     );
+    
     add_build_string(build_constants, w);
 
     while true {
         message := compiler_wait_for_message();
 
         if message.kind == {
+            case .PHASE;
+                phase := cast(*Message_Phase) message;
+                if phase.phase == .POST_WRITE_EXECUTABLE {
+                    set_icon(message);
+                }
             case .COMPLETE;
-                break;
+                break; // Exit from the compiler's message loop
         }
 
         // Visual Studio
@@ -85,11 +92,10 @@
 set_icon :: (message: *Message) {
     // Wait for a post_write_executable message. Then we
     // modify the executable by writing the icon to it.
-    
-    if message.kind != .PHASE return;
 
+    assert(message.kind == .PHASE);
     phase := cast(*Message_Phase) message;
-    if phase.phase != .POST_WRITE_EXECUTABLE return;
+    assert(phase.phase == .POST_WRITE_EXECUTABLE);
 
     exe_filename := tprint("%/%", get_build_options(message.workspace).output_path, phase.executable_name);
     
@@ -102,7 +108,7 @@ set_icon :: (message: *Message) {
     }
 }
 
-ICON_FILEPATH :: "data/icon.ico";
+ICON_FILEPATH :: "data/icon/icon.ico";
 
 // #import "Project_Generator";
 #import "Compiler";

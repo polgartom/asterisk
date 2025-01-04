@@ -175,33 +175,56 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         // Simp.immediate_flush();
         // Simp.immediate_quad(footer.x, footer.h, footer.w, footer.h-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0});
 
+        width := 0;
         left := 10;
         center := footer.y + footer.h / 2 - my_font.character_height / 2;
         // Simp.immediate_quad(footer.x, footer.h/2, footer.w, footer.h/2-2, .{149.0/255.0, 121.0/255.0, 82.0/255.0, 1.0}); // center debug
 
         buffer := editor.active_buffer;
-        opened_file: string = ---;
-        filepath := buffer.filepath;
-        if filepath {
-            opened_file = tprint("% %", filepath, ifx buffer.dirty then "(unsaved)" else "");
-        } else {
-            opened_file = tprint("<new file>");
+
+        {
+            // Draw buffer's file info
+            using buffer;
+
+            path := filepath;
+            if path {
+                workdir := get_working_directory();
+                if begins_with(path, workdir) {
+                    steps := workdir.count;
+                    advance(*path, steps);
+                    
+                    // separator :: #run -> string { #if OS == .WINDOWS return "\\"; else return "/"; };
+                    separator :: #run -> string { #if OS == .WINDOWS return "\\"; else return "/"; };
+                    if begins_with(path, separator) advance(*path, 1);
+
+                    assert(path.count > 0);
+                }
+            } else {
+                path = "Untitled";
+            }
+
+            fileinfo := tprint(
+                "%1%2%3",
+                path,
+                ifx !exists_on_disk then " <new file>" else "",
+                ifx dirty           then " (unsaved)"  else "",
+            );
+
+            width = Simp.prepare_text(my_font, fileinfo);
+            Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
         }
 
-        w := Simp.prepare_text(my_font, opened_file);
-        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
-
-        left += w;
+        left += width;
         active_buffer_index := get_buffer_index(editor, editor.active_buffer);
-        index := tprint("| %/%", active_buffer_index + 1, editor.buffers.count);
-        w = Simp.prepare_text(my_font, index);
+        index := tprint(" | %/%", active_buffer_index + 1, editor.buffers.count);
+        width = Simp.prepare_text(my_font, index);
         Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
 
-        row := find_row_index(buffer, buffer._cursor.pos)+1;
-        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
-        row_col_info := tprint("Row % Col %", row, col);
-        w = Simp.prepare_text(my_font, row_col_info);
-        Simp.draw_prepared_text(my_font, xx (window_width-w*1.25), xx center, .{.0,.0,.0,1.0});
+        row := find_row_index(buffer, buffer._cursor.pos) + 1;
+        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
+        row_col_info := tprint("Ln %, Col %", row, col);
+        width = Simp.prepare_text(my_font, row_col_info);
+        Simp.draw_prepared_text(my_font, xx (window_width - width * 1.25), xx center, .{.0,.0,.0,1.0});
     }
 
     // Widgets
@@ -266,15 +289,26 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     Simp.set_shader_for_color(true);
     
     c  := *buffer._cursor;
+    cx := get_cursor_x(buffer, c) - editor.left_offset + r.x;
     ch := my_font.character_height;
+    cw := my_font.em_width;
 
     row_index := find_row_index(buffer, c.pos);
-    bottom := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-    cx   := get_cursor_x(buffer, c) - editor.left_offset + r.x;
-    cw   := my_font.em_width;
+    bottom    := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
 
     Simp.immediate_quad(cast(float32) cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), CURSOR_COLOR);
     // Simp.immediate_quad(cast(float32) cx, bottom - ch/2, cast(float32)(cx + cw), bottom + ch, CURSOR_COLOR);
+
+    #if CURRENT_LINE_INDICATOR_STYLE == .FRAME {
+        color   :: CURRENT_LINE_INDICATOR_COLOR;
+        thick   :: CURRENT_LINE_INDICATOR_FRAME_WIDTH;
+        
+        p1 := bottom + (ch-ch*0.1);
+        p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+
+        Simp.immediate_quad(0.0, p1, r.w, p1 + thick, color); // top
+        Simp.immediate_quad(0.0, p2, r.w, p2 + thick, color); // bottom
+    }
 
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);

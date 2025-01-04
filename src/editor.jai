@@ -1,48 +1,38 @@
-open_file :: (editor: *Editor, filepath: string) {
-    file_data := read_entire_file(filepath);
-    defer free(file_data);
-
-    {
-        tmp := replace_crlf_to_lf(file_data);
-        free(file_data);
-        file_data = tmp;
-    }
-    {
-        tmp := replace_tabs_with_spaces(file_data);
-        free(file_data);
-        file_data = tmp;
-    }
-    {
-        // @Todo: A nice alert or something instead of these asserts
-        // Validate UTF-8
-        s := file_data;
-        while s.count {
-            code, bytes, success := character_utf8_to_utf32(s.data, s.count);
-            assert(success == .CONVERSION_OK, "Invalid UTF-8 file");
-            s.data  += bytes;
-            s.count -= bytes;
-            assert(s.count >= 0, "Invalid UTF-8 file");
-        } 
+open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
+    filepath := File.get_absolute_path(_filepath);
+    for editor.buffers {
+        if it.filepath == filepath return;
     }
 
-    assert(editor.active_buffer != null);
-
-    buffer := editor.active_buffer;
-    if buffer.dirty || buffer.filepath {
-        // Using the current buffer if it's empty, probably it's the initial buffer
-        buffer = array_add(*editor.buffers);
-    }
-
-    buffer.filepath = filepath;
+    buffer := create_buffer(editor);
+    buffer.filepath       = filepath;
+    buffer.exists_on_disk = file_exists(filepath);
     
-    maybe_grow(buffer, file_data.count);
-    
-    SlowMemcpy(buffer.data, file_data.data, file_data.count);
-    buffer.count = file_data.count;
+    if buffer.exists_on_disk {
+        input := File.read_entire_file(filepath);
+        if input {
+            input = sanitize_and_free_input_data(input);
+            if input.count {
+                maybe_grow(buffer, input.count);
+                SlowMemcpy(buffer.data, input.data, input.count);
+                buffer.count = input.count;
+            }
+        }
+    }
 
     rescan_line_ends(buffer);
 
     editor.active_buffer = buffer;
+}
+
+sanitize_and_free_input_data :: (data: string) -> string {
+    assert(data.count > 0);
+    
+    s := data;
+    s = replace_crlf_to_lf(s, autofree=true);
+    s = replace_tabs_with_spaces(s, autofree=true);
+
+    return s;
 }
 
 close_buffer :: (editor: *Editor, buffer: *Buffer) {
@@ -88,11 +78,8 @@ get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     return editor, editor.active_buffer;
 }
 
-create_an_editor_instance :: () -> *Editor {
+create_editor :: () -> *Editor {
     editor := New(Editor);
-    buffer := create_buffer(editor);
-    editor.active_buffer = buffer;
-
     return editor;
 }
 
@@ -104,8 +91,7 @@ change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     should_recalc_editor_offsets = true;
 }
 
-// Active editor
-editor: *Editor; // @Temporary?
+editor: *Editor; // @Temporary
 
 should_recalc_editor_offsets := false; // @Temporary
 
@@ -121,12 +107,20 @@ Editor :: struct {
     left_offset := 0.0; // s64?
 }
 
-replace_tabs_with_spaces :: inline (s: string) -> (result: string, ocurrences: int) {
-    result, ocurrences := replace(s, "\t", TAB_SPACE_CHARS);
+replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
+    #if autofree {
+        defer free(input);
+    }
+    
+    result, ocurrences := replace(input, "\t", TAB_SPACE_CHARS);
     return result, ocurrences;
 }
 
-replace_crlf_to_lf :: inline (s: string) -> (result: string, ocurrences: int) {
-    result, ocurrences := replace(s, "\r\n", "\n");
+replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
+    #if autofree {
+        defer free(input);
+    }
+
+    result, ocurrences := replace(input, "\r\n", "\n");
     return result, ocurrences;
 }

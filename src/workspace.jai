@@ -1,0 +1,7 @@
+
+
+
+workspace: Workspace;
+
+Workspace :: struct {
+}

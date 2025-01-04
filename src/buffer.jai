@@ -104,7 +104,8 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
 
 create_buffer :: (editor: *Editor) -> *Buffer {
     buffer := array_add(*editor.buffers);
-    maybe_grow(buffer, 0);
+    maybe_grow(buffer, BUFFER_PAGE_SIZE);
+
     rescan_line_ends(buffer);
 
     return buffer;
@@ -216,7 +217,9 @@ Buffer :: struct {
     row_table: [..] Row_Info;
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
+    
     filepath: string;
+    exists_on_disk: bool;
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     read_only := false;
