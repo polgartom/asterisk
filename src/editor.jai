@@ -48,9 +48,9 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
         if it != buffer then array_add(*editor.buffers, it);
     }
 
-    array_free(buffer.row_table);
-    c_free(buffer.data);
-    if buffer.filepath then free(buffer.filepath);
+    // array_free(buffer.row_table);                     // BUG !!!!!!! 
+    // c_free(buffer.data);                              // BUG ???????
+    // if buffer.filepath then free(buffer.filepath);    // BUG !!!!!!! 
 
     if editor.buffers.count == 0 {
         // Create a new empty (initial) buffer
@@ -63,8 +63,6 @@ close_buffer :: (editor: *Editor, buffer: *Buffer) {
 }
 
 get_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> s64 {
-    assert(editor.active_buffer != null);
-
     for * buffers {
         if buffer == it {
             return it_index;

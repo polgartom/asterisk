@@ -250,6 +250,8 @@ main :: () {
             }
         }
 
+        assert(editor.active_buffer != null);
+
         editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
         get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
 
