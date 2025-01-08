@@ -12,8 +12,8 @@ swap_buffers :: (window: Window_Type) {
     }
 }
 
-#if OS == .WINDOWS {
-    BYPASS_FRAMERATE_LIMIT :: true;
-} else {
+#if POWERSAVE_BUILD {
     BYPASS_FRAMERATE_LIMIT :: false;
+} else {
+    BYPASS_FRAMERATE_LIMIT :: true;
 }

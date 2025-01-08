@@ -1,3 +1,22 @@
+switch_editor_mode :: (switch_to: Program_Mode) {
+    if switch_to == {
+        case .EDITOR;
+            active_widget_deactivate_all();
+            
+            #if POWERSAVE_BUILD {
+                powersaving = true;
+            }
+            
+            mode = .EDITOR;                
+        case .WIDGET;
+            #if POWERSAVE_BUILD {
+                powersaving = false;
+            }
+        
+            mode = .WIDGET;
+    }
+}
+
 open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
     filepath := File.get_absolute_path(_filepath);
     path_overwrite_separators(filepath, #char "/");

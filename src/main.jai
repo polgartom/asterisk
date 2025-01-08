@@ -73,6 +73,8 @@ Args :: struct {
     workdir: string;
 }
 
+powersaving := POWERSAVE_BUILD;
+
 main :: () {
     print("\n\n");
 
@@ -102,19 +104,21 @@ main :: () {
     }
 
     {
-        workdir := path_strip_filename(get_path_of_running_executable());
+        workdir := get_working_directory();
         if args.workdir {
             dir := File.get_absolute_path(args.workdir);
             if is_directory(dir) {
                 workdir = dir;
             } else {
-                log_error("Unable to locate the given directory's absolute location specified with the '-workdir %' argument! We'll use the path of the running executable.\n", dir);
-            }
+                log_error("Unable to locate the given directory's absolute location specified with the '-workdir %' argument!\n", dir);
+            }   
         }
 
         path_overwrite_separators(workdir, #char "/");
         set_working_directory(workdir);
         
+        file_browser_change_directory(workdir);
+
         print("Working directory: '%'\n", workdir);
     }
 
@@ -144,13 +148,12 @@ main :: () {
         editor.active_buffer = create_buffer(editor);
     }
 
-    #if 1 {
-        mode = .WIDGET;
-        active_widget = File_Browser_Widget;
+    // #if 1 {
+    //     mode = .WIDGET;
+    //     active_widget = File_Browser_Widget;
 
-        file_browser_change_directory(get_working_directory());
-    }
-
+    //     file_browser_change_directory(get_working_directory());
+    // }
 
     while !should_quit {
         // #if !DEBUG {
@@ -158,6 +161,10 @@ main :: () {
         //         WaitMessage();
         //     }
         // }
+        
+        #if POWERSAVE_BUILD {
+            if powersaving then WaitMessage();
+        }
 
         current_frame = frame;
         defer frame += 1;

@@ -7,22 +7,20 @@ Quit :: () {
 // [Widget]
 
 CloseCurrentWidget :: () {
-    mode = .EDITOR;
-    
-    active_widget_deactivate_all();
+    switch_editor_mode(.EDITOR);
 }
 
 // [Editor]
 
 UseSearchWidget :: () {
-    mode = .WIDGET;
+    switch_editor_mode(.WIDGET);
     active_widget = Search_Widget;
 
     reset_search_widget();
 }
 
 UseFileBrowserWidget :: () {
-    mode = .WIDGET;
+    switch_editor_mode(.WIDGET);
     active_widget = File_Browser_Widget;
 
     reset_search_widget();

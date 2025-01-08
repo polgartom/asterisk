@@ -1,4 +1,3 @@
-
 update_search_widget :: () {
     loc := #location();
 
@@ -32,19 +31,6 @@ update_search_widget :: () {
     } 
     // if action & .ESCAPED {
     // }
-}
-
-file_browser_change_directory :: (new_directory: string) -> (changed: bool) {
-    using file_browser_widget;
-
-    if new_directory == base_directory return false;
-
-    base_directory = copy_string(new_directory);
-    path_overwrite_separators(base_directory, #char "/");
-    
-    items = scan_dir(base_directory);
-
-    return true;
 }
 
 reset_search_widget :: () {
@@ -118,114 +104,157 @@ to_next_occurance :: () {
 }
 
 update_file_browser_widget :: () {
-    loc := #location();
-
-    theme := my_theme.scrollable_region_theme;
-    theme.region_background.shape.rounding_flags = 0;
+    loc := #location(); // remove it!
 
     k  := window_width * .1;
     k2 := window_height * .1;
-    width  := 4.0*k;
-    height := 4.5*k;
 
-    r := get_rect(window_width*0.5-width, 0.3*k2, width*2, window_height-0.3*k2-.05*k);
+    {
+        width  := 4.0*k;
+        height := my_font.character_height * 2.0;
+        r := get_rect(window_width*0.5-width, window_height-height-2.5-15.0, width*2, height);
 
-    region, inside := begin_scrollable_region(r, *theme, loc=loc);
+        w := *file_browser_widget;
 
-    label_height := window_height * .03;
+        text_theme := my_theme.text_input_theme;
+        // text_theme.font = my_font;
+        
+        action, _, state := text_input(r, w.search_text, *text_theme, input_action=.ACTIVATE);
 
-    s := inside;
-    s.y = s.y + s.h - label_height;
-    s.h = label_height;
-    s.y += file_browser_widget.scroll_value;
-
-    label_theme := my_theme.label_theme;
-    label_theme.alignment = .Left;
-
-    button_theme := my_theme.button_theme;
-    button_theme.alignment = .Left;
-
-    basedir := file_browser_widget.base_directory;
-
-    label(s, basedir, *label_theme);
-    s.y -= floor(label_height * 1.1 + 0.5);
-
-    move_up_to_parent_dir := false;
-
-    defer if move_up_to_parent_dir {
-        info := parse_path(basedir);
-        if info.words.count {
-            info.words.count -= 1;
-            new_dir := path_to_string(info);
-            file_browser_change_directory(new_dir);
-            basedir = file_browser_widget.base_directory;
+        if action & .TEXT_MODIFIED {
+            if state.text.count == 0 || state.text[state.text.count-1] == 0x7F { // Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace @Hacky
+                if state.text                    then modify_string(*state.text,                  "");
+                if state.pre_modification_text   then modify_string(*state.pre_modification_text, "");
+                if w.search_text                 then modify_string(*w.search_text,               "");
+            
+            } else {
+                modify_string(*w.search_text, state.text);
+            }
         }
+
     }
 
     {
-        button_theme2 := button_theme;
-        button_theme2.surface_color = .{.40, .40, .40, 1.0};
-        button_theme2.text_color = .{.21, .21, .21, 1.0};
-        
-        _, _, was_just_released := button(s, "^", *button_theme2);
-        move_up_to_parent_dir = was_just_released;
+        width := 4.0*k;
+        height := 4.5*k2;
 
+        theme := my_theme.scrollable_region_theme;
+        theme.region_background.shape.rounding_flags = 0;
+
+        r := get_rect(window_width*0.5-width, 0.3*k2, width*2, window_height-0.3*k2-.05*k-15.0);
+
+        region, inside := begin_scrollable_region(r, *theme, loc=loc);
+
+        label_height := window_height * .03;
+
+        s := inside;
+        s.y = s.y + s.h - label_height;
+        s.h = label_height;
+        s.y += file_browser_widget.scroll_value;
+
+        label_theme := my_theme.label_theme;
+        label_theme.alignment = .Left;
+
+        button_theme := my_theme.button_theme;
+        button_theme.alignment = .Left;
+
+        basedir := file_browser_widget.base_directory;
+
+        label(s, basedir, *label_theme);
         s.y -= floor(label_height * 1.1 + 0.5);
-    }
 
-    // @Todo Change sorting method (by name or directory / file)
+        move_up_to_parent_dir := false;
 
-    button_id := 0;
-    for file_browser_widget.items {
-        text := it;
-        if begins_with(text, basedir) {
-            advance(*text, basedir.count);
-            if text[0] == #char "/" then advance(*text, 1);
-        }
-        
-        already_loaded_into_this_buffer: *Buffer = null;
-
-        if is_directory(it) {
-            text = tprint("%/", text);
-        } else {
-            for *buffer: editor.buffers {
-                if buffer.filepath == it {
-                    already_loaded_into_this_buffer = buffer;
-                    text = tprint("% (opened)", text);
-                    break;
-                }
+        defer if move_up_to_parent_dir {
+            info := parse_path(basedir);
+            if info.words.count {
+                info.words.count -= 1;
+                new_dir := path_to_string(info);
+                file_browser_change_directory(new_dir);
+                basedir = file_browser_widget.base_directory;
             }
         }
 
-        _, _, was_just_released := button(s, text, *button_theme, button_id);
-        if was_just_released {
-            using file_browser_widget;
+        {
+            button_theme2 := button_theme;
+            button_theme2.surface_color = .{.40, .40, .40, 1.0};
+            button_theme2.text_color = .{.21, .21, .21, 1.0};
             
+            is_disabled := file_browser_widget.search_text.count != 0;
+            _, _, was_just_released := button(s, "^", *button_theme2, disable_over=is_disabled, disable_press=is_disabled);
+            move_up_to_parent_dir = was_just_released;
+
+            s.y -= floor(label_height * 1.1 + 0.5);
+        }
+
+        // @Todo Change sorting method (by name or directory / file)
+
+        button_id := 0;
+        for file_browser_widget.items {
+            text := it;
+            if begins_with(text, basedir) {
+                advance(*text, basedir.count);
+                if text[0] == #char "/" then advance(*text, 1);
+            }
+            
+            already_loaded_into_this_buffer: *Buffer = null;
+
             if is_directory(it) {
-                file_browser_change_directory(it);
-                break;
-
-            } else if already_loaded_into_this_buffer {
-                change_active_buffer(editor, already_loaded_into_this_buffer);
-            
+                text = tprint("%/", text);
             } else {
-                if file_exists(it) {
-                    open_file_or_create_empty_buffer(editor, it);
-                    // @Todo should_close_widgets_in_next_frame = true
-                } else {
-                    // @Todo: Error hint
-                    log_error("I unable to load this file! %\n", it);
+                for *buffer: editor.buffers {
+                    if buffer.filepath == it {
+                        already_loaded_into_this_buffer = buffer;
+                        text = tprint("% (opened)", text);
+                        break;
+                    }
                 }
             }
+
+            _, _, was_just_released := button(s, text, *button_theme, button_id);
+            if was_just_released {
+                using file_browser_widget;
+                
+                if is_directory(it) {
+                    file_browser_change_directory(it);
+                    break;
+
+                } else if already_loaded_into_this_buffer {
+                    change_active_buffer(editor, already_loaded_into_this_buffer);
+                
+                } else {
+                    if file_exists(it) {
+                        open_file_or_create_empty_buffer(editor, it);
+                        // @Todo should_close_widgets_in_next_frame = true
+                    } else {
+                        // @Todo: Error hint
+                        log_error("I unable to load this file! %\n", it);
+                    }
+                }
+            }
+
+            s.y -= floor(label_height * 1.1 + 0.5);
+            
+            button_id += 1;
         }
 
-        s.y -= floor(label_height * 1.1 + 0.5);
-        
-        button_id += 1;
+        end_scrollable_region(region, s.x + s.w, s.y, *file_browser_widget.scroll_value);
     }
-
-    end_scrollable_region(region, s.x + s.w, s.y, *file_browser_widget.scroll_value);
 }
+
+file_browser_change_directory :: (new_directory: string) -> (changed: bool) {
+    using file_browser_widget;
+
+    if new_directory == base_directory return false;
+
+    base_directory = copy_string(new_directory);
+    path_overwrite_separators(base_directory, #char "/");
+    
+    items = scan_dir(base_directory);
+
+    return true;
+}
+
 
 active_widget: Type;
 
@@ -240,7 +269,7 @@ Search_Widget :: struct {
 }
 
 File_Browser_Widget :: struct {
-    rescan_requested: bool;
+    search_text: string;
 
     scroll_value: float;
 
