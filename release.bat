@@ -2,4 +2,4 @@
 
 del .\build\asterisk.exe .\build\asterisk.pdb > NUL 2> NUL
 
-jai .\build.jai - release bake_font
+jai .\build.jai - release bake_font powersave

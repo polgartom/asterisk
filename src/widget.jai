@@ -117,6 +117,7 @@ update_file_browser_widget :: () {
         w := *file_browser_widget;
 
         text_theme := my_theme.text_input_theme;
+        text_theme.rectangle_shape.roundedness = .0;
         // text_theme.font = my_font;
         
         action, _, state := text_input(r, w.search_text, *text_theme, input_action=.ACTIVATE);
@@ -127,9 +128,44 @@ update_file_browser_widget :: () {
                 if state.pre_modification_text   then modify_string(*state.pre_modification_text, "");
                 if w.search_text                 then modify_string(*w.search_text,               "");
             
+                w.items.count = 0;
             } else {
                 modify_string(*w.search_text, state.text);
+
+                file_browser_find_matches();
             }
+        } else if action & .ENTERED {
+            using file_browser_widget;
+        
+            if items.count {
+                it := items[0];
+
+                if is_directory(it) {
+                    file_browser_change_directory(it);
+                } else {
+                    already_loaded_into_this_buffer: *Buffer = null;
+                    for *buffer: editor.buffers {
+                        if buffer.filepath == it {
+                            already_loaded_into_this_buffer = buffer;
+                            break;
+                        }
+                    }
+
+                    if already_loaded_into_this_buffer {
+                        change_active_buffer(editor, already_loaded_into_this_buffer);
+                    } else if file_exists(it) {
+                        open_file_or_create_empty_buffer(editor, it);
+                        // @Todo should_close_widgets_in_next_frame = true
+                    } else {
+                        // @Todo: Error hint
+                        log_error("I unable to load this file! %\n", it);
+                    }
+
+                    switch_editor_mode(.EDITOR);
+                }
+
+            }
+
         }
 
     }
@@ -140,8 +176,9 @@ update_file_browser_widget :: () {
 
         theme := my_theme.scrollable_region_theme;
         theme.region_background.shape.rounding_flags = 0;
+        theme.scrollbar_nib_theme.rectangle_shape.roundedness = .0;
 
-        r := get_rect(window_width*0.5-width, 0.3*k2, width*2, window_height-0.3*k2-.05*k-15.0);
+        r := get_rect(window_width*0.5-width, window_height-(height*1.5+my_font.character_height*1.5), width*2, height*1.5-my_font.character_height*2);
 
         region, inside := begin_scrollable_region(r, *theme, loc=loc);
 
@@ -159,35 +196,6 @@ update_file_browser_widget :: () {
         button_theme.alignment = .Left;
 
         basedir := file_browser_widget.base_directory;
-
-        label(s, basedir, *label_theme);
-        s.y -= floor(label_height * 1.1 + 0.5);
-
-        move_up_to_parent_dir := false;
-
-        defer if move_up_to_parent_dir {
-            info := parse_path(basedir);
-            if info.words.count {
-                info.words.count -= 1;
-                new_dir := path_to_string(info);
-                file_browser_change_directory(new_dir);
-                basedir = file_browser_widget.base_directory;
-            }
-        }
-
-        {
-            button_theme2 := button_theme;
-            button_theme2.surface_color = .{.40, .40, .40, 1.0};
-            button_theme2.text_color = .{.21, .21, .21, 1.0};
-            
-            is_disabled := file_browser_widget.search_text.count != 0;
-            _, _, was_just_released := button(s, "^", *button_theme2, disable_over=is_disabled, disable_press=is_disabled);
-            move_up_to_parent_dir = was_just_released;
-
-            s.y -= floor(label_height * 1.1 + 0.5);
-        }
-
-        // @Todo Change sorting method (by name or directory / file)
 
         button_id := 0;
         for file_browser_widget.items {
@@ -211,7 +219,14 @@ update_file_browser_widget :: () {
                 }
             }
 
-            _, _, was_just_released := button(s, text, *button_theme, button_id);
+            theme := button_theme;
+            if button_id == 0 {
+                theme.frame_color = .{.1, .49, .1, 1.0};
+            } else {
+                theme.surface_color = .{.1, .1, .1, 1.0};
+            }
+
+            _, _, was_just_released := button(s, text, *theme, button_id);
             if was_just_released {
                 using file_browser_widget;
                 
@@ -250,11 +265,33 @@ file_browser_change_directory :: (new_directory: string) -> (changed: bool) {
     base_directory = copy_string(new_directory);
     path_overwrite_separators(base_directory, #char "/");
     
-    items = scan_dir(base_directory);
+    file_browser_find_matches();
+    // items = scan_dir(base_directory, follow_directory_symlinks=false);
 
     return true;
 }
 
+file_browser_find_matches :: () {
+    w := *file_browser_widget;
+
+    if !w.search_text {
+        w.items.count = 0;
+        return;
+    }
+
+    dir := w.base_directory;
+    files := scan_dir(dir, recursive=true, follow_directory_symlinks=false, files_only=true);
+    
+    matches: [..] string;
+    for fpath: files {
+        if find_index_from_left_nocase(fpath, ".git") != -1 continue;
+
+        i := find_index_from_left_nocase(fpath, w.search_text);
+        if i != -1 then array_add(*matches, fpath);
+    }
+
+    w.items = xx matches;
+}
 
 active_widget: Type;
 

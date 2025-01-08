@@ -23,7 +23,7 @@ UseFileBrowserWidget :: () {
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser_Widget;
 
-    reset_search_widget();
+    // using file_browser_widget;
 }
 
 CreateBuffer :: () {
