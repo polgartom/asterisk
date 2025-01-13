@@ -207,13 +207,25 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
             width = Simp.prepare_text(my_font, fileinfo);
             Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+
+            left += width;
         }
 
-        left += width;
-        active_buffer_index := get_buffer_index(editor, editor.active_buffer);
-        index := tprint(" | %/%", active_buffer_index + 1, editor.buffers.count);
-        width = Simp.prepare_text(my_font, index);
-        Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+        {
+            count := count_buffers(editor, initialized=true);
+            relative_index := 0;
+            for * editor.buffers {
+                if !it.initialized continue;
+                
+                relative_index += 1;
+                if it == buffer break;
+            }
+
+            buffer_info := tprint(" | %/%", relative_index, count);
+
+            width = Simp.prepare_text(my_font, buffer_info);
+            Simp.draw_prepared_text(my_font, left, xx center, .{.0,.0,.0,1.0});
+        }
 
         row := find_row_index(buffer, buffer._cursor.pos) + 1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;

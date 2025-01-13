@@ -28,7 +28,7 @@ UseFileBrowserWidget :: () {
 
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
-    editor.active_buffer = create_buffer(editor);
+    editor.active_buffer = create_or_find_empty_buffer(editor);
 }
 
 CloseCurrentBuffer :: () {
@@ -45,11 +45,30 @@ PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_buffer_index(editor, active_buffer);
-    prev_index    := current_index-1;
-    if prev_index < 0 then prev_index = buffers.count-1;
-    prev_buffer   := *buffers[prev_index];
+    count := count_buffers(editor, initialized=true);
+    if count < 2 return;
 
+    found, index := find_buffer_index(editor, buffer);
+    assert(found, "-> %\n", buffer.*);
+
+    prev_buffer: *Buffer;
+    for < * buffers {
+        if it_index < index && it.initialized {
+            prev_buffer = it;
+            break;
+        }
+    }
+
+    if !prev_buffer {
+        for < * buffers {
+            if it.initialized {
+                prev_buffer = it;
+                break;
+            }
+        }
+    }
+
+    assert(prev_buffer != null);
     change_active_buffer(editor, prev_buffer);
 }
 
@@ -57,10 +76,30 @@ NextBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    current_index := get_buffer_index(editor, active_buffer);
-    next_index    := (current_index + 1) % buffers.count;
-    next_buffer   := *buffers[next_index];
-    
+    count := count_buffers(editor, initialized=true);
+    if count < 2 return;
+
+    found, index := find_buffer_index(editor, buffer);
+    assert(found, "-> %\n", buffer.*);
+
+    next_buffer: *Buffer;
+    for * buffers {
+        if it_index > index && it.initialized {
+            next_buffer = it;
+            break;
+        }
+    }
+
+    if !next_buffer {
+        for * buffers {
+            if it.initialized {
+                next_buffer = it;
+                break;
+            }
+        }
+    }
+
+    assert(next_buffer != null);
     change_active_buffer(editor, next_buffer);
 }
 
@@ -1104,8 +1143,8 @@ F1 ToggleDevInfo
 
 C-n CreateBuffer
 C-w CloseCurrentBuffer
-C-PageUp PrevBuffer
-C-PageDown NextBuffer
+C-PageUp NextBuffer
+C-PageDown PrevBuffer
 C-s Save
 
 ArrowLeft MoveLeft

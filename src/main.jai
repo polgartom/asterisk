@@ -145,7 +145,7 @@ main :: () {
     }
 
     if !editor.active_buffer {
-        editor.active_buffer = create_buffer(editor);
+        editor.active_buffer = create_or_find_empty_buffer(editor);
     }
 
     while !should_quit {
@@ -244,7 +244,7 @@ main :: () {
             }
         }
 
-        assert(editor.active_buffer != null);
+        assert(editor.active_buffer != null && editor.active_buffer.initialized);
 
         editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
         get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
@@ -309,8 +309,10 @@ get_char_at_string_index :: (t: string, index: s64) -> string {
 }
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
+    assert(buffer.initialized, "buffer: %\n", buffer.*);
+
     index := find_row_index(buffer, byte_pos);
-    assert(index < row_table.count);
+    assert(index < row_table.count, "buffer: %\n", buffer.*);
     
     return row_table[index];
 }

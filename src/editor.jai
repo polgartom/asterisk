@@ -25,7 +25,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
         if it.filepath == filepath return;
     }
 
-    buffer := create_buffer(editor);
+    buffer := create_or_find_empty_buffer(editor);
     buffer.filepath       = copy_string(filepath);
     buffer.exists_on_disk = file_exists(filepath);
     
@@ -56,29 +56,20 @@ sanitize_and_free_input_data :: (data: string) -> string {
     return s;
 }
 
-close_buffer :: (editor: *Editor, buffer: *Buffer) {
-    // success := array_ordered_remove_by_value(editor.buffers, buffer);
-    // assert(success, "Buffer doesn't found!");
+close_buffer :: (using editor: *Editor, buffer: *Buffer) {
+    found, index := find_buffer_index(editor, buffer);
+    assert(found && index != -1);
 
-    // @Cleanup: WTF??!
-    tmp := editor.buffers;
-    array_reset_keeping_memory(*editor.buffers);
-    for * tmp {
-        if it != buffer then array_add(*editor.buffers, it);
+    buffer_reset_keeping_memory(buffer);
+
+    for * buffers {
+        if it_index > index && it.initialized {
+            active_buffer = it;
+            return;
+        }
     }
 
-    // array_free(buffer.row_table);                     // BUG !!!!!!! 
-    // c_free(buffer.data);                              // BUG ???????
-    // if buffer.filepath then free(buffer.filepath);    // BUG !!!!!!! 
-
-    if editor.buffers.count == 0 {
-        // Create a new empty (initial) buffer
-        new_buffer := create_buffer(editor);
-        editor.active_buffer = new_buffer;
-    } else {
-        last_index := editor.buffers.count-1;
-        editor.active_buffer = *editor.buffers[last_index];
-    }
+    active_buffer = create_or_find_empty_buffer(editor);
 }
 
 get_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> s64 {

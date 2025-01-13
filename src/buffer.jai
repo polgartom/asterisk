@@ -102,11 +102,57 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
     return at + 1 + trailingBytesForUTF8[byte];
 }
 
-create_buffer :: (editor: *Editor) -> *Buffer {
-    buffer := array_add(*editor.buffers);
-    maybe_grow(buffer, BUFFER_PAGE_SIZE);
+count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
+    count := 0;
+    for * editor.buffers {
+        if it.initialized == initialized then count += 1;
+    }
 
+    return count;
+}
+
+find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64)
+{
+    for * editor.buffers {
+        if it == buffer return true, it_index;
+    }
+
+    return false, -1;
+}
+
+find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
+{
+    for * editor.buffers {
+        if it.initialized return true, it_index;
+    }
+
+    return false, -1;
+}
+
+find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
+{
+    for * editor.buffers {
+        if !it.initialized return true, it_index;
+    }
+
+    return false, -1;
+}
+
+create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
+    buffer: *Buffer;
+    
+    found, index := find_uninitialized_buffer_index(editor);
+    if found {
+        assert(index > -1);
+        buffer = *editor.buffers[index];
+    } else {
+        buffer = array_add(*editor.buffers);
+    }
+
+    maybe_grow(buffer, BUFFER_PAGE_SIZE);
     rescan_line_ends(buffer);
+    
+    buffer.initialized = true;
 
     return buffer;
 }
@@ -204,12 +250,19 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
+buffer_reset_keeping_memory :: (using buffer: *Buffer) {    
+    free(row_table.data,, row_table.allocator);
+    if data != null then c_free(data);
+    if filepath     then free(filepath);
+    
+    new_buffer: Buffer;
+    buffer.* = new_buffer;
+}
+
 Buffer :: struct {
     data:      *u8;
     count:     s64;
     allocated: s64;
-
-    dirty := false;
 
     // cursors: [..] Cursor; // @Todo: Multiple cursor support
     _cursor: Cursor; // This name temporary, because we're gonna use the cursors dynamic array
@@ -223,6 +276,8 @@ Buffer :: struct {
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     read_only := false;
+    dirty := false;
+    initialized := false;
 }
 
 BUFFER_PAGE_SIZE :: 4096;
