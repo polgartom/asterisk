@@ -1,3 +1,4 @@
+
 get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
     assert(index < row_table.count);
 

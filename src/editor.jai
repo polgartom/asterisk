@@ -25,7 +25,19 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
         if it.filepath == filepath return;
     }
 
-    buffer := create_or_find_empty_buffer(editor);
+    buffer: *Buffer;
+    for * editor.buffers {
+        if it.initialized && !it.exists_on_disk && !it.dirty && !it.count {
+            buffer = it;
+            break;
+        }
+    }
+
+    if !buffer {
+        buffer = create_or_find_empty_buffer(editor);
+    }
+
+    // buffer := create_or_find_empty_buffer(editor);
     buffer.filepath       = copy_string(filepath);
     buffer.exists_on_disk = file_exists(filepath);
     
@@ -62,10 +74,20 @@ close_buffer :: (using editor: *Editor, buffer: *Buffer) {
 
     buffer_reset_keeping_memory(buffer);
 
+    active_buffer = null;
     for * buffers {
         if it_index > index && it.initialized {
             active_buffer = it;
             return;
+        }
+    }
+
+    if !active_buffer {
+        for * buffers {
+            if it.initialized {
+                active_buffer = it;
+                return;
+            }
         }
     }
 
