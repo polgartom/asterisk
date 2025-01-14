@@ -37,7 +37,6 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
         buffer = create_or_find_empty_buffer(editor);
     }
 
-    // buffer := create_or_find_empty_buffer(editor);
     buffer.filepath       = copy_string(filepath);
     buffer.exists_on_disk = file_exists(filepath);
     

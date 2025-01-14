@@ -117,10 +117,9 @@ main :: () {
 
         path_overwrite_separators(workdir, #char "/");
         set_working_directory(workdir);
-        
-        file_browser_change_directory(workdir);
-
         print("Working directory: '%'\n", workdir);
+
+        file_browser_scan(workdir);
     }
 
     init_keymaps();
@@ -721,7 +720,7 @@ scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := tru
 
     if path.count > 1 && ends_with(path, "/") then path.count -= 1;
 
-    assert(is_directory(path)); // Error hint for the user @Todo
+    // assert(is_directory(path)); // Error hint for the user @Todo
     
     items : [..] string; // IS IT USING THE TEMP ALLOCATOR???
 
@@ -733,6 +732,23 @@ scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := tru
         } else {
             array_add(user_data, copy_string(info.full_name));
         }
+    }
+
+    visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
+
+    return items;
+}
+
+scan_dir2 :: (_path: string, recursive := false, follow_directory_symlinks := true, $files_only := true) -> [] File_Visit_Info #must {
+    path := _path;
+
+    if path.count > 1 && ends_with(path, "/") then path.count -= 1;
+
+    items : [..] File_Visit_Info; // IS IT USING THE TEMP ALLOCATOR???
+
+    visitor :: (info: *File_Visit_Info, user_data: *[..] File_Visit_Info) {
+        _info := array_add(user_data);
+        _info.* = info.*;
     }
 
     visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
@@ -796,6 +812,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 #import "Unicode";
 #import "GetRect";
 #import "Command_Line";
+#import "Hash_Table";
 
 File      :: #import "File";
 Simp      :: #import "Simp";
