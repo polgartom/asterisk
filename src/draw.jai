@@ -229,7 +229,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
         row := find_row_index(buffer, buffer._cursor.pos) + 1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
-        row_col_info := tprint("Ln % Col %", row, col);
+        total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
+        row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
         width = Simp.prepare_text(my_font, row_col_info);
         Simp.draw_prepared_text(my_font, xx (window_width - width * 1.25), xx center, .{.0,.0,.0,1.0});
     }
