@@ -186,6 +186,8 @@ main :: () {
         c := bg_color;
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
 
+        handle_user_events();
+
         {
             enable(*keymap_set, editor_keymap, mode == .EDITOR);
             enable(*keymap_set, widget_keymap, mode == .WIDGET);
@@ -760,6 +762,25 @@ scan_dir2 :: (_path: string, recursive := false, follow_directory_symlinks := tr
 
     return items;
 }
+
+modify_string :: (target: *string, new_value: string) {
+    free(target.*);
+    target.* = copy_string(new_value);
+}
+
+parent_dir :: (path: string) -> string {
+    t := path;
+
+    index := find_index_of_any_from_right(t, "\\/");
+    if index == -1 || index == 0 && t.count <= 2 return t;
+    t.count -= 1;
+
+    index = find_index_of_any_from_right(t, "\\/");
+    if index == -1 return t;
+    
+    return slice(t, 0, index+1); // +1 because we want to keep the last "/" character
+}
+
 
 RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
     return Vector4.{
