@@ -3,11 +3,11 @@ update_search_widget :: () {
 
     k := window_height * .1;
     width := window_width * .15;
-    height := my_font.character_height*2.0;
+    height := my_font_small.character_height*2.0;
     top_pad := 0.1*k;
     text_theme := my_theme.text_input_theme;
-    text_theme.font = my_font;
-    r := get_rect((window_width-width*2)-0.1*k, window_height-height-top_pad, width*2, my_font.character_height*2.0);
+    text_theme.font = my_font_small;
+    r := get_rect((window_width-width*2)-0.1*k, window_height-height-top_pad, width*2, my_font_small.character_height*2.0);
     action, _, state := text_input(r, search_text, *text_theme, input_action=.ACTIVATE, loc=loc);
     
     {
@@ -109,15 +109,18 @@ update_file_browser_widget :: () {
     k  := window_width * .1;
     k2 := window_height * .1;
 
+    font := my_font_small;
+
+
     {
         width  := 4.0*k;
-        height := my_font.character_height * 2.0;
+        height := my_font_small.character_height * 2.0;
         r := get_rect(window_width*0.5-width, window_height-height-2.5-15.0, width*2, height);
 
         w := *file_browser_widget;
         text_theme := my_theme.text_input_theme;
         text_theme.rectangle_shape.roundedness = .0;
-        // text_theme.font = my_font;
+        text_theme.font = my_font_small;
         
         action, _, state := text_input(r, w.search_text, *text_theme, input_action=.ACTIVATE);
 
@@ -135,7 +138,6 @@ update_file_browser_widget :: () {
         //     using file_browser_widget;
 
         // }
-
     }
 
     {
@@ -148,7 +150,7 @@ update_file_browser_widget :: () {
         theme.region_background.shape.rounding_flags = 0;
         theme.scrollbar_nib_theme.rectangle_shape.roundedness = .0;
 
-        r := get_rect(window_width*0.5-width, window_height-(height*1.5+my_font.character_height*1.5), width*2, height*1.5-my_font.character_height*2);
+        r := get_rect(window_width*0.5-width, window_height-(height*1.5+my_font_small.character_height*1.5), width*2, height*1.5-my_font_small.character_height*2);
 
         region, inside := begin_scrollable_region(r, *theme, loc=loc);
 
@@ -164,6 +166,7 @@ update_file_browser_widget :: () {
 
         button_theme := my_theme.button_theme;
         button_theme.alignment = .Left;
+        button_theme.font = my_font_small;
 
         basedir := current_directory;
 

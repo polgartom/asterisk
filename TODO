@@ -1,80 +1,11 @@
-[x] Open a window with a dark green background
-[x] Handle key inputs
-[x] Display pressed key on the screen
-[x] Draw caret
-[x] Cursor movement: left, right
-[x] Handle backspace (delete the left character)
-[x] Handle spacebar
-[x] Fix caret X alignment
-[x] Fix caret Y alignment (breaks after some line breaks)
-[x] Parse \n
-[x] Insert spaces when pressing the tab key
-[x] Cursor movement: up, down
-[x] Fix up/down cursor movement if the above row ends with spaces (is this the actual problem?)
-[x] Scale the text properly when resizing the window
-[x] Implement screen scrolling
-[x] Add a small threshold for screen scrolling
-[x] Delete tabs from right
-[x] Draw tabulators (4 spaces) (debug)
-[x] Display frame debug info on the screen instead of the console
-[x] Scroll up or left only if the cursor is at the top or left
-[x] Use   WaitMessage() because of the cputime
-[x] Fix the first chars problem (its caused by the new rendering thing and the row_table)
-[x] Fix the last char problem by adding an extra space ??
-[x] PageUp, PageDown
-[x] Delete char from left
-[x] Delete line
-[x] Delete everything from left
-[x] Delete whole word from right
-[x] Delete subword from right
-[x] DeleteWordFromRight - Delete all the whitespace until we find a non-whitespace character
-[x] Jump the first character and the last character of current the line
-[x] Ctrl-Enter insert line below
-[x] Proper UTF-8
-[X] Word stepping (Ctrl+{arrow})
-[X] Subword stepping (Alt+{arrow})
-[X] Custom u8 buffer instead of string builder
-[X] Editor context which have multiple buffer, we want multiple editor context for split screen
-[X] Need an abstraction for the c_memmove like shift_left or smth
-[X] Parse tab characters "\t" (replace them with 4 spaces) when loading a file
-[X] Open a file
-[x] Move cursor related data to the Buffer struct - later we want multiple cursor support, so refact that way 
-[X] An initialization procedure for the new editor instance, because we need to setup and allocate an empty buffer
-[X] Validate UTF-8 before we load the file data into the buffer
-[X] Range selection
-[X] Save the buffer (file)
-[] Indent to left and right action
-[] System reserved read-only buffers for debugging or for the console output 
-[] Fix word/subword movement if the cursor surrounded with multiple line breaks
-[] Improve word/subword movement mainly because the left and right movement not exactly the same
-[] Cleanup the keymap.jai. We should rename it something like actions.jai also we should simplify the add_proc thing, also use things for the new beta: - "Added Keymap_Set which groups multiple Keymaps that can be activated and deactivated depending on what your program is doing ..."
-[] Move current line up/down with (Alt-{uparrow}, Alt-{downarrow})
-[] Draw spaces. We should remove the current thing because that replaces the spaces with ~ characters which is not gooood!
-[] CRLF line ends? Convert all CRLF to \n. We should do an option for the what we expect of program to do, like convert all of the \n to CRLF
-[] Try to keep the cursor on the same col at the below or above row when we move up or down (just like in vscode)
-[] Keep the cursor center after new occurence has found
-[] Smart movement check { } positions, also we should check the current language
-[] Add a little padding and scrolling offset
-[] Draw right, bottom scrollbar
-[] Search forward (Ctrl+?)
-[] Search backward (Ctrl+:)
-[] Search from the top (Ctrl+F)
-[] Search and replace
-[] Goto line (Ctrl+G)
-[] Copy / paste
-[] Undo / Redo
-[] Markers, also do some visualization for them
-[] Multiple cursor support
-[] File browser
-[] Split editor (split screen)
-[] Separate input handling like if we open a file browser modal we should not handle editor events like insert text and so on
-[] More row_table rebuild proc improvements. Maybe mark the rebuild type like we should do a whole rebuild or a partial rebuild which starting from the last insert character-1
-[] Basic syntax highlighting
-[] Draw the left line which indicates the block from { to } (this option should be toggable)
+Split screen
+Undo/Redo
+File save model
 
-/* IDEAS */
+[Config]
+    - Which file extensions and directories are included, excluded
+    - Specific keybindings for commands and so on...
+    - 
 
-/* PHP */
-phpstan integration
-show errors besides the corresponding rows (maybe cols too)
-show the var types by pressing a key (can we use phpstan for this?)
+[File browser]
+    - Do we wanna use a custom allocator for that, also do we wanna do something like a deep copy procedure which just copy all of the related property of the struct for a specific memory location?

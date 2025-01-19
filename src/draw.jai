@@ -316,6 +316,15 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         Simp.immediate_quad(0.0, p1, r.w, p1 + thick, color); // top
         Simp.immediate_quad(0.0, p2, r.w, p2 + thick, color); // bottom
     }
+    
+    #if CURRENT_LINE_INDICATOR_STYLE == .HIGHLIGHT {
+        color   :: CURRENT_LINE_INDICATOR_COLOR;
+        
+        p1 := bottom + (ch-ch*0.1);
+        p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+
+        Simp.immediate_quad(0.0, p1, r.w, p2, color);
+    }
 
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);

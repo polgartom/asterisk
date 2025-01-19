@@ -17,8 +17,9 @@ CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
 
-CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
-CURRENT_LINE_INDICATOR_COLOR       :: #run Hex4ToVec4Rgba(0x5D2A6DC0);
+// CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
+CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.HIGHLIGHT;
+CURRENT_LINE_INDICATOR_COLOR       :: #run Hex4ToVec4Rgba(0xcccccc_0A);
 CURRENT_LINE_INDICATOR_FRAME_WIDTH :: 2.0;
 
 Current_Line_Indicator_Style :: enum u32 {
@@ -30,9 +31,11 @@ Current_Line_Indicator_Style :: enum u32 {
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 my_font: *Simp.Dynamic_Font;
+my_font_small: *Simp.Dynamic_Font;
 font_width: s64;
 line_height :: 0.0;
-font_size   :: 15;
+font_size       :: 15;
+font_size_small :: 14; // @Incomplete: scale this by the window's ratio 
 
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
@@ -573,8 +576,10 @@ my_init_fonts :: () {
         }
 
         my_font = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
+        my_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
     } else {
         my_font = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+        my_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
         // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
     }
 
