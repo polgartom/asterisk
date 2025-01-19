@@ -172,36 +172,41 @@ update_file_browser_widget :: () {
         list, found := table_find(*table, basedir);
         assert(found, "basedir: %\n", basedir);
 
-        id := 0;
-
         {
-            parent := path_strip_extension(basedir);
-            parent = parent_dir(parent);
+            parent := parent_dir(current_directory);
             PrintDev("parent_dir: %\n", parent);
 
             _, found := table_find(*table, parent);
+            
             theme := button_theme;
             theme.surface_color = Vector4.{.3,.3,.3,1.0};
             if !found {
                 theme.surface_color.w = .2;
                 theme.text_color.w    = .5;
             }
+            if selected_entry_index == -1 {
+                theme.frame_color = .{.2,.9,.3,1.0};
+            }
 
             text := tprint("[UP] %", ifx found then parent else "");
-            _, _, was_just_released := button(s, text, *theme, id, disable_over=!found, disable_press=!found);
+            _, _, was_just_released := button(s, text, *theme, -1, disable_over=!found, disable_press=!found);
         
             if found && was_just_released {
-                print("new parent: %\n", parent);
                 file_browser_change_directory(parent);
             }
             
             s.y -= floor(label_height * 1.1 + 0.5);
-
-            id += 1;
         }
 
+        id := 0;
+
         for list {
-            _, _, was_just_released := button(s, it.name, *button_theme, id);
+            theme := button_theme;
+            if id == selected_entry_index {
+                theme.frame_color = .{.2,.9,.3,1.0};
+            }
+
+            _, _, was_just_released := button(s, it.name, *theme, id);
             if was_just_released {
                 if it.is_directory {
                     child_dir := tprint("%1%2/", basedir, it.name);
@@ -224,6 +229,41 @@ update_file_browser_widget :: () {
         }
 
         end_scrollable_region(region, s.x + s.w, s.y, *file_browser_widget.scroll_value);
+    }
+}
+
+file_browser_change_directory :: (dir: string) {
+    using file_browser_widget;
+
+    if current_directory { // @Hacky
+        list, found := table_find(*table, dir);
+        if !found {
+            log_error("% directory cannot be selected!", dir);
+            return;
+        }
+    }
+
+    modify_string(*current_directory, copy_string(dir));
+    selected_entry_index = -1;
+}
+
+file_browser_select_entry :: (index: s64) {
+    using file_browser_widget;
+    
+    list, found := table_find(*table, current_directory);
+    assert(found, "%\n", current_directory);
+    assert(index < list.count, "index: % ; list: %\n", index, list);
+
+    entry := list[index];
+    if entry.is_directory {
+        dir := tprint("%1%2/", current_directory, entry.name);
+        file_browser_change_directory(dir);
+    } else {
+        fpath := tprint("%1/%2", current_directory, entry.name);
+        assert(file_exists(fpath), "fpath: %\n", fpath);
+
+        open_file_or_create_empty_buffer(editor, fpath);
+        array_add(*user_events, .{ type = .CLOSE_WIDGET });
     }
 }
 
@@ -268,13 +308,6 @@ file_browser_scan :: (start_dir: string) {
     print("[file_browser_scan] entries: % ; duration: %ms\n", table.entries.count, (seconds_since_init() - timer)*1000);
 }
 
-file_browser_change_directory :: (to: string) {
-    using file_browser_widget;
-
-    modify_string(*current_directory, copy_string(to));
-
-    selected_entry = -1;
-}
 
 active_widget: Type;
 
@@ -296,7 +329,7 @@ File_Browser_Widget :: struct {
 
     current_directory: string;
     table: Table(string, [] Path_Info);
-    selected_entry := -1;
+    selected_entry_index := -1;
 
     Path_Info :: struct {
         name: string;

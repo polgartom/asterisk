@@ -10,6 +10,61 @@ CloseCurrentWidget :: () {
     switch_editor_mode(.EDITOR);
 }
 
+ListUp :: () {
+    if active_widget == {
+        case File_Browser_Widget; {
+            using file_browser_widget;
+            
+            entries, found := table_find(*table, current_directory);
+            assert(found, "%\n", current_directory);
+            
+            i := selected_entry_index;
+            i -= 1;
+            
+            // -1 means the first entry of the file list which is the parent directory 
+            if i < -1 && entries.count i = entries.count - 1;
+
+            selected_entry_index = i;
+        }
+    }
+
+}
+
+ListDown :: () {
+    if active_widget == {
+        case File_Browser_Widget; {
+            using file_browser_widget;
+            
+            entries, found := table_find(*table, current_directory);
+            assert(found, "%\n", current_directory);
+            
+            i := selected_entry_index;
+            i += 1;
+
+            // -1 means the first entry of the file list which is the parent directory 
+            if i + 1 > entries.count then i = -1;
+
+            selected_entry_index = i;
+        }
+    }
+
+}
+
+ListEntered :: () {
+    if active_widget == {
+        case File_Browser_Widget; {
+            using file_browser_widget;
+
+            if selected_entry_index == -1 {
+                parent := parent_dir(current_directory);
+                file_browser_change_directory(parent);
+            } else {
+                file_browser_select_entry(selected_entry_index);
+            }
+        }
+    }
+}
+
 // [Editor]
 
 UseSearchWidget :: () {
@@ -1028,6 +1083,10 @@ register_keymap_procedures :: () {
     // Widget
 
     Add(widget_keymap, CloseCurrentWidget);
+    
+    Add(widget_keymap, ListUp);
+    Add(widget_keymap, ListDown);
+    Add(widget_keymap, ListEntered);
 
     // Editor
 
@@ -1132,6 +1191,10 @@ A-F4 Quit
 [Widget]
 
 ESC CloseCurrentWidget
+
+ArrowUp ListUp
+ArrowDown ListDown
+Enter ListEntered
 
 [Editor]
 
