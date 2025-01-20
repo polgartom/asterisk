@@ -82,11 +82,11 @@ get_token_color :: inline (token: string, $lang: Language.Type) -> (found: bool,
                 "if", "else", "elseif", "return", "for", "while", "true", "false", "null", "string",
                 "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "size_t", "char", "short", "unsigned", "long", "int", "bool", "double",
                 "struct", "enum", "const", "continue", "break", "exit", "default", "then", "assert",
-                "#if", "#ifdef", "#ifndef", "#endif", "#define", "#undef", "#include", "class"
+                "#if", "#ifdef", "#ifndef", "#endif", "#define", "#undef", "#include", "class", "union"
             ];
 
-            for RESERVED_IDENTIFIERS {
-                if it == token return true, TOKEN_COLOR_IDENTIFIER;
+            for ident: RESERVED_IDENTIFIERS {
+                if equal_nocase(token, ident) then return true, TOKEN_COLOR_IDENTIFIER;
             }
         }
     };
