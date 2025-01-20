@@ -8,4 +8,6 @@ File save model
     - 
 
 [File browser]
-    - Do we wanna use a custom allocator for that, also do we wanna do something like a deep copy procedure which just copy all of the related property of the struct for a specific memory location?
+
+[] Do we wanna use a custom allocator for that, also do we wanna do something like a deep copy procedure which just copy all of the related property of the struct for a specific memory location?
+[] Scroll to the viewport when using the up and down arrows to navigate the list

@@ -154,8 +154,44 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
 
             left := -left_offset + r.x;
-            t := slice(text, row.end-row.size, row.size);
-            left += draw_text(t, xx left, xx bottom, text_color);
+            line_text := slice(text, row.end-row.size, row.size);
+            
+            {
+                // Tokenize and highlight the current row
+
+                array_reset_keeping_memory(*temp_highlights);
+
+                h_start := 0;
+                t := line_text;
+                while t.count {
+                    ok, token := utf8_extract_identifier(t);
+                    if !token.count break;
+
+                    len := utf8_count_chars(token);
+                    defer {
+                        h_start += len;
+                        advance(*t, token.count);
+                    }
+
+                    if !ok continue;
+
+                    found, token_color := get_token_color(token, .C_STYLE);
+                    if found {
+                        h := array_add(*temp_highlights);
+                        h.start_quad_index = h_start;
+                        h.end_quad_index = h_start + len-1;
+                        h.color = TOKEN_COLOR_IDENTIFIER;
+
+                        // h_t := tprint("%", temp_highlights);
+                        // w := Simp.prepare_text(my_font_small, h_t);
+                        // c := text_color;
+                        // c.w *= .25;
+                        // Simp.draw_prepared_text(my_font_small, xx (window_width - w*1.1), xx bottom, c);
+                    }
+                }
+            }
+
+            left += draw_highlighted_text(my_font, xx left, xx bottom, line_text, highlights=temp_highlights, fallback_color=text_color);
 
             avg_row_render_time += (seconds_since_init()*1000 - time);
             rendered_rows += 1;
@@ -404,6 +440,128 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
     ch := font.character_height;
 
     Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
+}
+
+draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, highlights: [] Text_Highlight, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
+    width := Simp.prepare_text(font, text, 0);
+    Simp.generate_quads_for_prepared_text(font, x, y, 0);
+    draw_highlighted_generated_quads(font, highlights, fallback_color);
+
+    return width;
+}
+
+draw_highlighted_prepared_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, highlights: [] Text_Highlight, fallback_color := Vector4.{1, 1, 1, 1}) {
+    Simp.generate_quads_for_prepared_text(font, x, y, 0);
+    draw_highlighted_generated_quads(font, highlights, fallback_color);
+}
+
+draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, highlights: [] Text_Highlight, fallback_color: Vector4) {
+    #import "GL";
+
+    Simp.CheckInit();
+    quads := font.current_quads;
+
+    if state.current_shader Simp.immediate_flush();
+
+    Simp.set_shader_for_text();
+    Simp.immediate_begin();
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
+    draw_letter_quad :: (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
+        page := quad.glyph.page;
+
+        if page.bitmap_data.width  <= 1 return;
+        if page.bitmap_data.height <= 1 return;
+
+        using quad;
+        uv0 := Vector2.{u0, v0};
+        uv1 := Vector2.{u1, v0};
+        uv2 := Vector2.{u1, v1};
+
+        uv3 := Vector2.{u0, v1};
+
+        Simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
+    }
+
+    GetColor :: (quad_index: s64) -> Vector4 #expand {
+        for `highlights {
+            if quad_index >= it.start_quad_index && quad_index <= it.end_quad_index {
+                return it.color;
+            }
+        }
+
+        return `fallback_color;
+    }
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    last_texture: s64 = -1;
+
+    for quad, i: quads {
+        page := quad.glyph.page;
+        map  := *page.texture;
+
+        if page.dirty {
+            page.dirty = false;
+            Simp.texture_load_from_bitmap(map, page.bitmap_data);
+        }
+
+        if map.gl_handle != last_texture {
+            Simp.immediate_flush();
+            handle := map.gl_handle;
+            last_texture = handle;
+
+            shader := state.current_shader;
+            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            if loc < 0  log_error("Unable to find text_sampler in shader_text!");
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
+            glUniform1i(loc, 0);
+        }
+
+        color := GetColor(i);
+        draw_letter_quad(font, quad, color);
+    }
+
+    Simp.immediate_flush();
+
+    glDisable(GL_BLEND);
+}
+
+// tokenize_and_highlight :: (editor: *Editor, buffer: *Buffer) {
+//     array_reset_keeping_memory(*highlights);
+
+//     first_index := first_visible_row_index(editor, buffer);
+//     last_index  := last_visible_row_index(editor, buffer);
+
+//     first_row := buffer.row_table[first_index];
+//     last_row := buffer.row_table[first_index];
+
+//     t := slice(buffer, first_row.start, end_row.end);
+//     while t.count {
+//         ok, token := utf8_extract_identifier(t);
+//         if !ok {
+//             if t[0] == #char "\"" {
+
+//             } else {
+
+//             }
+//         }
+//     }
+
+// }
+
+temp_highlights: [..] Text_Highlight;
+
+Text_Highlight :: struct {
+    start_quad_index: s64;
+    end_quad_index: s64;
+    color: Vector4;
 }
 
 DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};

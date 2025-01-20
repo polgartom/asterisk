@@ -1,4 +1,3 @@
-
 window_width  := 1200;
 window_height := 1200;
 
@@ -11,11 +10,14 @@ last_rendering_time  : float64;
 
 // Blackboard theme
 bg_color          :: #run RgbaToVec4(12, 16, 33);
-text_color        :: #run RgbaToVec4(248, 248, 248);
+text_color        :: #run RgbaToVec4(221, 221, 221);
 CURSOR_COLOR      :: #run Hex4ToVec4Rgba(0xFBDE2Dc0);
 CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
+
+// TOKEN_COLOR_IDENTIFIER :: #run Hex4ToVec4Rgba(0xFBDE2DA0);
+TOKEN_COLOR_IDENTIFIER :: #run RgbaToVec4(221, 100, 40);
 
 // CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
 CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.HIGHLIGHT;
@@ -81,6 +83,10 @@ powersaving := POWERSAVE_BUILD;
 
 main :: () {
     print("\n\n");
+
+    {
+        // array_add(*common_identifiers, "if", "else", "return", "for", "while", "true", "false", "null", "#if", "#ifdef", "#endif", "#define");
+    }
 
     {    
         format := *context.print_style.default_format_struct;
