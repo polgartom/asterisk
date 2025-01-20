@@ -15,6 +15,7 @@
     set_optimization(*options, .VERY_DEBUG);
     options.output_path = "build";
     options.output_executable_name = "asterisk_devbuild";
+
     window_name := "Asterisk (dev build)";
 
     options.backend = .X64;

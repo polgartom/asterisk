@@ -16,9 +16,6 @@ CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
 
-// TOKEN_COLOR_IDENTIFIER :: #run Hex4ToVec4Rgba(0xFBDE2DA0);
-TOKEN_COLOR_IDENTIFIER :: #run RgbaToVec4(180, 90, 45);
-
 // CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
 CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.HIGHLIGHT;
 CURRENT_LINE_INDICATOR_COLOR       :: #run Hex4ToVec4Rgba(0xcccccc_0A);
@@ -646,12 +643,6 @@ is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
            ;
 }
 
-is_whitespace :: inline (c: s64) -> bool {
-    assert(c != #char "\t", "We should convert all of the tabs to spaces");
-
-    return c == #char " " || c == #char "\n";
-}
-
 count_whitespaces_from_left :: (s: string) -> s64 {
     count := 0;
     for c: s {
@@ -830,7 +821,8 @@ mode := Program_Mode.EDITOR;
 #load "draw.jai";
 #load "event.jai";
 #load "widget.jai";
-#load "language_support.jai";
+
+#import "Language_Support";
 
 CodeInspect :: #import,file "code_inspect.jai";
 

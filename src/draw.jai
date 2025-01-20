@@ -144,6 +144,8 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
         // end_row = clamp(end_row + 1, end_row, row_table.count-1);
         end_row := last_visible_row_index(editor, buffer);
 
+        // colors := get_color_regions_range(color_regions, start_row.start, end_row.end);
+
         for row_index: start_row..end_row {
             row := row_table[row_index];
             if row.size == 0 continue;
@@ -155,41 +157,41 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
 
             left := -left_offset + r.x;
             line_text := slice(text, row.end-row.size, row.size);
-            
-            {
-                // Tokenize and highlight the current row
 
-                array_reset_keeping_memory(*temp_highlights);
+            find_color_region_index(color_regions
 
-                h_start := 0;
-                t := line_text;
-                while t.count {
-                    ok, token := utf8_extract_identifier(t);
-                    if !token.count break;
+            // {
+            //     // Tokenize and highlight the current row
+            //     array_reset_keeping_memory(*temp_highlights);
+            //     h_start := 0;
+            //     t := line_text;
+            //     while t.count {
+            //         ok, token := utf8_extract_identifier(t);
+            //         if !token.count break;
 
-                    len := utf8_count_chars(token);
-                    defer {
-                        h_start += len;
-                        advance(*t, token.count);
-                    }
+            //         len := utf8_count_chars(token);
+            //         defer {
+            //             h_start += len;
+            //             advance(*t, token.count);
+            //         }
 
-                    if !ok continue;
+            //         if !ok continue;
 
-                    found, token_color := get_token_color(token, .C_STYLE);
-                    if found {
-                        h := array_add(*temp_highlights);
-                        h.start_quad_index = h_start;
-                        h.end_quad_index = h_start + len-1;
-                        h.color = TOKEN_COLOR_IDENTIFIER;
+            //         found, token_color := get_token_type_color(token);
+            //         if found {
+            //             h := array_add(*temp_highlights);
+            //             h.start_quad_index = h_start;
+            //             h.end_quad_index = h_start + len-1;
+            //             h.color = TOKEN_COLOR_IDENTIFIER;
 
-                        // h_t := tprint("%", temp_highlights);
-                        // w := Simp.prepare_text(my_font_small, h_t);
-                        // c := text_color;
-                        // c.w *= .25;
-                        // Simp.draw_prepared_text(my_font_small, xx (window_width - w*1.1), xx bottom, c);
-                    }
-                }
-            }
+            //             // h_t := tprint("%", temp_highlights);
+            //             // w := Simp.prepare_text(my_font_small, h_t);
+            //             // c := text_color;
+            //             // c.w *= .25;
+            //             // Simp.draw_prepared_text(my_font_small, xx (window_width - w*1.1), xx bottom, c);
+            //         }
+            //     }
+            // }
 
             left += draw_highlighted_text(my_font, xx left, xx bottom, line_text, highlights=temp_highlights, fallback_color=text_color);
 
@@ -533,27 +535,24 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, highlights: [] Te
     glDisable(GL_BLEND);
 }
 
-// tokenize_and_highlight :: (editor: *Editor, buffer: *Buffer) {
-//     array_reset_keeping_memory(*highlights);
+// get_token_type_color :: inline (token: string, $lang: Language_Type) -> (found: bool, color: Vector4) {
+//     #if lang == {
+//         case .C_STYLE; {
+//             RESERVED_IDENTIFIERS :: string.[
+//                 "if", "else", "elseif", "return", "for", "while", "true", "false", "null", "string",
+//                 "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "size_t", "char", "short", "unsigned", "long", "int", "bool", "double",
+//                 "struct", "enum", "const", "continue", "break", "exit", "default", "then", "assert",
+//                 "#if", "#ifdef", "#ifndef", "#endif", "#define", "#undef", "#include", "class", "union"
+//             ];
 
-//     first_index := first_visible_row_index(editor, buffer);
-//     last_index  := last_visible_row_index(editor, buffer);
-
-//     first_row := buffer.row_table[first_index];
-//     last_row := buffer.row_table[first_index];
-
-//     t := slice(buffer, first_row.start, end_row.end);
-//     while t.count {
-//         ok, token := utf8_extract_identifier(t);
-//         if !ok {
-//             if t[0] == #char "\"" {
-
-//             } else {
-
+//             for ident: RESERVED_IDENTIFIERS {
+//                 if equal_nocase(token, ident) then return true, TOKEN_COLOR_IDENTIFIER;
 //             }
 //         }
-//     }
+//     };
 
+//     fallback_color :: text_color;
+//     return false, fallback_color;
 // }
 
 temp_highlights: [..] Text_Highlight;

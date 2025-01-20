@@ -1,4 +1,3 @@
-
 get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
     assert(index < row_table.count);
 
@@ -186,6 +185,7 @@ rescan_line_ends :: (using buffer: *Buffer) {
         pos += 1; // because of the line end
     }
 
+    create_color_regions(buffer); // @Cleanup: Remove from here
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
@@ -260,6 +260,57 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     buffer.* = new_buffer;
 }
 
+create_color_regions :: (using buffer: *Buffer) {
+    array_reset_keeping_memory(*color_regions);
+
+    s := to_string(buffer);
+    // tokens := tokenize(s, lang=buffer.language);
+    tokens := tokenize(s, language = .C_STYLE);
+    defer if tokens.count array_free(tokens);
+
+
+    array_add(*color_regions, .{pos=0, color=text_color});
+    at := 0;
+    for tokens {
+        color := get_token_type_color(it.type);
+        if color != text_color {
+            array_add(*color_regions, .{pos=at, color=color});
+            array_add(*color_regions, .{pos=at+it.count, color=text_color});
+        }
+    }
+}
+
+find_color_region_index :: inline (regions: [] Color_Region, pos: s64) -> (index: s64) {
+    for regions {
+        if pos <= it.pos {
+            return it_index;
+        }
+    }
+
+    return -1;
+}
+
+get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end_pos: s64) -> (color_regions: [] Color_Region) {
+    assert(regions.count > 0);
+    
+    start_index := find_color_region_index(regions, start_pos);
+    if start_index == -1 {
+        start_index = 0;
+    }
+    
+    end_index := find_color_region_index(regions, end_pos);
+    if end_index == -1 {
+        end_index = regions.count - 1;
+    }
+
+    count := end_index - start_index;
+    if count == 0 then count = 1;
+    
+    return array_view(regions, start_index, count);
+}
+
+BUFFER_PAGE_SIZE :: 4096;
+
 Buffer :: struct {
     data:      *u8;
     count:     s64;
@@ -271,17 +322,19 @@ Buffer :: struct {
     row_table: [..] Row_Info;
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
-    
+
+    color_regions: [..] Color_Region;
+    // rebuild_color_regions := false;
+
     filepath: string;
     exists_on_disk: bool;
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
+    language: Language = .PLAIN_TEXT;
     read_only := false;
     dirty := false;
     initialized := false;
 }
-
-BUFFER_PAGE_SIZE :: 4096;
 
 // @Speed: Shrink the struct size because we use 3 × 8 bytes per row which is quite inefficient!
 Row_Info :: struct {
@@ -289,3 +342,8 @@ Row_Info :: struct {
     end:   s64;
     size:  s64;
 }
+
+Color_Region :: struct {
+    pos: s64;
+    color: Vector4;
+};

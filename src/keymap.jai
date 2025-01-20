@@ -1049,18 +1049,29 @@ IndentRight :: () {
 
 }
 
-AddSelectionToNextFindMatch :: () {
+// @Incomplete !!!
+ExtendSelectionByToken :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    s := slice(buffer, _cursor.pos, buffer.count - _cursor.pos);
-    success, identifier := utf8_extract_identifier(s);
-    if success {
-        set_cursor_pos(buffer, *_cursor, _cursor.pos + identifier.count, horizontal=true, with_selection=false);
+    s := to_string(buffer);
+    advance(*s, _cursor.pos);
+
+    if !s return;
+    if !is_alphanum(s[0]) return;
+
+    t := s;
+    while t {
+        if is_separator(t[0], include_underscore=false) {
+            ident := slice(buffer, _cursor.pos, t.data - s.data);
+            set_cursor_pos(buffer, *_cursor, _cursor.pos + ident.count, horizontal=true, with_selection=false);
+            break;
+        }
+
+        utf8_advance_one_character(*t);
     }
 
     // @Incomplete: Currently, we are working with one cursor instance per buffer
-
 }
 
 ////////////////////////////////////
@@ -1144,7 +1155,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ExpandSelectionViewPortUp);
     Add(editor_keymap, ExpandSelectionViewPortDown);
 
-    Add(editor_keymap, AddSelectionToNextFindMatch);
+    Add(editor_keymap, ExtendSelectionByToken);
 
     Add(editor_keymap, IndentLeft);
     Add(editor_keymap, IndentRight);
@@ -1255,7 +1266,7 @@ C-S-ArrowRight ExpandSelectionRightbyWord
 C-S-PageUp ExpandSelectionViewPortUp
 C-S-PageDown ExpandSelectionViewPortDown
 
-C-d AddSelectionToNextFindMatch
+C-d ExtendSelectionByToken
 
 C-] IndentRight
 C-[ IndentLeft
