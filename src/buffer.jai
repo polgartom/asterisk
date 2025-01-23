@@ -264,20 +264,23 @@ create_color_regions :: (using buffer: *Buffer) {
     array_reset_keeping_memory(*color_regions);
 
     s := to_string(buffer);
-    // tokens := tokenize(s, lang=buffer.language);
     tokens := tokenize(s, language = .C_STYLE);
     defer if tokens.count array_free(tokens);
 
+    // if tokens.count == 0 then array_add(*color_regions, .{pos=0, color=text_color});
 
-    array_add(*color_regions, .{pos=0, color=text_color});
     at := 0;
     for tokens {
         color := get_token_type_color(it.type);
         if color != text_color {
-            array_add(*color_regions, .{pos=at, color=color});
-            array_add(*color_regions, .{pos=at+it.count, color=text_color});
+            array_add(*color_regions, .{pos=it.byte_pos, color=color});
+            array_add(*color_regions, .{pos=it.byte_pos + it.count, color=text_color});
         }
     }
+
+    print("[tokens]: % \n\n[regions]: %\n\n", tokens, color_regions);
+
+    // print("color_regions: %\n", color_regions);
 }
 
 find_color_region_index :: inline (regions: [] Color_Region, pos: s64) -> (index: s64) {

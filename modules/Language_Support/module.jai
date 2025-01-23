@@ -2,11 +2,15 @@
 
 get_token_type_color :: inline (type: Token_Type) -> Vector4 {
     if type == {
-        case KEYWORD;   return #run RgbaToVec4(180, 90, 45);
-        case DIRECTIVE; return #run RgbaToVec4(180, 90, 45);
+        case .KEYWORD;        return Vector4.{180/255.0, 90/255.0, 45/255.0, 1.0};
+        case .DIRECTIVE;      return Vector4.{180/255.0, 90/255.0, 45/255.0, 1.0};
+        case .PROCEDURE_CALL; return Vector4.{150/255.0, 100/255.0, 150/255.0, 1.0};
+
+        case .COMMENT_INLINE; return Vector4.{10/255.0, 100/255.0, 10/255.0, 1.0};
+        case .COMMENT_MULTILINE; return Vector4.{50/255.0, 50/255.0, 50/255.0, 1.0};
     };
 
-    return text_color;
+    return Vector4.{221/255.0, 221/255.0, 221/255.0, 1.0};
 }
 
 tokenize :: (s: string, $language: Language) -> [] Token {
@@ -48,109 +52,74 @@ is_digit :: inline (c: u32) -> bool{
     return (c >= #char "0" && c <= #char "9");
 }
 
-is_alphanum :: inline (c: u32) -> bool{
+is_alphanum :: (c: u32) -> bool {
     return is_alpha(c) || is_digit(c) || c == #char "_";
 }
 
-is_whitespace :: inline (c: s64) -> bool {
+is_whitespace :: inline (c: u32) -> bool {
     assert(c != #char "\t", "We should convert all of the tabs to spaces");
     return c == #char " " || c == #char "\n";
 }
 
+is_line_end :: inline (c: u32) -> bool {
+    assert(c != #char "\r", "We should convert all of the \\r (CRs) to \\n (LRs)");
+    return c == #char "\n";
+}
+
 ////////////////////////
 
-eat_char :: inline (using lexer: *Lexer) -> bool {
-    success, character := peak_next_char(lexer);
-    if !success return false;
-    
-    bytes := 1 + trailingBytesForUTF8[character];
-    char_pos += 1;
-    cr += bytes;
-
-    return true;
+eat_characters :: inline (using lexer: *Lexer, bytes: s64 = 1) {
+    defer c = ifx cursor then cursor[0] else 0;
+    if cursor then advance(*cursor, bytes);
 }
 
-eat_spaces :: inline (using lexer: *Lexer, $move_both_cursor := true) {
-    t := advance(text, cr);
-    while t {
-        defer advance(*t, 1);
-        if is_whitespace(t[0]) break;
+eat_character :: inline (using lexer: *Lexer) {
+    eat_characters(lexer, bytes=1);
+}
+
+eat_whitespaces :: inline (using lexer: *Lexer) {
+    while cursor && is_whitespace(c) {
+        eat_character(lexer);
     }
-
-    cr = t.data - text.data;
-    #if move_both_cursor then keep_up_left_cursor(lexer);
 }
 
-eat_multibyte_alphanum_chars :: inline (using lexer: *Lexer, $move_both_cursor := true) {
-    t := advance(text, cr);
-    while t {
-        bytes := utf8_char_in_bytes(t);
-        if bytes == 1 && !is_alphanum(t[0]) {
-            break;
-        }
-        advance(*t, bytes);
+eat_multibyte_alphanum_characters :: (using lexer: *Lexer) {
+    while cursor {
+        bytes := 1 + trailingBytesForUTF8[c];
+        if bytes == 1 && !is_alphanum(c) break;
+        eat_characters(lexer, bytes);
     }
-
-    cr = t.data - text.data;
-    #if move_both_cursor then keep_up_left_cursor(lexer);
 }
 
-peak_next_char :: inline (using lexer: *Lexer) -> bool, u32 {
-    t := advance(text, cr);
-    bytes := utf8_char_in_bytes(t);
-    advance(*t, bytes);
+peak_next_character :: inline (using lexer: *Lexer) -> u32 {
+    if cursor.count < 2 return 0;
+    return cursor[1];
+}
+
+add_token :: (using lexer: *Lexer) -> *Token {
+    count    := cursor.data - left_cursor.data;
+    byte_pos := (cursor.data - text.data) - count;
     
-    if !t return false, 0;
-    return true, t[0];
-}
-
-get_char :: inline (using lexer: *Lexer) -> u32 {
-    if !text return 0;
-    return text[cr];
-}
-
-add_token :: (using lexer: *Lexer) -> *Token { // Return null on unsuccessful
-    if cr == cl return null;
+    if count == 0 return null;
 
     token := array_add(*tokens);
-    token.* = .{byte_pos = cl, char_pos = char_pos, count = cr - cl, type = .UNKNOWN};
-    
+    token.* = .{byte_pos=byte_pos, count=count, type=.UNKNOWN};
     return token;
 }
 
-keep_up_left_cursor :: inline (using lexer: *Lexer) {
-    cl = cr;
-}
-
-slice :: inline (using lexer: *Lexer) -> string {
-    return slice(text, cl, cr - cl);
-}
-
-utf8_char_in_bytes :: inline (s: string) -> s64 {
-    assert(s.count > 0);
-    return 1 + trailingBytesForUTF8[s[0]];
-}
-
-to_string :: inline (lexer: *Lexer, token: *Token) -> string {
-    return slice(lexer.text, token.byte_pos, token.count);
-}
-
 Lexer :: struct {
-    cl: s64;
-    cr: s64;
+    c: u32;
 
-    char_pos: s64;
+    cursor: string;
+    left_cursor: string;
 
     text: string;
-    initial_text: string;
 
     tokens: [..] Token;
 };
 
 Token :: struct {    
     byte_pos: s64;
-    char_pos: s64;
-
     count: s64;
 
     type: Token_Type;
@@ -163,7 +132,10 @@ Token_Type :: enum {
     NUMBER_LITERAL      :: 3;
     STRING_LITERAL      :: 4;
     DIRECTIVE           :: 5;
-    PROCEDURE_CALL      :: 1;
+    PROCEDURE_CALL      :: 6;
+
+    COMMENT_INLINE      :: 7;
+    COMMENT_MULTILINE   :: 8;
 }
 
 Language :: enum_flags u64 {

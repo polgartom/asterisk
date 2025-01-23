@@ -1,64 +1,105 @@
 #scope_export
 
-tokenize_c :: (text: string) -> [..] Token {
-    lexer := Lexer.{text=text, initial_text=text};
+tokenize_c :: (input_text: string) -> [] Token {
+    if !input_text return .[];
 
-    while lexer.cr < text.count {
-        c := get_char(*lexer);
+    lexer := Lexer.{c=input_text[0], cursor=input_text, text=input_text};
+    using lexer;
 
-        if is_whitespace(c) {
-            eat_spaces(*lexer);
+    while cursor {
+        if is_alpha(c) || c == #char "#" {
+            parse_identifier(*lexer);
             continue;
-
-        } else if is_alpha(c) {
-            token := parse_identifier(*lexer);
-            if token then token.type = guess_token_type(*lexer, token);
-
-        } else if c == #char "#" {
-            token := parse_identifier(*lexer);
-            if token then token.type = .DIRECTIVE;
+        } else if c == #char "/" {
+            nc := peak_next_character(*lexer);
+            if nc == #char "*" {
+                parse_multiline_comment(*lexer);
+                continue;
+            } else if nc == #char "/" {
+                parse_inline_comment(*lexer);
+                continue;
+            }
         }
-
-        if !eat_char(*lexer) break;
+        
+        eat_character(*lexer);
     }
     
     return lexer.tokens;
 }
 
-parse_identifier :: (using lexer: *Lexer) -> *Token {
-    keep_up_left_cursor(lexer);
+parse_identifier :: (using lexer: *Lexer) {
+    left_cursor = cursor;
+    eat_character(lexer);
 
-    while true {
-        success, c := peak_next_char(lexer);
-        if !success break;
-
-        if 1 + trailingBytesForUTF8[c] > 1 {
-            eat_multibyte_alphanum_chars(lexer);
-            return null;
+    while cursor {
+        is_multibyte_char := trailingBytesForUTF8[c];
+        if is_multibyte_char {
+            eat_multibyte_alphanum_characters(lexer);
+            return;
         }
+
+        defer eat_character(lexer);
 
         if !is_alphanum(c) {
-            break;
+            token := add_token(lexer);
+            if token != null then token.type = guess_token_type(lexer, token);
+            return;
         }
+    }
+}
 
-        eat_char(lexer);
+parse_inline_comment :: (using lexer: *Lexer) {
+    left_cursor = cursor;
+    eat_character(lexer);
+
+    while cursor {
+        if is_line_end(c) break;
+        eat_character(lexer);
     }
 
     token := add_token(lexer);
-    return token;
+    token.type = .COMMENT_INLINE;
+}
+
+parse_multiline_comment :: (using lexer: *Lexer) {
+    left_cursor = cursor;
+    eat_character(lexer);
+
+    end_found := false;
+    while cursor {
+        if inline begins_with(cursor, "*/") {
+            eat_characters(lexer, 2);
+            end_found = true;
+            break;
+        }
+
+        eat_character(lexer);
+    }
+
+    token := add_token(lexer);
+    token.type = .COMMENT_MULTILINE;
+    
+    // @Cleanup: It's silly because at this point we probably got an EOF
+    if !end_found {
+        eat_character(lexer);
+    }
 }
 
 guess_token_type :: (lexer: *Lexer, token: *Token) -> Token_Type {
-    s := to_string(lexer, token);
+    s := slice(lexer.text, token.byte_pos, token.count);
     assert(s.count > 0);
 
-    if s[0] == #char "#"                    return .DIRECTIVE;
-    
-    ok, next_char := peak_next_char(lexer);
-    if ok && next_char == #char "("         return .PROCEDURE_CALL;
-    
-    if match_with_any_keyword(s)            return .KEYWORD;
+    if s[0] == #char "#" return .DIRECTIVE;
 
+    if match_with_any_keyword(s) return .KEYWORD;
+    
+    if token.byte_pos + token.count < lexer.text.count {
+        next_character := lexer.text[token.byte_pos + token.count];
+        if next_character == #char "(" {
+            return .PROCEDURE_CALL;
+        }
+    }
+    
     return .UNKNOWN;
 }
 
@@ -71,42 +112,6 @@ match_with_any_keyword :: inline (token_str: string) -> bool {
 
     return false;
 }
-
-// parse_identifier_like :: (using lexer: *Lexer) -> (valid: bool) {
-//     while cr < text.count {
-//         next_char := peak_next_char(lexer);
-        
-//         if 1 + trailingBytesForUTF8[next_char] > 1 {
-//             // Invalid identifier character detected which is not a separator, like "ifá" or "őreturn"...
-//             eat_multibyte_alphanum_chars(lexer);
-//             return false;
-//         }
-
-//         if !is_alphanum(next_char) {
-//             break;
-//         }
-
-//         eat_char(lexer);
-//     }
-
-//     return true;
-// }
-
-
-// parse_identifier :: (using lexer: *Lexer) -> bool, *Token {
-//     parse_identifier_like(lexer);
-
-//     valid, token := add_token(lexer, .IDENTIFIER);
-//     return valid, token;
-// }
-
-// parse_directive :: (lexer: *Lexer) -> bool, *Token {
-//     valid, token := parse_identifier(lexer);
-//     if !valid return false, token;
-
-//     token.type = .DIRECTIVE;
-//     return true, token;
-// }
 
 #scope_file
 

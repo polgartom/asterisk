@@ -778,6 +778,12 @@ parent_dir :: (path: string) -> string {
     return slice(t, 0, index+1); // +1 because we want to keep the last "/" character
 }
 
+advance :: (arr: *[]$T, steps := 1) {
+    assert(arr.count - steps > -1 && steps > -1);
+
+    arr.data  += steps;
+    arr.count -= steps;
+}
 
 RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
     return Vector4.{

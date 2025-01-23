@@ -158,8 +158,6 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             left := -left_offset + r.x;
             line_text := slice(text, row.end-row.size, row.size);
 
-            find_color_region_index(color_regions
-
             // {
             //     // Tokenize and highlight the current row
             //     array_reset_keeping_memory(*temp_highlights);
@@ -193,7 +191,7 @@ draw_frame :: (text: string, second_elapsed: bool, current_time: float64) {
             //     }
             // }
 
-            left += draw_highlighted_text(my_font, xx left, xx bottom, line_text, highlights=temp_highlights, fallback_color=text_color);
+            left += draw_highlighted_text(my_font, xx left, xx bottom, line_text, buffer, row_index, fallback_color=text_color);
 
             avg_row_render_time += (seconds_since_init()*1000 - time);
             rendered_rows += 1;
@@ -444,20 +442,20 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
     Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
 }
 
-draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, highlights: [] Text_Highlight, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
+// draw_highlighted_prepared_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, row: Row_Info, fallback_color := Vector4.{1, 1, 1, 1}) {
+//     Simp.generate_quads_for_prepared_text(font, x, y, 0);
+//     draw_highlighted_generated_quads(font, row, fallback_color);
+// }
+
+draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, buffer: *Buffer, row_index: s64, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
     width := Simp.prepare_text(font, text, 0);
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
-    draw_highlighted_generated_quads(font, highlights, fallback_color);
+    draw_highlighted_generated_quads(font, buffer, row_index, fallback_color);
 
     return width;
 }
 
-draw_highlighted_prepared_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, highlights: [] Text_Highlight, fallback_color := Vector4.{1, 1, 1, 1}) {
-    Simp.generate_quads_for_prepared_text(font, x, y, 0);
-    draw_highlighted_generated_quads(font, highlights, fallback_color);
-}
-
-draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, highlights: [] Text_Highlight, fallback_color: Vector4) {
+draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, using buffer: *Buffer, row_index: s64, fallback_color: Vector4) {
     #import "GL";
 
     Simp.CheckInit();
@@ -487,22 +485,28 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, highlights: [] Te
         Simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
     }
 
-    GetColor :: (quad_index: s64) -> Vector4 #expand {
-        for `highlights {
-            if quad_index >= it.start_quad_index && quad_index <= it.end_quad_index {
-                return it.color;
-            }
-        }
-
-        return `fallback_color;
-    }
-
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    row := row_table[row_index];
+
     last_texture: s64 = -1;
+    byte_pos := row.start;
+    color := fallback_color;
+    text := get_row_as_string(buffer, row);
+
+    regions := color_regions;
+
+    PrintDev("regions: %\n", regions, slice(text, 0, 1));
+    
+    while regions {
+        if row.start <= regions[0].pos break;
+        advance(*regions, 1);
+    }
+
+    PrintDev("regions_filtered: % ; start: %\n", regions, slice(text, 0, 1));
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -526,41 +530,23 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, highlights: [] Te
             glUniform1i(loc, 0);
         }
 
-        color := GetColor(i);
+        if regions.count && byte_pos >= regions[0].pos {
+            before_color := color;
+            color = regions[0].color;
+            
+            advance(*regions, 1);
+        }
+
         draw_letter_quad(font, quad, color);
+
+        bytes := 1 + trailingBytesForUTF8[text[0]];
+        advance(*text, bytes);
+        byte_pos += bytes;
     }
 
     Simp.immediate_flush();
 
     glDisable(GL_BLEND);
-}
-
-// get_token_type_color :: inline (token: string, $lang: Language_Type) -> (found: bool, color: Vector4) {
-//     #if lang == {
-//         case .C_STYLE; {
-//             RESERVED_IDENTIFIERS :: string.[
-//                 "if", "else", "elseif", "return", "for", "while", "true", "false", "null", "string",
-//                 "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "size_t", "char", "short", "unsigned", "long", "int", "bool", "double",
-//                 "struct", "enum", "const", "continue", "break", "exit", "default", "then", "assert",
-//                 "#if", "#ifdef", "#ifndef", "#endif", "#define", "#undef", "#include", "class", "union"
-//             ];
-
-//             for ident: RESERVED_IDENTIFIERS {
-//                 if equal_nocase(token, ident) then return true, TOKEN_COLOR_IDENTIFIER;
-//             }
-//         }
-//     };
-
-//     fallback_color :: text_color;
-//     return false, fallback_color;
-// }
-
-temp_highlights: [..] Text_Highlight;
-
-Text_Highlight :: struct {
-    start_quad_index: s64;
-    end_quad_index: s64;
-    color: Vector4;
 }
 
 DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
