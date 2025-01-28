@@ -144,14 +144,20 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
 
-    editor = create_editor();
+    active_editor = create_editor();
     
     for filepath: files_from_cmdline {
-        open_file_or_create_empty_buffer(editor, filepath);
+        open_file_or_create_empty_buffer(active_editor, filepath);
     }
 
-    if !editor.active_buffer {
-        editor.active_buffer = create_or_find_empty_buffer(editor);
+    if !active_editor.active_buffer {
+        active_editor.active_buffer = create_or_find_empty_buffer(active_editor);
+    }
+
+    // @Temporary
+    editor2 := create_editor();
+    if !editor2.active_buffer {
+        editor2.active_buffer = create_or_find_empty_buffer(editor2);
     }
 
     while !should_quit {
@@ -182,6 +188,7 @@ main :: () {
 
                 if should_reinit {
                     my_init_fonts();
+                    request_editor_top_left_offsets_recalc();
                 }
             }
         }
@@ -221,47 +228,28 @@ main :: () {
                     ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                    _, buffer := get_active_editor_and_buffer(); // @Temporary
                     insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
                 }
             }
         }
 
-        text := to_string(editor.active_buffer);
-        if editor.active_buffer.rebuild_row_table {
-            rescan_line_ends(editor.active_buffer);
-        }
-
-        if draw_special_chars {
-            // Tabs
-            spaces := 0;
-            for 0..text.count-1 {
-                ch := text.data[it];
-                if ch == #char " " {
-                    spaces += 1;
-                    if spaces == TAB_SIZE_IN_SPACES {
-                        tab := slice(text, it-spaces+1, it);
-                        for j: it-spaces+1..it {
-                            text.data[j] = #char "~";
-                        }
-                        spaces = 0;
-                    }
-                } else {
-                    spaces = 0;
-                }
+        for *editor: editors {
+            if editor.active_buffer.rebuild_row_table {
+                rescan_line_ends(editor.active_buffer);
             }
+
+            assert(editor.active_buffer != null && editor.active_buffer.initialized);
+
+            editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
+            get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
         }
-
-        assert(editor.active_buffer != null && editor.active_buffer.initialized);
-
-        editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
-        get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
 
         if show_debug_info {
             debug_time := seconds_since_init();
 
-            editor, buffer := get_active_editor_and_buffer();
-            using editor;
+            active_editor, buffer := get_active_editor_and_buffer();
+            using active_editor;
 
             #if 1 {
                 PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
@@ -295,7 +283,7 @@ main :: () {
             last_simulation_time = (seconds_since_init()-last_time)*1000;
         }
 
-        draw_frame(text, second_elapsed, last_time);
+        draw_frame(second_elapsed, last_time);
         swap_buffers(my_window);
         
         // sleep_milliseconds(20); // @Temporary
@@ -521,7 +509,7 @@ get_cursor_y :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
     return window_height - xx get_line_height(row_index + 1);
 }
 
-get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
+get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Font = null) -> s64 {
     if cursor.pos == 0 return 0;
     if cursor.x_cache != -1 return cursor.x_cache;
 
@@ -535,7 +523,9 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
 
     s := get_row_as_string(buffer, row);
     s = slice(s, 0, cursor.pos - row.start);
-    cx = measure_text_width(my_font, s);
+    
+    if !font font = my_font;
+    cx = measure_text_width(font, s);
 
     return cx;
 }
@@ -582,18 +572,28 @@ my_init_fonts :: () {
 
         my_font = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
         my_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
+
+        primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
+        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
     } else {
-        my_font = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+        my_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
         my_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
-        // my_font = Simp.get_font_at_size("./../data", "local/font.ttf", pixel_height+2);
+        
+        primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
+        primary_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
     }
+
+    print("[font]: %\n\n", my_font.*);
 
     assert(my_font != null);
 }
 
-current_font_width :: () -> s64 {
+primary_font: *Simp.Dynamic_Font;
+primary_font_small: *Simp.Dynamic_Font;
+
+em :: (x: float = 1.0) -> float {
     assert(my_font != null);
-    return my_font.em_width;
+    return my_font.em_width * x;
 }
 
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {

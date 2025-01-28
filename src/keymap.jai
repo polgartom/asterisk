@@ -67,6 +67,19 @@ ListEntered :: () {
 
 // [Editor]
 
+SwitchOrSplitEditorPanel :: () {
+    c := active_editor;
+
+    if !editors[1].visible {
+        editors[1].visible = true;
+        active_editor = *editors[1];
+        return;
+    }
+
+    if      *editors[0] == active_editor then active_editor = *editors[1];
+    else if *editors[1] == active_editor then active_editor = *editors[0];
+}
+
 UseSearchWidget :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Search_Widget;
@@ -1101,9 +1114,10 @@ register_keymap_procedures :: () {
 
     // Editor
 
+    Add(editor_keymap, SwitchOrSplitEditorPanel);
+
     Add(editor_keymap, UseSearchWidget);
     Add(editor_keymap, UseFileBrowserWidget);
-
 
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
@@ -1209,9 +1223,10 @@ Enter ListEntered
 
 [Editor]
 
+C-, SwitchOrSplitEditorPanel
+
 C-f UseSearchWidget
 C-p UseFileBrowserWidget
-
 
 F1 ToggleDevInfo
 

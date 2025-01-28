@@ -218,7 +218,7 @@ update_file_browser_widget :: () {
                     fpath := tprint("%1/%2", basedir, it.name);
                     assert(file_exists(fpath), "fpath: %\n", fpath);
 
-                    open_file_or_create_empty_buffer(editor, fpath);
+                    open_file_or_create_empty_buffer(active_editor, fpath);
                     array_add(*user_events, .{ type = .CLOSE_WIDGET });
                 }
             }
@@ -262,7 +262,7 @@ file_browser_select_entry :: (index: s64) {
         fpath := tprint("%1/%2", current_directory, entry.name);
         assert(file_exists(fpath), "fpath: %\n", fpath);
 
-        open_file_or_create_empty_buffer(editor, fpath);
+        open_file_or_create_empty_buffer(active_editor, fpath);
         array_add(*user_events, .{ type = .CLOSE_WIDGET });
     }
 }

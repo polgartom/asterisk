@@ -278,7 +278,7 @@ create_color_regions :: (using buffer: *Buffer) {
         }
     }
 
-    print("[tokens]: % \n\n[regions]: %\n\n", tokens, color_regions);
+    // print("[tokens]: % \n\n[regions]: %\n\n", tokens, color_regions);
 
     // print("color_regions: %\n", color_regions);
 }

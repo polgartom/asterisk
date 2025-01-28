@@ -105,12 +105,14 @@ get_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> s64 {
 }
 
 get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
-    assert(editor.active_buffer != null);
-    return editor, editor.active_buffer;
+    assert(active_editor != null && active_editor.active_buffer != null);
+    
+    return active_editor, active_editor.active_buffer;
 }
 
 create_editor :: () -> *Editor {
-    editor := New(Editor);
+    editor := array_add(*editors);
+
     return editor;
 }
 
@@ -120,14 +122,23 @@ change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
 
     editor.active_buffer = buffer;
     
-    should_recalc_editor_offsets = true;
+    editor.should_recalc_editor_offsets = true;
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
 }
 
-editor: *Editor; // @Temporary
+request_editor_top_left_offsets_recalc :: () {
+    for *editor: editors {
+        request_editor_top_left_offsets_recalc(editor);
+    }
+}
 
-should_recalc_editor_offsets := false; // @Temporary
+request_editor_top_left_offsets_recalc :: (editor: *Editor) {
+    editor.should_recalc_editor_offsets = true;
+}
+
+active_editor: *Editor = null; // @Temporary
+editors: [..] Editor;
 
 Editor :: struct {
     buffers: [..] Buffer;
@@ -139,6 +150,9 @@ Editor :: struct {
 
     top_offset  := 0.0;
     left_offset := 0.0;
+
+    visible := true;
+    should_recalc_editor_offsets := false; // @Temporary
 }
 
 replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
