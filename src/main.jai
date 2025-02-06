@@ -31,6 +31,7 @@ DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 my_font: *Simp.Dynamic_Font;
 my_font_small: *Simp.Dynamic_Font;
+
 font_width: s64;
 line_height :: 0.0;
 font_size       :: 15;
@@ -574,13 +575,15 @@ my_init_fonts :: () {
         my_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
 
         primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
-        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
+        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height/2);
+        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, xx font_xs_size);
     } else {
         my_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
         my_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
         
         primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
         primary_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
+        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, font_xs_size);
     }
 
     print("[font]: %\n\n", my_font.*);
@@ -590,6 +593,8 @@ my_init_fonts :: () {
 
 primary_font: *Simp.Dynamic_Font;
 primary_font_small: *Simp.Dynamic_Font;
+primary_font_xs: *Simp.Dynamic_Font;
+font_xs_size := 15 * .9;
 
 em :: (x: float = 1.0) -> float {
     assert(my_font != null);
@@ -806,6 +811,12 @@ Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
         b/255.0, 
         a/255.0
     };
+}
+
+SetVector4ColorAlpha :: (c: Vector4, multiply: float = 1.0) -> Vector4 #expand {
+    r := c;
+    r.w *= multiply;
+    return r;
 }
 
 Program_Mode :: enum u8 {

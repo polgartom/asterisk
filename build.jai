@@ -22,20 +22,24 @@
 
     do_optimization := false;
     use_baked_font  := false;
+    
     powersave_build := false;
+    #if OS == .WINDOWS {
+        powersave_build = true;
+    }
 
     log("\n");
 
     for arg: args {
         if arg == {
-            case "powersave";
-                #if OS != .WINDOWS {
-                    log_error("The powersave build only available for Windows! (at least now)");
-                    exit(1);
-                }
+            // case "powersave";
+            //     #if OS != .WINDOWS {
+            //         log_error("The powersave build only available for Windows! (at least now)");
+            //         exit(1);
+            //     }
 
-                powersave_build = true;
-                log("[BUILD] Powersave build requested!\n");
+            //     powersave_build = true;
+            //     log("[BUILD] Powersave build requested!\n");
                 
             case "bake_font";
                 use_baked_font = true;
@@ -60,14 +64,14 @@
 
     log("\n");
 
-    if powersave_build {
-        t: string;
-        t = sprint("%_powersave", options.output_executable_name);
-        options.output_executable_name = copy_string(t);
+    // if powersave_build {
+        // t: string;
+        // t = sprint("%_powersave", options.output_executable_name);
+        // options.output_executable_name = copy_string(t);
         
-        t = sprint("% (powersave)", window_name);
-        window_name = copy_string(t);
-    }
+        // t = sprint("% (powersave)", window_name);
+        // window_name = copy_string(t);
+    // }
 
     set_build_options(options, w);
 
@@ -90,6 +94,7 @@
             ifx do_optimization then "false" else "true",
             ifx use_baked_font  then "true"  else "false",
             window_name,
+            // ifx powersave_build then "true"  else "false",
             ifx powersave_build then "true"  else "false",
     );
     
