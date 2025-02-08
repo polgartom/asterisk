@@ -1,5 +1,5 @@
 // Remove this @Cleanup
-SlowMemcpy :: (destination: *void, source: *void, count: s64) #expand {
+SlowMemcpy :: (destination: *void, source: *void, count: s64) {
     d := cast(*u8) destination;  s := cast(*u8) source;
 
     #if 1 {
@@ -16,11 +16,11 @@ SlowMemcpy :: (destination: *void, source: *void, count: s64) #expand {
     }
 }
 
-ZeroMemory :: (ptr: *void, size: s64) #expand {
+ZeroMemory :: inline (ptr: *void, size: s64) {
     memset(ptr, 0, size);
 }
 
-Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T #expand {
+Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
     return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
 }
 

@@ -308,7 +308,6 @@ file_browser_scan :: (start_dir: string) {
     print("[file_browser_scan] entries: % ; duration: %ms\n", table.entries.count, (seconds_since_init() - timer)*1000);
 }
 
-
 active_widget: Type;
 
 search_widget_state: *Text_Input_State;

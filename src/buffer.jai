@@ -161,8 +161,7 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
 rescan_line_ends :: (using buffer: *Buffer) {
     rebuild_row_table = false;
 
-    timer :=  seconds_since_init();
-    defer row_table_recalc_time = (seconds_since_init() - timer) * 1000;
+    timer := seconds_since_init();
 
     array_reset_keeping_memory(*row_table);
 
@@ -185,7 +184,9 @@ rescan_line_ends :: (using buffer: *Buffer) {
         pos += 1; // because of the line end
     }
 
-    create_color_regions(buffer); // @Cleanup: Remove from here
+    // create_color_regions(buffer); // @Cleanup: Remove from here
+
+    row_table_recalc_time = (seconds_since_init() - timer) * 1000;
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {

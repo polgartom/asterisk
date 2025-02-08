@@ -82,10 +82,6 @@ powersaving := POWERSAVE_BUILD;
 main :: () {
     print("\n\n");
 
-    {
-        // array_add(*common_identifiers, "if", "else", "return", "for", "while", "true", "false", "null", "#if", "#ifdef", "#endif", "#define");
-    }
-
     {    
         format := *context.print_style.default_format_struct;
         format.use_newlines_if_long_form = true;
@@ -766,7 +762,9 @@ scan_dir2 :: (_path: string, recursive := false, follow_directory_symlinks := tr
 }
 
 modify_string :: (target: *string, new_value: string) {
-    free(target.*);
+    assert(target != null);
+    // print("modify_string: '%' -> '%'\n", target.*, new_value);
+    if target.count free(target.*);
     target.* = copy_string(new_value);
 }
 
