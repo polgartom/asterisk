@@ -1,13 +1,26 @@
-Split screen
-Undo/Redo
-File save model
+- Undo/Redo ; Ctrl-z to redo, Ctrl-y to undo
+- Add Jump to line action and by it to the Ctrl-G key combination
+- Store the buffers globally
+- Shift-Alt-(PageDown) key combination to select everything from right from cursor until line end
+- Shift-Alt-(PageUp) key combination to select everything from left from cursor until line start
+- Invesitage memory arithmetic overflows specified in the bugs.txt
+
+
+[Search widget]
+- Draw on the active panel (left or right)
+- The widget should be translucent
+
+[File open widget]
+- Scroll to the viewport when using the up and down arrows to navigate the list
+- Rebind this widget to the Ctrl-O key combination
+
+[Switch to buffers]
+- Bind this widget to the Alt-x key combination
 
 [Config]
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
-    - 
-
-[File browser]
-
-[] Do we wanna use a custom allocator for that, also do we wanna do something like a deep copy procedure which just copy all of the related property of the struct for a specific memory location?
-[] Scroll to the viewport when using the up and down arrows to navigate the list
+	
+[Syntax highlighting/tokenization]
+- Do partial tokenization due the performance issues caused by large files
+- We have a basic highlighting/tokenization but we need to improve the performance of it
