@@ -142,6 +142,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         color := text_color;
         if active_editor != editor then color = #run SetVector4ColorAlpha(text_color, .8);
 
+        colors: [..] Vector4;
+        array_add(*colors, text_color);
+
         for row_index: start_row..end_row {
             row := row_table[row_index];
             if row.size == 0 continue;
@@ -405,15 +408,15 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
 //     draw_highlighted_generated_quads(font, row, fallback_color);
 // }
 
-draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, buffer: *Buffer, row_index: s64, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
-    width := Simp.prepare_text(font, text, 0);
-    Simp.generate_quads_for_prepared_text(font, x, y, 0);
-    draw_highlighted_generated_quads(font, buffer, row_index, fallback_color);
+// draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, buffer: *Buffer, row_index: s64, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
+//     width := Simp.prepare_text(font, text, 0);
+//     Simp.generate_quads_for_prepared_text(font, x, y, 0);
+//     draw_highlighted_generated_quads(font, buffer, row_index, fallback_color);
 
-    return width;
-}
+//     return width;
+// }
 
-draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, using buffer: *Buffer, row_index: s64, fallback_color: Vector4) {
+draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, text: string) {
     #import "GL";
 
     Simp.CheckInit();
@@ -448,25 +451,8 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, using buffer: *Bu
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    row := row_table[row_index];
-
     last_texture: s64 = -1;
-    byte_pos := row.start;
-    color := fallback_color;
-    text := get_row_as_string(buffer, row);
-
-    regions := color_regions;
-
-    // PrintDev("regions: %\n", regions, slice(text, 0, 1));
-    
-    for regions {
-        if row.start <= it.pos {
-            inline advance(*regions, it_index);
-            break;
-        }
-    }
-
-    // PrintDev("regions_filtered: % ; start: %\n", regions, slice(text, 0, 1));
+    color := text_color;
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -490,18 +476,7 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, using buffer: *Bu
             glUniform1i(loc, 0);
         }
 
-        if regions.count && byte_pos >= regions[0].pos {
-            before_color := color;
-            color = regions[0].color;
-            
-            advance(*regions, 1);
-        }
-
         inline draw_letter_quad(font, quad, color);
-
-        bytes := 1 + trailingBytesForUTF8[text[0]];
-        inline advance(*text, bytes);
-        byte_pos += bytes;
     }
 
     Simp.immediate_flush();
