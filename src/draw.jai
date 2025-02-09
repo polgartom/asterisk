@@ -142,9 +142,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         color := text_color;
         if active_editor != editor then color = #run SetVector4ColorAlpha(text_color, .8);
 
-        colors: [..] Vector4;
-        array_add(*colors, text_color);
-
         for row_index: start_row..end_row {
             row := row_table[row_index];
             if row.size == 0 continue;
