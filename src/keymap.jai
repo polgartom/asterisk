@@ -80,6 +80,12 @@ SwitchOrSplitEditorPanel :: () {
     else if *editors[1] == active_editor then active_editor = *editors[0];
 }
 
+HideSecondEditorPanel :: () {
+    active_editor = *editors[0];
+    
+    editors[1].visible = false;
+}
+
 UseSearchWidget :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Search_Widget;
@@ -175,12 +181,13 @@ Save :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    assert(!!filepath, "TODO");
-    
-    s := to_string(buffer);
-    File.write_entire_file(filepath, s);
-
-    dirty = false;
+    if filepath {
+        s := to_string(buffer);
+        File.write_entire_file(filepath, s);
+        dirty = false;
+    } else {
+        log_error("[TODO]: File save modal is not implemented yet!\n");
+    }
 }
 
 ToggleDevInfo :: () {
@@ -827,7 +834,7 @@ GotoFirstCharOfCurrentRow :: inline () {
     for at: row.start..row.end {
         if buffer.data[at] != #char " " { // skip the indentation
             if at == _cursor.pos then at = row.start;
-            set_cursor_pos(buffer, *_cursor, at, horizontal=true);
+            set_cursor_pos(buffer, *_cursor, at, horizontal=true, with_selection=!ShiftHeld());
             return;
         }
     }
@@ -839,7 +846,8 @@ GotoLastCharOfCurrentRow :: inline () {
 
     row := find_row(buffer, _cursor.pos);
 
-    set_cursor_pos(buffer, *_cursor, row.end, horizontal=true);
+    // @Cleanup Confusing the with_selection thing, 'cause it means that we also move the selection cursor with the primary cursor!!
+    set_cursor_pos(buffer, *_cursor, row.end, horizontal=true, with_selection=!ShiftHeld());
 }
 
 ExpandSelectionByLine :: () {
@@ -1115,6 +1123,7 @@ register_keymap_procedures :: () {
     // Editor
 
     Add(editor_keymap, SwitchOrSplitEditorPanel);
+    Add(editor_keymap, HideSecondEditorPanel);
 
     Add(editor_keymap, UseSearchWidget);
     Add(editor_keymap, UseFileBrowserWidget);
@@ -1202,6 +1211,7 @@ widget_keymap: *Keymap;
 
 last_input_event: Event = ---;
 
+// @Cleanup
 ShiftHeld :: () -> bool #expand {
     return last_input_event.shift_pressed;
 }
@@ -1224,6 +1234,7 @@ Enter ListEntered
 [Editor]
 
 C-, SwitchOrSplitEditorPanel
+A-w HideSecondEditorPanel
 
 C-f UseSearchWidget
 C-p UseFileBrowserWidget
@@ -1251,6 +1262,8 @@ PageDown ScrollViewPortDown
 
 Home GotoFirstCharOfCurrentRow
 A-Home GotoLastCharOfCurrentRow
+S-Home GotoFirstCharOfCurrentRow
+A-S-Home GotoLastCharOfCurrentRow
 
 TAB InsertTab
 ENTER InsertLine

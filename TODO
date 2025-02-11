@@ -4,7 +4,7 @@
 - Shift-Alt-(PageDown) key combination to select everything from right from cursor until line end
 - Shift-Alt-(PageUp) key combination to select everything from left from cursor until line start
 - Invesitage memory arithmetic overflows specified in the bugs.txt
-
+- File save modal
 
 [Search widget]
 - Draw on the active panel (left or right)

@@ -18,7 +18,10 @@ draw_frame :: (second_elapsed: bool, current_time: float64) {
             Simp.set_shader_for_color(true);
             BORDER_COLOR :: #run Vector4.{text_color.x,text_color.y,text_color.z,text_color.w*.2};
             Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, BORDER_COLOR);
+        } else {
+            draw_editor(*editors[0], rect);
         }
+
     }
 
     // r=, footer := cut_top(r, window_height-footer_height);

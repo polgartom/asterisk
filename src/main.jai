@@ -153,6 +153,7 @@ main :: () {
 
     // @Temporary
     editor2 := create_editor();
+    editor2.visible = false;
     if !editor2.active_buffer {
         editor2.active_buffer = create_or_find_empty_buffer(editor2);
     }
