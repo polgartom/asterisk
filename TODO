@@ -5,14 +5,14 @@
 - Shift-Alt-(PageUp) key combination to select everything from left from cursor until line start
 - Invesitage memory arithmetic overflows specified in the bugs.txt
 - File save modal
+- Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
 
 [Search widget]
 - Draw on the active panel (left or right)
 - The widget should be translucent
 
 [File open widget]
-- Scroll to the viewport when using the up and down arrows to navigate the list
-- Rebind this widget to the Ctrl-O key combination
+- Highlight files which already opened
 
 [Switch to buffers]
 - Bind this widget to the Alt-x key combination

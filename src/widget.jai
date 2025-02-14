@@ -170,7 +170,28 @@ update_file_browser_widget :: () {
         basedir := current_directory;
 
         list, found := table_find(*table, basedir);
-        assert(found, "basedir: %\n", basedir);
+        if !found {
+            log_error("I cannot found the basedir: '%'\n", basedir); // @Todo: error hint for the user 
+            return;
+        }
+
+        if should_recalc_scroll_offsets {
+            top := 0.0;
+            for index: -1..list.count { // -1 means the first entry of the file list which is the parent directory 
+                if index == selected_entry_index {
+                    break;
+                }
+                top += floor(label_height * 1.1 + 0.5);
+            }
+
+            if top - scroll_value < 0 {
+                scroll_value -= floor(label_height * 1.1 + 0.5);
+            } else if r.y + top >= s.y {
+                scroll_value += floor(label_height * 1.1 + 0.5);
+            } else {
+                should_recalc_scroll_offsets = false;
+            }
+        }
 
         {
             parent := parent_dir(current_directory);
@@ -203,7 +224,7 @@ update_file_browser_widget :: () {
         for list {
             theme := button_theme;
             if id == selected_entry_index {
-                theme.frame_color = .{.2,.9,.3,1.0};
+                theme.frame_color = .{.2, .6 ,.3, 1.0};
             }
 
             _, _, was_just_released := button(s, it.name, *theme, id);
@@ -325,10 +346,12 @@ Search_Widget :: struct {
 File_Browser_Widget :: struct {
     search_text: string;
     scroll_value: float;
+    should_recalc_scroll_offsets: bool;
 
     current_directory: string;
     table: Table(string, [] Path_Info);
     selected_entry_index := -1;
+
 
     Path_Info :: struct {
         name: string;

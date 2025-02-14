@@ -25,9 +25,9 @@ ListUp :: () {
             if i < -1 && entries.count i = entries.count - 1;
 
             selected_entry_index = i;
+            should_recalc_scroll_offsets = true;
         }
     }
-
 }
 
 ListDown :: () {
@@ -45,6 +45,7 @@ ListDown :: () {
             if i + 1 > entries.count then i = -1;
 
             selected_entry_index = i;
+            should_recalc_scroll_offsets = true;
         }
     }
 
@@ -1237,7 +1238,7 @@ C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
 C-f UseSearchWidget
-C-p UseFileBrowserWidget
+C-o UseFileBrowserWidget
 
 F1 ToggleDevInfo
 
