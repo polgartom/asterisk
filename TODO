@@ -6,6 +6,7 @@
 - Invesitage memory arithmetic overflows specified in the bugs.txt
 - File save modal
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
+- File watcher
 
 [Search widget]
 - Draw on the active panel (left or right)
@@ -13,6 +14,7 @@
 
 [File open widget]
 - Highlight files which already opened
+- Search for files
 
 [Switch to buffers]
 - Bind this widget to the Alt-x key combination
