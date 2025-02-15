@@ -1096,6 +1096,18 @@ ExtendSelectionByToken :: () {
     // @Incomplete: Currently, we are working with one cursor instance per buffer
 }
 
+Undo :: () {
+    _, buffer := get_active_editor_and_buffer();
+// kacsa
+    undo_history(buffer);
+}
+
+Redo :: () {
+    _, buffer := get_active_editor_and_buffer();
+
+    redo_history(buffer);
+}
+
 ////////////////////////////////////
 //
 
@@ -1183,6 +1195,9 @@ register_keymap_procedures :: () {
 
     Add(editor_keymap, IndentLeft);
     Add(editor_keymap, IndentRight);
+
+    Add(editor_keymap, Undo);
+    Add(editor_keymap, Redo);
 }
 
 init_keymaps :: () {
@@ -1299,6 +1314,11 @@ C-d ExtendSelectionByToken
 
 C-] IndentRight
 C-[ IndentLeft
+
+C-z Undo
+C-y Redo
+C-S-z Redo
+
 DONE;
 
 #import "Keymap";
