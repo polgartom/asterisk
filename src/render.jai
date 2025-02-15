@@ -3,17 +3,19 @@ swap_buffers :: (window: Window_Type) {
     Simp.swap_buffers(my_window, vsync=false);
 
     {
-        glFinish :: () #foreign;
-        
-        #if BYPASS_FRAMERATE_LIMIT {
-            // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
-            glFinish(); // @Hacky
+        // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
+        BOOST_THE_FPS_MAGICALLY :: true;
+        #if BOOST_THE_FPS_MAGICALLY {
+            glFinish :: () #foreign;
+            glFinish();
         }
     }
 }
 
-#if POWERSAVE_BUILD {
-    BYPASS_FRAMERATE_LIMIT :: false;
-} else {
-    BYPASS_FRAMERATE_LIMIT :: true;
+should_redraw :: inline () -> bool {
+    #if DEBUG return true;
+
+    return redraw_requested && mode == .WIDGET;
 }
+
+redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX

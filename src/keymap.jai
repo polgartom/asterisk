@@ -7,7 +7,7 @@ Quit :: () {
 // [Widget]
 
 CloseCurrentWidget :: () {
-    switch_editor_mode(.EDITOR);
+    close_current_widget();
 }
 
 ListUp :: () {

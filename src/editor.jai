@@ -3,16 +3,8 @@ switch_editor_mode :: (switch_to: Program_Mode) {
         case .EDITOR;
             active_widget_deactivate_all();
             
-            #if POWERSAVE_BUILD {
-                powersaving = true;
-            }
-            
             mode = .EDITOR;                
         case .WIDGET;
-            #if POWERSAVE_BUILD {
-                powersaving = false;
-            }
-        
             mode = .WIDGET;
     }
 }

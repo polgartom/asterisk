@@ -77,8 +77,6 @@ Args :: struct {
     workdir: string;
 }
 
-powersaving := POWERSAVE_BUILD;
-
 main :: () {
     print("\n\n");
 
@@ -139,7 +137,7 @@ main :: () {
     last_second_time: float64 = 0.0;
     second_elapsed := false;
 
-    string_for_utf32_to_utf8 := alloc_string(4); // @HEAP
+    string_for_utf32_to_utf8 := alloc_string(4);
 
     active_editor = create_editor();
     
@@ -159,8 +157,8 @@ main :: () {
     }
 
     while !should_quit {
-        #if POWERSAVE_BUILD {
-            if powersaving then WaitMessage();
+        if !should_redraw() {
+            #if OS == .WINDOWS WaitMessage();
         }
 
         current_frame = frame;
@@ -223,6 +221,7 @@ main :: () {
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT {
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
+
                     ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 

@@ -172,6 +172,7 @@ update_file_browser_widget :: () {
         list, found := table_find(*table, basedir);
         if !found {
             log_error("I cannot found the basedir: '%'\n", basedir); // @Todo: error hint for the user 
+            close_current_widget(); // this will prevent the flickering of the file browser window
             return;
         }
 
@@ -184,9 +185,11 @@ update_file_browser_widget :: () {
                 top += floor(label_height * 1.1 + 0.5);
             }
 
+            // This will cause a scrolling animation, because we're working with the value of "floor(label_height * 1.1 + 0.5)" on every frame
+            // until it's not below 0 or above s.y
             if top - scroll_value < 0 {
                 scroll_value -= floor(label_height * 1.1 + 0.5);
-            } else if r.y + top >= s.y {
+            } else if r.y + top > s.y {
                 scroll_value += floor(label_height * 1.1 + 0.5);
             } else {
                 should_recalc_scroll_offsets = false;
@@ -327,6 +330,10 @@ file_browser_scan :: (start_dir: string) {
     // }
 
     print("[file_browser_scan] entries: % ; duration: %ms\n", table.entries.count, (seconds_since_init() - timer)*1000);
+}
+
+close_current_widget :: () {
+    switch_editor_mode(.EDITOR);
 }
 
 active_widget: Type;
