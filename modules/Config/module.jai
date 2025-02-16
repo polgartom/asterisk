@@ -1,6 +1,6 @@
 Config :: struct {
-    ui_bg_color: Color;
-    ui_fg_color: Color;
+    ui_bg_color: Vector4;
+    ui_fg_color: Vector4;
 }
 
 parse_config :: (data: string) {
@@ -27,7 +27,7 @@ parse_config :: (data: string) {
         }
         
         if param.type == {
-            case type_info(Color);
+            case type_info(Vector4);
                 if !begins_with(rhs, "0x") {
                     error(handler, "'%' is an invalid color value given after the '%' key specifier.\n", rhs, key_name);
                     continue;
@@ -102,8 +102,6 @@ hex32_to_vector4 :: (hex32: u32) -> Vector4 {
     return .{r, g, b, a};
 }
 
-Color :: #type,isa Vector4;
-
 #scope_module
 
 DEFAULT_CONFIG_STRING :: #string DONE
@@ -114,7 +112,7 @@ ui_fg_color: 0xddddddff
 
 DONE;
 
-#load "file_handler.jai";
+// #load "file_handler.jai";
 
 #import "Math";
 #import "Hash_Table";

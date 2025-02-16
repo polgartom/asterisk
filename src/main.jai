@@ -124,7 +124,7 @@ main :: () {
         file_browser_scan(workdir);
     }
 
-    Config.init_config();
+    load_global_config();
     init_keymaps();
 
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
@@ -844,11 +844,11 @@ mode := Program_Mode.EDITOR;
 #load "draw.jai";
 #load "event.jai";
 #load "widget.jai";
+#load "config.jai";
+#load "color.jai";
 
 // Local modules
 #import "Language_Support";
-Config :: #import "Config";
-
 CodeInspect :: #import,file "code_inspect.jai";
 
 #import "System";

@@ -190,6 +190,13 @@ break_by_spaces :: (line: string) -> (left: string, right: string) {
 }
 
 break_by_colon :: (line: string) -> (left: string, right: string) {
+    // left  := line;
+
+    // right := eat_until_space(line);  // 'right' now has everything from the first space to the end of the line.
+    // left.count -= right.count;
+            
+    // right = eat_spaces(right);       // Trim the spaces from 'right'.
+
     found, left, right := split_from_left(line, ":");
     if !found return "", "";
 
