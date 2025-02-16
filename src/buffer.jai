@@ -467,7 +467,7 @@ reset_history_item :: (using history_item: *Buffer_History) {
 trim_history_right :: (b: *Buffer, index: s64) {
     before_count := b.history.count;
     before_index := b.history_index;
-    print("trim_history_right(): count: % -> % ; i: % -> %\n", before_count, b.history.count, before_index, b.history_index);
+    // print("trim_history_right(): count: % -> % ; i: % -> %\n", before_count, b.history.count, before_index, b.history_index);
 
     assert(index > -1 && index < b.history.count, "Invalid index! max: % ; given: %\n", b.history.count-1, index);
 

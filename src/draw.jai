@@ -120,6 +120,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             // Draw search_widget's results
 
             Simp.set_shader_for_color(true);
+            highlight_color := map_color_to_vec4(.TEXT_HIGHLIGHT);
 
             using editor;
             using buffer;
@@ -150,7 +151,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
                     left += Simp.prepare_text(primary_font, t);
                 }
 
-                draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, HIGHLIGHT_COLOR);
+                draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, highlight_color);
             }
         }
     }
@@ -168,9 +169,14 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         Simp.set_shader_for_color(true);
         
         font := primary_font_xs;
-        color := FOOTER_COLOR;
-        if active_editor != editor then color = #run SetVector4ColorAlpha(FOOTER_COLOR, .6);
-        Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.h, color);
+        
+        bg_color := map_color_to_vec4(.FOOTER_BACKGROUND);
+        if active_editor != editor {
+            bg_color = map_color_to_vec4(.FOOTER_BACKGROUND_DARKEN);
+        }
+
+        // Footer shape
+        Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.h, bg_color);
 
         width := 0;
         left := footer.x + 10;
@@ -290,12 +296,13 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 }
 
 draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
-    Simp.set_shader_for_color(true);
-    
-    left_pad := cast(float32) primary_font.em_width;
-
     c := *buffer._cursor;
     if !has_selection(c) return;
+    
+    Simp.set_shader_for_color(true);
+    selection_color := map_color_to_vec4(.TEXT_SELECTION);
+
+    left_pad := cast(float32) primary_font.em_width;
 
     ch := primary_font.character_height;
     line_height := get_line_height();
@@ -331,7 +338,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
                     else width += primary_font.em_width;
 
         bottom := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-        Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), SELECTION_COLOR); 
+        Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), selection_color); 
     }
 
 }
@@ -542,9 +549,9 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     }
 }
 
-DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
-PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
-FOOTER_COLOR :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};
+// DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
+// PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
+// FOOTER_COLOR :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};
 
 #scope_file
 

@@ -86,14 +86,15 @@ text_dimmed:                bbbbbbff
 text_selection:             ffffff20
 text_highlight:             73ffff73
 text_under_cursor:          0c1021ff
-text_under_inactive_cursor: ffffffff
+text_under_inactive_cursor: FBDE2D_a0
 
 cursor:                 FBDE2Dc0
-cursor_inactive:        4a4a4ac0
+cursor_inactive:        3a3a3aff
 cursor_line_background: cccccc0A
 
-footer_background:      d1b58eff
-footer_text:            000000ff
+footer_background:        b0a070ff
+footer_background_darken: 8b7c4dff
+footer_text:              000000ff
 
 CONFIG;
 

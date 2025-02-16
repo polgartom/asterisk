@@ -8,21 +8,6 @@ last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
-CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
-SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
-HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
-
-// CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.FRAME;
-CURRENT_LINE_INDICATOR_STYLE       :: Current_Line_Indicator_Style.HIGHLIGHT;
-CURRENT_LINE_INDICATOR_COLOR       :: #run Hex4ToVec4Rgba(0xcccccc_0A);
-CURRENT_LINE_INDICATOR_FRAME_WIDTH :: 2.0;
-
-Current_Line_Indicator_Style :: enum u32 {
-    NONE;
-    FRAME;
-    HIGHLIGHT;
-}
-
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 my_font: *Simp.Dynamic_Font;
@@ -205,6 +190,8 @@ main :: () {
             enable(*keymap_set, widget_keymap, mode == .WIDGET);
         }
 
+        wait_for_this_key_to_release: *u32; // Key_Code
+
         for event : events_this_frame {
             if event.type == .QUIT {
                 // print("quit!\n");
@@ -220,12 +207,27 @@ main :: () {
                 }
             }
 
+
+            if wait_for_this_key_to_release {
+                key_code := wait_for_this_key_to_release.*;
+                if key_code == cast,no_check(u32)event.key_code && event.key_pressed == 0 {
+                    wait_for_this_key_to_release = null;
+                } else {
+                    continue;
+                }
+            }
+
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
-            if handled continue;
-            
+            if handled {
+                wait_for_this_key_to_release = *cast,no_check(u32)event.key_code;
+                continue;
+            }
+
+            // print("event: % ; % ; handled: %\n", event.modifier_flags.packed, event.ctrl_pressed, handled);
+        
             if mode == .EDITOR {
-                if event.type == .TEXT_INPUT {
+                if event.type == .TEXT_INPUT && !event.ctrl_pressed {
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
 
                     ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
@@ -808,35 +810,6 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
     };
 }
 
-RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {
-    return Vector4.{
-        r/255.0, 
-        g/255.0, 
-        b/255.0, 
-        alpha
-    };
-}
-
-Hex4ToVec4Rgba :: (hex: u32) -> Vector4 #expand {
-    r := (hex>>24) & 0xFF;
-    g := (hex>>16) & 0xFF;
-    b := (hex>>8)  & 0xFF;
-    a := (hex>>0)  & 0xFF;
-
-    return Vector4.{
-        r/255.0, 
-        g/255.0, 
-        b/255.0, 
-        a/255.0
-    };
-}
-
-SetVector4ColorAlpha :: (c: Vector4, multiply: float = 1.0) -> Vector4 #expand {
-    r := c;
-    r.w *= multiply;
-    return r;
-}
-
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -844,7 +817,6 @@ Program_Mode :: enum u8 {
 };
 
 mode := Program_Mode.EDITOR;
-
 
 #load "workspace.jai";
 #load "editor.jai";
