@@ -88,8 +88,9 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
     insert_at      := buffer.data  + at;
     new_right      := insert_at    + text.count;
     right_rem_size := buffer.count - (insert_at - buffer.data);
+    right_rem_size  = max(0, right_rem_size);
 
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
+    if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
     SlowMemcpy(insert_at, text.data, text.count);
 
     buffer.count += text.count;
@@ -293,9 +294,15 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
 
 buffer_reset_keeping_memory :: (using buffer: *Buffer) {    
     free(row_table.data,, row_table.allocator);
-    if data != null then c_free(data);
-    if filepath     then free(filepath);
     
+    if data != null  then c_free(data);
+    if filepath      then free(filepath);
+    
+    if history {
+        for * history free_history_item(it);
+        array_free(history);
+    }
+
     new_buffer: Buffer;
     buffer.* = new_buffer;
 }
@@ -455,12 +462,17 @@ redo_history :: (using buffer: *Buffer) {
     history_index   += 1;
 }
 
-reset_history_item :: (using history_item: *Buffer_History) {
-    if type == .INSERT_STRING {
-        if text free(text);
-    }
+reset_history_item :: inline (h: *Buffer_History) {
+    free_history_item(h); 
+    ZeroMemory(h, size_of(Buffer_History));
+}
 
-    ZeroMemory(history_item, size_of(Buffer_History));
+free_history_item :: inline (using h: *Buffer_History) {
+    if type == {
+        case .UNDEFINED;
+        case .INSERT_STRING;
+            if text free(text);
+    };
 }
 
 // Reset the buffer history items from the right until the specified index (inclusive).
