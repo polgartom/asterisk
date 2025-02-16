@@ -124,6 +124,7 @@ main :: () {
         file_browser_scan(workdir);
     }
 
+    Config.init_config();
     init_keymaps();
 
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
@@ -589,7 +590,7 @@ my_init_fonts :: () {
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, font_xs_size);
     }
 
-    print("[font]: %\n\n", my_font.*);
+    // print("[font]: %\n\n", my_font.*);
 
     assert(my_font != null);
 }
@@ -844,7 +845,9 @@ mode := Program_Mode.EDITOR;
 #load "event.jai";
 #load "widget.jai";
 
+// Local modules
 #import "Language_Support";
+Config :: #import "Config";
 
 CodeInspect :: #import,file "code_inspect.jai";
 
