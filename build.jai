@@ -15,6 +15,8 @@
     options := get_build_options(w);
     copy_commonly_propagated_fields(get_build_options(), *options);
 
+    options.backend = .X64;
+    
     options.array_bounds_check = .ON;
     options.null_pointer_check = .ON;
 
@@ -24,6 +26,7 @@
     do_optimization := false;
     use_baked_font  := false;
 
+
     if has_argument("release") {
         // Release build
         
@@ -32,8 +35,8 @@
         do_optimization = true;
 
         // @Investigate WTF? The row_table gentime is faster on the .X64 backend!!
-        options.backend = .LLVM;
-        options.llvm_options.enable_split_modules = false;
+        //options.backend = .LLVM;
+        //options.llvm_options.enable_split_modules = false;
         
         set_optimization(*options, .VERY_OPTIMIZED);
         options.arithmetic_overflow_check = .OFF;
@@ -45,8 +48,6 @@
 
         do_optimization = false;
         
-        options.backend = .X64;
-
         set_optimization(*options, .VERY_DEBUG);
         options.arithmetic_overflow_check = .FATAL;
     }

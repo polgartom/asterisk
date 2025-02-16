@@ -198,6 +198,8 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
 
 // @Speed: We could implement something like a Quadtree. For example we might create a chunk after every 1000 rows (line ends)
 rescan_line_ends :: (using buffer: *Buffer) {
+    rescan_line_ends_v2(buffer);
+    
     rebuild_row_table = false;
 
     timer := seconds_since_init();
@@ -226,6 +228,79 @@ rescan_line_ends :: (using buffer: *Buffer) {
     // create_color_regions(buffer); // @Cleanup: Remove from here
 
     row_table_recalc_time = (seconds_since_init() - timer) * 1000;
+}
+
+// @Todo: We can get ~2x speed on larger files!
+rescan_line_ends_v2 :: (using,except(count,data) buffer: *Buffer) {
+    rebuild_row_table = false;
+    
+    timer := seconds_since_init();
+    
+    array_reset_keeping_memory(*row_table_v2);
+
+    bytes := buffer;
+    s := to_string(bytes);
+
+    // if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
+    #if 1 {
+        // Scan by 16 bytes at a time
+        lf := 0xA; // '\n'
+        #asm AVX2 {
+            movq lf_source:, lf;
+            pbroadcastb.x line_feeds:, lf_source;
+        }
+        data := s.data;
+        count := s.count;
+        while count >= 16 {
+            mask:  u32 = ---;
+            #asm {
+                movdqu      batch:, [data];
+                pcmpeqb.x   batch, line_feeds;
+                pmovmskb.x  mask, batch;
+            }
+            shift := 0;
+            bit_id: u32 = ---;
+            while mask {
+                #asm {
+                    bsf.d bit_id, mask;
+                }
+                mask >>= (bit_id) + 1;
+                shift += bit_id + 1;
+                
+                start := data - bytes.data;
+                end := (start + shift);
+                inline array_add(*row_table_v2, .{start = start, end = end, size = end-start});
+            }
+            count -= 16;
+            data  += 16;
+        }
+        s.data = data;
+        s.count = count;
+    }
+
+    processed_with_simd := s.data - bytes.data;
+    at := processed_with_simd;
+
+    start_index := 0;
+    while true {
+        index := inline find_index_from_left(s, 0xA, start_index);
+        if index >= 0 {
+            start := processed_with_simd + start_index;
+            end := (start + index);
+
+            array_add(*row_table_v2, .{start = start, end = end, size = end - start});
+            
+            start_index = index + 1;
+        } else {
+            break;
+        }
+    }
+
+    start := processed_with_simd + start_index;
+    end := bytes.count - start;
+    array_add(*row_table_v2, .{start = start, end = end, size = end - start});
+
+    row_table_v2_recalc_time = (seconds_since_init() - timer) * 1000;
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
@@ -501,6 +576,9 @@ Buffer :: struct {
     row_table: [..] Row_Info;
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
+
+    row_table_v2: [..] Row_Info;
+    row_table_v2_recalc_time: float64 = 0.0;
 
     color_regions: [..] Color_Region;
     // rebuild_color_regions := false;

@@ -280,6 +280,14 @@ main :: () {
                 mx, my, ok := get_mouse_pointer_position(right_handed=false);
                 PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
 
+                PrintDev("--------------\n");
+                PrintDev("[LINESCAN_v1]: gentime: %ms\n", formatFloat(active_buffer.row_table_recalc_time, trailing_width=4));
+                // for buffer.row_table { PrintDev("%\n", it); }
+                PrintDev("--------------\n");
+                PrintDev("[LINESCAN_v2]: gentime: %ms\n", formatFloat(active_buffer.row_table_v2_recalc_time, trailing_width=4));
+                // for buffer.row_table_v2 { PrintDev("%\n", it); }
+                PrintDev("--------------\n");
+
                 debug_time = (seconds_since_init() - debug_time) * 1000;
                 PrintDev("[DEBUG TIME] %ms\n", formatFloat(debug_time, trailing_width=4));
             }
