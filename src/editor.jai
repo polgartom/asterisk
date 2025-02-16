@@ -143,6 +143,7 @@ Editor :: struct {
     top_offset  := 0.0;
     left_offset := 0.0;
 
+    rect_for_draw: Rect;
     visible := true;
     should_recalc_editor_offsets := false; // @Temporary
 }

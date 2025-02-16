@@ -512,7 +512,7 @@ Copy :: () {
 }
 
 Paste :: () {
-    editor, buffer := get_active_editor_and_buffer();
+    _, buffer := get_active_editor_and_buffer();
     insert_os_clipboard_text_at_cursor(buffer, *buffer._cursor);
 }
 
@@ -1098,7 +1098,7 @@ ExtendSelectionByToken :: () {
 
 Undo :: () {
     _, buffer := get_active_editor_and_buffer();
-// kacsa
+
     undo_history(buffer);
 }
 
@@ -1316,8 +1316,8 @@ C-] IndentRight
 C-[ IndentLeft
 
 C-z Undo
-C-y Redo
 C-S-z Redo
+C-y Redo
 
 DONE;
 

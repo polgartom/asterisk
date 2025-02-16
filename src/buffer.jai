@@ -30,12 +30,18 @@ cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
 }
 
 insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
+
     // @Incomplete: Validate if the input data is valid utf8!
-    
     text := Clipboard.os_clipboard_get_text();
     defer free(text);
 
+    buffer.history_enabled       = false;
+    defer buffer.history_enabled = true;
+
+    at := cursor.pos;
+
     insert_text_at_cursor(buffer, cursor, text);
+    push_history(buffer, text, at);
 }
 
 insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
@@ -43,7 +49,8 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
 
     maybe_grow(buffer, text.count);
 
-    insert_at      := buffer.data  + cursor.pos;
+    at             := cursor.pos;
+    insert_at      := buffer.data  + at;
     new_right      := insert_at    + text.count;
     right_rem_size := buffer.count - (insert_at - buffer.data);
 
@@ -54,12 +61,12 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
-    set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
+    set_cursor_pos(buffer, cursor, at + text.count, horizontal=true);
 
     if buffer.history_enabled {
         if text == "\n" || text == " " {
             push_history_from_input_buffer(buffer);
-            push_history(buffer, text, cursor.pos);
+            push_history(buffer, text, at);
         } else {
             t := *buffer.history_temp_text;
 
@@ -354,9 +361,11 @@ push_history :: (b: *Buffer, text: string, at: s64) {
         return;
     }
 
+    // defer print("push_history() -> text: |%| (%) at: %\n", text, text.count, at);
+
     reset_history_temp_text(b);
 
-    if b.history.count && b.history_index != -1 && b.history_index != b.history.count-1 {
+    if b.history_index != -1 && b.history_index < b.history.count-1 {
         trim_history_right(b, b.history_index);
     }
 
@@ -382,6 +391,7 @@ push_history_from_input_buffer :: (using buffer: *Buffer) {
     push_history(buffer, text, at);
 }
 
+// @Todo: Simplify
 undo_history :: (using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
@@ -390,41 +400,55 @@ undo_history :: (using buffer: *Buffer) {
     history_enabled = false;
 
     h := history[history_index];
-    if h.type == .INSERT_STRING {
-        assert(!!h.text);
-        
-        to := h.at;
-        from := h.at + h.text.count;
-        if from > buffer.count {
-            from -= 1;
-            to   -= 1;
-        }
-        to = max(to, 0);
-        assert(from <= buffer.count, "%; %\n", from, buffer.count);
-        print("undo_history() -> to: % from: % total: % ; |%|\n", to, from, buffer.count, h.text);
-        // shift_left(buffer, to, from);
+    if h.type == {
+        case .UNDEFINED;
+        case .INSERT_STRING; {
+            assert(!!h.text);
+            
+            to := h.at;
+            from := h.at + h.text.count;
+            if from > buffer.count {
+                diff := from - buffer.count;
+                from -= diff;
+                to   -= diff;
+            }
+            to = max(to, 0);
+            
+            assert(from <= buffer.count, "%; %\n", from, buffer.count); // @Debug
 
-    } else {
-        assert(false, "TODO!\n");
+            shift_left(buffer, to, from);
+            set_cursor_pos(buffer, *_cursor, to, horizontal=true);
+        }
+        case .DELETE_STRING; {
+            assert(false, "TODO: .DELETE_STRING history type\n");
+        }
     }
 
     history_enabled = true;
     history_index   -= 1;
 }
 
+// @Todo: Simplify
 redo_history :: (using buffer: *Buffer) {
-    if !history.count || history_index == history.count -1 return;
+    if !history.count || history_index + 1 >= history.count return;
 
     reset_history_temp_text(buffer);
 
     history_enabled = false;
 
     h := history[history_index+1];
-    if h.type == .INSERT_STRING {
-        assert(!!h.text);
-        insert_text_at(buffer, h.at, h.text);
-    } else {
-        assert(false, "TODO!\n");
+    if h.type == {
+        case .UNDEFINED;
+        case .INSERT_STRING; {
+            assert(!!h.text);
+            insert_text_at(buffer, h.at, h.text);
+            assert(h.at + h.text.count <= buffer.count);
+            
+            set_cursor_pos(buffer, *_cursor, h.at + h.text.count, horizontal=true);
+        }
+        case .DELETE_STRING; {
+            assert(false, "TODO: .DELETE_STRING history type\n");
+        }
     }
 
     history_enabled = true;
@@ -441,12 +465,16 @@ reset_history_item :: (using history_item: *Buffer_History) {
 
 // Reset the buffer history items from the right until the specified index (inclusive).
 trim_history_right :: (b: *Buffer, index: s64) {
-    assert(index >= b.history.count, "Invalid index! max: % ; given: %\n", b.history.count-1, index);
+    before_count := b.history.count;
+    before_index := b.history_index;
+    print("trim_history_right(): count: % -> % ; i: % -> %\n", before_count, b.history.count, before_index, b.history_index);
+
+    assert(index > -1 && index < b.history.count, "Invalid index! max: % ; given: %\n", b.history.count-1, index);
 
     items := inline array_view(b.history, index);
     for * items inline reset_history_item(it);
 
-    b.history.count = index; // not index+1, because the index is inclusive
+    b.history.count = index+1; // not index+1, because the index is inclusive
 }
 
 // @Todo: Explain it!

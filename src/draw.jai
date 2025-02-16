@@ -1,32 +1,24 @@
-draw_frame :: (second_elapsed: bool, current_time: float64) {
+draw_frame :: (current_time: float64) {
+    Simp.set_shader_for_color(true);
+    
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
-    frame_rect := get_rect(0.0, 0.0, xx width, xx height);
+    rect := get_rect(0.0, 0.0, xx width, xx height);
 
-    Simp.set_shader_for_color(true);
+    if editors[0].visible && editors[1].visible {
+        left, right := cut_left(rect, floor(rect.w/2));
 
-    {
-        rect := frame_rect;
-        
-        if editors[0].visible && editors[1].visible {
-            left, right := cut_left(rect, floor(rect.w/2));
+        draw_editor(*editors[0], left);
+        draw_editor(*editors[1], right);
 
-            draw_editor(*editors[0], left);
-            draw_editor(*editors[1], right);
-
-            Simp.set_shader_for_color(true);
-            BORDER_COLOR :: #run Vector4.{text_color.x,text_color.y,text_color.z,text_color.w*.2};
-            Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, BORDER_COLOR);
-        } else {
-            draw_editor(*editors[0], rect);
-        }
-
+        Simp.set_shader_for_color(true);
+        BORDER_COLOR :: #run Vector4.{text_color.x,text_color.y,text_color.z,text_color.w*.2};
+        Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, BORDER_COLOR);
+    } else {
+        draw_editor(*editors[0], rect);
     }
 
-    // r=, footer := cut_top(r, window_height-footer_height);
-
-    // Draw mouse
     // if editor_in_focus {
     //     draw_debug_mouse_character_selection();
     // }
@@ -36,56 +28,8 @@ draw_frame :: (second_elapsed: bool, current_time: float64) {
         draw_widgets();
     }
 
-    // Draw debug info
     if show_debug_info {
-
-        // {
-        //     // Draw crosshair
-        //     Simp.set_shader_for_color();
-        //     Simp.immediate_quad(window_width/2.0-1.0, 0.0, window_width/2.0, xx window_height, DEBUG_CROSSHAIR_COLOR); 
-        //     Simp.immediate_quad(0.0, window_height/2.0-1.0, xx window_width, window_height/2.0, DEBUG_CROSSHAIR_COLOR); 
-        // }
-
-        #if 1 {
-            // Draw fps
-            ct := seconds_since_init();
-            if second_elapsed {
-                frametime = (ct - last_time); // frametime
-                fps       = 1/frametime;
-                last_showed_sim_time = last_simulation_time;
-                last_rendering_time = (ct-last_time)*1000;
-            }
-
-            PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
-            PrintDev("%fps %ms %sec\n", 
-                formatFloat(fps, trailing_width=0), 
-                formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO), 
-                formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO)
-            );
-        }
-
-        row := 1;
-        max := 0;
-        line_height := get_line_height();
-        bottom: float32 = footer_height + line_height;
-
-        for #v2 < debug_infos {
-            s := it;
-            ln := s[s.count-1] == #char "\n";
-            if ln then s.count -= 1;
-
-            rmargin := 10;
-
-            w := Simp.prepare_text(my_font, s);
-            bottom += line_height;
-            Simp.draw_prepared_text(my_font, xx (window_width - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
-
-            if ln then row += 1;
-
-            free(it.data);
-        }
-
-        array_reset(*debug_infos);
+        draw_global_debug_info(active_editor.rect_for_draw);
     }
 }
 
@@ -93,7 +37,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     left_pad := cast(float32) primary_font.em_width;
     
     r, footer_r := cut_top(rect, window_height-footer_height);
-    _, r= := cut_left(r, left_pad);
+    _, r=       := cut_left(r, left_pad);
+
+    defer editor.rect_for_draw = r;
 
     // Simp.immediate_quad(pad_r.x, pad_r.y, pad_r.x + pad_r.w, pad_r.h + pad_r.y, PURPLE_COLOR);
 
@@ -166,42 +112,44 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
-    // @Temporary
-    if mode == .WIDGET && active_editor == editor && search_text {
-        // Draw search_widget's results
+    if active_editor == editor {
+        // @Temporary
+        if mode == .WIDGET && search_text {
+            // Draw search_widget's results
 
-        Simp.set_shader_for_color(true);
+            Simp.set_shader_for_color(true);
 
-        using editor;
-        using buffer;
-        
-        push_scissor(rect);
-        defer pop_scissor();
+            using editor;
+            using buffer;
+            
+            push_scissor(rect);
+            defer pop_scissor();
 
-        width := measure_text_width(search_text);
+            width := measure_text_width(search_text);
 
-        start_row_index := first_visible_row_index(editor, buffer);
-        start_row := row_table[start_row_index];
+            start_row_index := first_visible_row_index(editor, buffer);
+            start_row := row_table[start_row_index];
 
-        end_row_index := last_visible_row_index(editor, buffer);
-        end_row := row_table[end_row_index];
+            end_row_index := last_visible_row_index(editor, buffer);
+            end_row := row_table[end_row_index];
 
-        for pos: search_widget.occurences {
-            if pos < start_row.start || pos > end_row.end continue;
+            for pos: search_widget.occurences {
+                if pos < start_row.start || pos > end_row.end continue;
 
-            row_index := find_row_index(buffer, pos);
-            row := row_table[row_index];
+                row_index := find_row_index(buffer, pos);
+                row := row_table[row_index];
 
-            left   := r.x - left_offset;
-            bottom := (rect.h + rect.y) - get_line_height(row_index+1) + editor.top_offset;
+                left   := r.x - left_offset;
+                bottom := (rect.h + rect.y) - get_line_height(row_index+1) + editor.top_offset;
 
-            if pos != row.start {
-                t := get_row_as_string(buffer, row);
-                t = slice(t, 0, pos - row.start);
-                left += Simp.prepare_text(primary_font, t);
+                if pos != row.start {
+                    t := get_row_as_string(buffer, row);
+                    t = slice(t, 0, pos - row.start);
+                    left += Simp.prepare_text(primary_font, t);
+                }
+
+                draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, HIGHLIGHT_COLOR);
             }
-
-            draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, HIGHLIGHT_COLOR);
         }
     }
 
@@ -209,16 +157,15 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     draw_cursor(editor, buffer, r);
 
     {
+        // Draw footer
+
         push_scissor(footer_r);
         defer pop_scissor();
 
         footer := footer_r;
-
-        // Draw footer
-        font := primary_font_xs;
-
         Simp.set_shader_for_color(true);
         
+        font := primary_font_xs;
         color := FOOTER_COLOR;
         if active_editor != editor then color = #run SetVector4ColorAlpha(FOOTER_COLOR, .6);
         Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.h, color);
@@ -274,11 +221,17 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         row := find_row_index(buffer, buffer._cursor.pos) + 1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
+        
         row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
-        width = Simp.prepare_text(font, row_col_info);
+        if show_debug_info {
+            row_col_info = tprint("% Pos %", row_col_info, buffer._cursor.pos);
+        }
+
         RIGHT_PAD :: 1.1;
+        width = Simp.prepare_text(font, row_col_info);
         Simp.draw_prepared_text(font, xx (footer.x + footer.w - width * RIGHT_PAD), xx center, .{.0,.0,.0,1.0});
     }
+
 }
 
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
@@ -390,6 +343,47 @@ draw_widgets :: () {
     // Simp.immediate_quad(0.0, 9*k, w, 9*k+3, CURSOR_COLOR);
     // Simp.immediate_quad(window_width - w, 9*k, xx window_width, 9*k+3, CURSOR_COLOR);
 }
+
+draw_global_debug_info :: (r: Rect) {
+    // FPS
+    ct := seconds_since_init();
+    if second_elapsed {
+        frametime = (ct - last_time); // frametime
+        fps       = 1/frametime;
+        last_showed_sim_time = last_simulation_time;
+        last_rendering_time = (ct-last_time)*1000;
+    }
+
+    PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
+    PrintDev("%fps %ms %sec\n", 
+        formatFloat(fps, trailing_width=0), 
+        formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO), 
+        formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO)
+    );
+
+    row := 1;
+    max := 0;
+    line_height := get_line_height();
+    bottom: float32 = footer_height + line_height;
+
+    for #v2 < debug_infos {
+        s := it;
+        ln := s[s.count-1] == #char "\n";
+        if ln then s.count -= 1;
+
+        rmargin := 10;
+
+        w := Simp.prepare_text(my_font, s);
+        bottom += line_height;
+        Simp.draw_prepared_text(my_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
+
+        if ln then row += 1;
+    }
+
+    array_reset(*debug_infos);
+}
+
+/////////////////////
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(my_font, s);

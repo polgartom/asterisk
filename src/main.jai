@@ -72,6 +72,7 @@ footer_height: float;
 
 frame := 0;
 current_frame := 0;
+second_elapsed := false;
 
 Args :: struct {
     workdir: string;
@@ -135,7 +136,6 @@ main :: () {
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
-    second_elapsed := false;
 
     string_for_utf32_to_utf8 := alloc_string(4);
 
@@ -287,7 +287,7 @@ main :: () {
             last_simulation_time = (seconds_since_init()-last_time)*1000;
         }
 
-        draw_frame(second_elapsed, last_time);
+        draw_frame(last_time);
         swap_buffers(my_window);
         
         // sleep_milliseconds(20); // @Temporary
@@ -297,8 +297,8 @@ main :: () {
 }
 
 PrintDev :: (fmt: string, args: .. Any) #expand {
-    s := sprint(fmt, ..args); // Switch to tprint @Todo
-    array_add(*debug_infos, s);  // can we use temporary allocator for dynamic arrays?
+    s := tprint(fmt, ..args);
+    array_add(*debug_infos, s); // can we use temporary allocator for dynamic arrays?
 } @PrintLike
 
 get_char_at_string_index :: (t: string, index: s64) -> string {
