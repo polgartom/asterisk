@@ -44,12 +44,12 @@ parse_color_config :: () {
 
         } else if current_section == "Color" {
             key, rhs := break_by_colon(line);
-            if rhs.count != 10 || !begins_with(rhs, "0x") {
+            
+            rhs = join(..split(rhs, "_")); // The jai's numeric separation thing is supported, like '0c_10_21_ff' -> '0c1021ff' 
+            if rhs.count != 8 {
                 error(handler, "Invalid hex value ('%') given after the '%' key specifier!\n", rhs, key);
                 return;
             }
-
-            advance(*rhs, "0x".count);
 
             result, success, rem := string_to_int(rhs, base=16, u32);
             if !success || rem {
@@ -77,16 +77,23 @@ DEFAULT_CONFIG_STRING :: #string CONFIG
 [1] # Version number; do not delete!
 
 [Color]
-background:             0x0c1021ff
-text_default:           0xddddddff
-text_selection:         0xffffff20
-text_highlight:         0x73ffff73
-text_under_cursor:      0x0c1021ff
-cursor:                 0xFBDE2Dc0
-cursor_inactive:        0x01010166
-cursor_line_background: 0xcccccc0A
-footer_background:      0xd1b58eff
-footer_text:            0x000000ff
+background: 0c1021ff
+
+layout_separator: dddddd1B
+
+text_default:               ddddddff
+text_dimmed:                bbbbbbff
+text_selection:             ffffff20
+text_highlight:             73ffff73
+text_under_cursor:          0c1021ff
+text_under_inactive_cursor: ffffffff
+
+cursor:                 FBDE2Dc0
+cursor_inactive:        4a4a4ac0
+cursor_line_background: cccccc0A
+
+footer_background:      d1b58eff
+footer_text:            000000ff
 
 CONFIG;
 

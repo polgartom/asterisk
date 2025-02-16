@@ -307,7 +307,7 @@ create_color_regions :: (using buffer: *Buffer) {
     tokens := tokenize(s, language = .C_STYLE);
     defer if tokens.count array_free(tokens);
 
-    // if tokens.count == 0 then array_add(*color_regions, .{pos=0, color=text_color});
+    text_color := map_color_to_vec4(.TEXT_DEFAULT);
 
     at := 0;
     for tokens {

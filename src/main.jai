@@ -8,10 +8,6 @@ last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
-// Blackboard theme
-bg_color          :: #run RgbaToVec4(12, 16, 33);
-text_color        :: #run RgbaToVec4(221, 221, 221);
-CURSOR_COLOR      :: #run Hex4ToVec4Rgba(0xFBDE2Dc0);
 CURSOR_COLOR_TEXT :: #run RgbaToVec4(12, 16, 33);
 SELECTION_COLOR   :: #run Hex4ToVec4Rgba(0xffffff20);
 HIGHLIGHT_COLOR   :: #run RgbaToVec4(115, 255, 255, .45);
@@ -197,9 +193,11 @@ main :: () {
             }
         }
 
-        c := bg_color;
-        Simp.clear_render_target(c.x, c.y, c.z, c.w);
-
+        {
+            c := map_color_to_vec4(.BACKGROUND);
+            Simp.clear_render_target(c.x, c.y, c.z, c.w);
+        }
+        
         handle_user_events();
 
         {
@@ -794,6 +792,20 @@ advance :: (arr: *[]$T, steps := 1) {
 
     arr.data  += steps;
     arr.count -= steps;
+}
+
+hex_to_vec4 :: (hex: u32) -> Vector4 {
+    r := (hex>>24) & 0xFF;
+    g := (hex>>16) & 0xFF;
+    b := (hex>>8)  & 0xFF;
+    a := (hex>>0)  & 0xFF;
+
+    return .{
+        r / 255.0, 
+        g / 255.0, 
+        b / 255.0, 
+        a / 255.0
+    };
 }
 
 RgbaToVec4 :: (r: u8, g: u8, b: u8, alpha: float = 1.0) -> Vector4 #expand {

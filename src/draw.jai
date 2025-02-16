@@ -13,8 +13,8 @@ draw_frame :: (current_time: float64) {
         draw_editor(*editors[1], right);
 
         Simp.set_shader_for_color(true);
-        BORDER_COLOR :: #run Vector4.{text_color.x,text_color.y,text_color.z,text_color.w*.2};
-        Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, BORDER_COLOR);
+        c := map_color_to_vec4(.LAYOUT_SEPARATOR);
+        Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, c);
     } else {
         draw_editor(*editors[0], rect);
     }
@@ -88,8 +88,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         end_row := last_visible_row_index(editor, buffer);
 
-        color := text_color;
-        if active_editor != editor then color = #run SetVector4ColorAlpha(text_color, .8);
+        color := map_color_to_vec4(.TEXT_DEFAULT);
+        if active_editor != editor {
+            color = map_color_to_vec4(.TEXT_DIMMED);
+        }
 
         for row_index: start_row..end_row {
             row := row_table[row_index];
@@ -250,30 +252,40 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
     Simp.set_shader_for_color(true);
 
+    bg_color := map_color_to_vec4(.CURSOR);
+    fg_color := map_color_to_vec4(.TEXT_UNDER_CURSOR);
+
+    if active_editor != editor {
+        bg_color = map_color_to_vec4(.CURSOR_INACTIVE);
+        fg_color = map_color_to_vec4(.TEXT_UNDER_INACTIVE_CURSOR);
+    }
+
+    // @Todo: Current line indicator frame shape
+    // #if CURRENT_LINE_INDICATOR_STYLE == .FRAME {
+    //     p1 := bottom + (ch-ch*0.1);
+    //     p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+
+    //     Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // top
+    //     Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // bottom
+    // }
+    
     {
-        color := ifx active_editor == editor then CURSOR_COLOR else Vector4.{1,1,1,.4};
-        Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), color);
-    }
-    
-    #if CURRENT_LINE_INDICATOR_STYLE == .FRAME {
+        // Current line indicator shape
         p1 := bottom + (ch-ch*0.1);
         p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
-
-        Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // top
-        Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // bottom
+        
+        color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
+        Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
     }
+
+    // Cursor shape
+    Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
     
-    #if CURRENT_LINE_INDICATOR_STYLE == .HIGHLIGHT {
-        p1 := bottom + (ch-ch*0.1);
-        p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
-
-        Simp.immediate_quad(r.x, p1, r.x + r.w, p2, CURRENT_LINE_INDICATOR_COLOR);
-    }
-
-    if active_editor == editor && buffer.count {
+    // Change character's color under the cursor
+    if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);
         Font.prepare_text(primary_font, character);
-        Font.draw_prepared_text(primary_font, xx cx, xx bottom, CURSOR_COLOR_TEXT);
+        Font.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
     }
 }
 
@@ -446,7 +458,7 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, text: string) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     last_texture: s64 = -1;
-    color := text_color;
+    color := map_color_to_vec4(.TEXT_DEFAULT);
 
     for quad, i: quads {
         page := quad.glyph.page;
