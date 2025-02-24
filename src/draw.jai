@@ -364,6 +364,8 @@ draw_widgets :: () {
 }
 
 draw_global_debug_info :: (r: Rect) {
+    // Simp.immediate_flush();
+
     // FPS
     ct := seconds_since_init();
     if second_elapsed {

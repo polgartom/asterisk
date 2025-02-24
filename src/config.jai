@@ -22,6 +22,9 @@ parse_color_config :: () {
         }
 
         line = trim(line);
+        comment_index := find_index_from_left(line, #char "#");
+        if comment_index != -1 line.count = comment_index;
+
         if line.count == 0 continue;
         if line[0] == #char "[" {
             advance(*line, 1);
@@ -69,15 +72,20 @@ parse_color_config :: () {
 
 }
 
+#scope_export
+
 load_global_config :: () {
     parse_color_config();
 }
+
+#scope_file
 
 DEFAULT_CONFIG_STRING :: #string CONFIG
 [1] # Version number; do not delete!
 
 [Color]
-background: 0c1021ff
+#background: 0c1021ff
+background: 0c1a21ff
 
 layout_separator: dddddd1B
 
@@ -89,6 +97,7 @@ text_under_cursor:          0c1021ff
 text_under_inactive_cursor: FBDE2D_a0
 
 cursor:                 FBDE2Dc0
+#cursor:                 ABDE2Dc0
 cursor_inactive:        3a3a3aff
 cursor_line_background: cccccc0A
 
@@ -96,8 +105,12 @@ footer_background:        b0a070ff
 footer_background_darken: 8b7c4dff
 footer_text:              000000ff
 
-CONFIG;
+# Nice colors
+# 8b708bff
+# b0a070ff
+# 7b904dff
+# bb704dff     # red-ish
 
-#scope_file
+CONFIG;
 
 #import,file "file_handler.jai";

@@ -83,3 +83,45 @@ prepare_text                      C:\jai\modules\Simp\font.jai:648
 draw_editor                       K:\Programming\asterisk\src\draw.jai:198
 draw_frame                        K:\Programming\asterisk\src\draw.jai:15
 main                              K:\Programming\asterisk\src\main.jai:283
+
+
+------------------------
+
+Working directory: 'K:/Programming/asterisk'
+Arithmetic overflow. We tried to compute:
+    0 - 1
+The operand type is u32, but the result does not fit into this type.
+Panic.
+A breakpoint was hit, but no debugger is attached.
+
+Printing the stack trace:      
+handle_exception
+   C:\jai\modules\Runtime_Support_Crash_Handler.jai:361       
+... (skipping OS-internal procedures)
+debug_break
+   C:\jai\modules\Runtime_Support.jai:462
+my_panic
+   C:\jai\modules\Runtime_Support.jai:365
+__arithmetic_overflow
+   C:\jai\modules\Runtime_Support.jai:269
+deallocate_direct_small_or_medium  C:\jai\modules\Default_Allocator\module.jai:1488
+deallocate_small_or_medium     
+   C:\jai\modules\Default_Allocator\module.jai:1553
+deallocate
+   C:\jai\modules\Default_Allocator\module.jai:1627
+allocator_proc
+   C:\jai\modules\Default_Allocator\module.jai:45
+free
+   C:\jai\modules\Basic\module.jai:121
+modify_string
+   K:\Programming\asterisk\src\main.jai:775
+reset_search_widget
+   K:\Programming\asterisk\src\widget.jai:44
+UseSearchWidget
+   K:\Programming\asterisk\src\keymap.jai:94
+keymap_handle_event
+   C:\jai\modules\Keymap\module.jai:405
+handle_event
+   C:\jai\modules\Keymap\module.jai:42
+main
+   K:\Programming\asterisk\src\main.jai:221
