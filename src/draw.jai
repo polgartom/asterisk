@@ -336,7 +336,8 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
                     else width += primary_font.em_width;
 
         bottom := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-        Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), selection_color); 
+        // @Hacky We should add +.001 as a crude fix for some rounding issues because there is a very subtle gap if editor.top_offset is 0.0.
+        Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left+width, bottom - (ch*.5-(ch*0.2)), selection_color);
     }
 
 }
