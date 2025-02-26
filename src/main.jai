@@ -102,7 +102,7 @@ main :: () {
         set_working_directory(workdir);
         print("Working directory: '%'\n", workdir);
 
-        file_browser_scan(workdir);
+        file_browser_scan_for_files(workdir);
     }
 
     load_global_config();
@@ -355,7 +355,6 @@ byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
     col := 0;
-    
     row := find_row(buffer, byte_pos);
     at  := row.start;
     while at < byte_pos {
@@ -363,7 +362,36 @@ byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
         at += 1 + trailingBytesForUTF8[byte];
         col += 1;
     }
+    
     assert(at == byte_pos);
+
+    return col;
+}
+
+byte_pos_to_col_pos_hacky :: (buffer: *Buffer, byte_pos: s64) -> s64 {
+    assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
+
+    // @HACKY!! 
+    // If we are on the first byte of the row, that may indicate that it is the last column of the 
+    // previous row — if the current row is not the first row — because we use the '\n' character to
+    // represent the line end. This means it serves as both the first character of the next row and the
+    // last character of the previous row at the same time.
+    
+    row := find_row(buffer, byte_pos);
+    if row.start != 0 && row.start == byte_pos {
+       byte_pos -= 1;
+       row = find_row(buffer, byte_pos);
+    }
+    
+    col := 0;
+    at  := row.start;
+    while at < byte_pos {
+        byte := buffer.data[at];
+        at += 1 + trailingBytesForUTF8[byte];
+        col += 1;
+    }
+    
+    // assert(at == byte_pos);
 
     return col;
 }
@@ -827,9 +855,13 @@ mode := Program_Mode.EDITOR;
 #load "render.jai";
 #load "draw.jai";
 #load "event.jai";
-#load "widget.jai";
 #load "config.jai";
 #load "color.jai";
+
+#load "widget.jai";
+#load "widget/file_browser.jai";
+#load "widget/find_text_dialog.jai";
+#load "widget/find_global_text_dialog.jai";
 
 // Local modules
 #import "Language_Support";

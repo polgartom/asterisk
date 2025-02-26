@@ -61,8 +61,12 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
-    set_cursor_pos(buffer, cursor, at + text.count, horizontal=true);
+    print("cursor.col: % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
 
+    set_cursor_pos(buffer, cursor, at + text.count, horizontal=true);
+    
+    print("cursor.col (after): % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
+        
     if buffer.history_enabled {
         if text == "\n" || text == " " {
             push_history_from_input_buffer(buffer);

@@ -12,8 +12,8 @@ CloseCurrentWidget :: () {
 
 ListUp :: () {
     if active_widget == {
-        case File_Browser_Widget; {
-            using file_browser_widget;
+        case File_Browser; {
+            using file_browser;
             
             entries, found := table_find(*table, current_directory);
             assert(found, "%\n", current_directory);
@@ -32,8 +32,8 @@ ListUp :: () {
 
 ListDown :: () {
     if active_widget == {
-        case File_Browser_Widget; {
-            using file_browser_widget;
+        case File_Browser; {
+            using file_browser;
             
             entries, found := table_find(*table, current_directory);
             assert(found, "%\n", current_directory);
@@ -53,8 +53,8 @@ ListDown :: () {
 
 ListEntered :: () {
     if active_widget == {
-        case File_Browser_Widget; {
-            using file_browser_widget;
+        case File_Browser; {
+            using file_browser;
 
             if selected_entry_index == -1 {
                 parent := parent_dir(current_directory);
@@ -87,18 +87,15 @@ HideSecondEditorPanel :: () {
     editors[1].visible = false;
 }
 
-UseSearchWidget :: () {
-    switch_editor_mode(.WIDGET);
-    active_widget = Search_Widget;
-
-    reset_search_widget();
+OpenFindTextDialog :: () {
+    find_text_dialog_handle_event();
 }
 
-UseFileBrowserWidget :: () {
+OpenFileBrowser :: () {
     switch_editor_mode(.WIDGET);
-    active_widget = File_Browser_Widget;
+    active_widget = File_Browser;
 
-    // using file_browser_widget;
+    // using file_browser;
 }
 
 CreateBuffer :: () {
@@ -1138,8 +1135,8 @@ register_keymap_procedures :: () {
     Add(editor_keymap, SwitchOrSplitEditorPanel);
     Add(editor_keymap, HideSecondEditorPanel);
 
-    Add(editor_keymap, UseSearchWidget);
-    Add(editor_keymap, UseFileBrowserWidget);
+    Add(editor_keymap, OpenFindTextDialog);
+    Add(editor_keymap, OpenFileBrowser);
 
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
@@ -1252,8 +1249,8 @@ Enter ListEntered
 C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
-C-f UseSearchWidget
-C-o UseFileBrowserWidget
+C-f OpenFindTextDialog
+C-o OpenFileBrowser
 
 F1 ToggleDevInfo
 

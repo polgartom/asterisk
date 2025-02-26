@@ -114,47 +114,45 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
-    if active_editor == editor {
-        // @Temporary
-        if mode == .WIDGET && search_text {
-            // Draw search_widget's results
+    // if active_editor == editor {
+    //     // @Temporary
+    //     if mode == .WIDGET && find_text_dialog.text {
+    //         Simp.set_shader_for_color(true);
+    //         highlight_color := map_color_to_vec4(.TEXT_HIGHLIGHT);
 
-            Simp.set_shader_for_color(true);
-            highlight_color := map_color_to_vec4(.TEXT_HIGHLIGHT);
-
-            using editor;
-            using buffer;
+    //         using editor;
+    //         using buffer;
             
-            push_scissor(rect);
-            defer pop_scissor();
+    //         push_scissor(rect);
+    //         defer pop_scissor();
 
-            width := measure_text_width(search_text);
+    //         width := measure_text_width(search_text);
 
-            start_row_index := first_visible_row_index(editor, buffer);
-            start_row := row_table[start_row_index];
+    //         start_row_index := first_visible_row_index(editor, buffer);
+    //         start_row := row_table[start_row_index];
 
-            end_row_index := last_visible_row_index(editor, buffer);
-            end_row := row_table[end_row_index];
+    //         end_row_index := last_visible_row_index(editor, buffer);
+    //         end_row := row_table[end_row_index];
 
-            for pos: search_widget.occurences {
-                if pos < start_row.start || pos > end_row.end continue;
+    //         for pos: search_widget.occurences {
+    //             if pos < start_row.start || pos > end_row.end continue;
 
-                row_index := find_row_index(buffer, pos);
-                row := row_table[row_index];
+    //             row_index := find_row_index(buffer, pos);
+    //             row := row_table[row_index];
 
-                left   := r.x - left_offset;
-                bottom := (rect.h + rect.y) - get_line_height(row_index+1) + editor.top_offset;
+    //             left   := r.x - left_offset;
+    //             bottom := (rect.h + rect.y) - get_line_height(row_index+1) + editor.top_offset;
 
-                if pos != row.start {
-                    t := get_row_as_string(buffer, row);
-                    t = slice(t, 0, pos - row.start);
-                    left += Simp.prepare_text(primary_font, t);
-                }
+    //             if pos != row.start {
+    //                 t := get_row_as_string(buffer, row);
+    //                 t = slice(t, 0, pos - row.start);
+    //                 left += Simp.prepare_text(primary_font, t);
+    //             }
 
-                draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, highlight_color);
-            }
-        }
-    }
+    //             draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, highlight_color);
+    //         }
+    //     }
+    // }
 
     draw_selection(editor, buffer, r);
     draw_cursor(editor, buffer, r);
@@ -346,21 +344,56 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 draw_widgets :: () {
     proc := default_theme_procs[current_theme];
     my_theme = proc();
-    set_default_theme(my_theme);  // Just in case we don't explicitly pass themes sometimes...!
-
-    // print("> active_widget: %\n", active_widget);
+    set_default_theme(my_theme);
 
     if active_widget == {
-        case Search_Widget;
-            update_search_widget();
-        case File_Browser_Widget;
-            update_file_browser_widget();
+        case Find_Text_Dialog; draw_find_text_dialog();
+        case File_Browser;     update_file_browser();
+    }
+}
+
+draw_find_text_dialog :: () {
+    using find_text_dialog;
+    loc := #location();
+    
+    ed_r            := active_editor.rect_for_draw;
+    k               := ed_r.h * .1;
+    width           := em(15.0, primary_font);
+    height          := em(2.0,  my_font_small);
+    right_pad       := 0.1 * k;
+
+    r := get_rect(
+        ed_r.x + ed_r.w - width * 2 - right_pad,
+        ed_r.h - height,
+        width * 2,
+        my_font_small.character_height * 2.0
+    );
+
+    text_theme := my_theme.text_input_theme;
+    text_theme.font = my_font_small;
+    action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
+    
+    // PrintDev("[d]: [%] [%]\n", text.data, state.text.data);
+
+    {
+        hash := get_hash(loc, 0);
+        state=, _ := find_or_create_state(Text_Input_State, hash, false);
     }
 
-    // k := window_height * .1;
-    // w := window_width*0.5-4*k;
-    // Simp.immediate_quad(0.0, 9*k, w, 9*k+3, CURSOR_COLOR);
-    // Simp.immediate_quad(window_width - w, 9*k, xx window_width, 9*k+3, CURSOR_COLOR);
+    if action & .ENTERED { // Enter pressed
+        to_next_occurance();
+
+    } else if action & .TEXT_MODIFIED {
+        if state.text.count && state.text[state.text.count-1] == 0x7F {
+            // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
+            reset_search_widget();
+        } else {
+            modify_string(*text, state.text);
+            find_occurences(text);
+        }
+    } 
+    // if action & .ESCAPED {
+    // }
 }
 
 draw_global_debug_info :: (r: Rect) {

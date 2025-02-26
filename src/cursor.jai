@@ -1,7 +1,8 @@
 // @Cleanup: Rename the $with_selection param because the opposite is happening right now!
 set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
-    target_pos = max(target_pos, 0);
-    target_pos = min(target_pos, buffer.count);
+    
+    if       target_pos < 0             target_pos = 0;
+    else if  target_pos > buffer.count  target_pos = buffer.count;
 
     if with_selection {
         cursor.pos = target_pos;
@@ -12,7 +13,7 @@ set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, hor
 
     // Explain!
     if horizontal {
-        cursor.col = byte_pos_to_col_pos(buffer, cursor.pos);
+        cursor.col = byte_pos_to_col_pos_hacky(buffer, target_pos);
     }
 
     request_editor_top_left_offsets_recalc();
