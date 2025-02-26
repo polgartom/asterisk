@@ -878,6 +878,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 #import "GetRect";
 #import "Command_Line";
 #import "Hash_Table";
+#import "Sort";
 
 File      :: #import "File";
 Simp      :: #import "Simp";

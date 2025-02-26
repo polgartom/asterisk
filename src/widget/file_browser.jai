@@ -1,6 +1,6 @@
 file_browser_select_entry :: (index: s64) {
     using file_browser;
-    
+
     list, found := table_find(*table, current_directory);
     assert(found, "%\n", current_directory);
     assert(index < list.count, "index: % ; list: %\n", index, list);
@@ -16,6 +16,8 @@ file_browser_select_entry :: (index: s64) {
         open_file_or_create_empty_buffer(active_editor, fpath);
         array_add(*user_events, .{ type = .CLOSE_WIDGET });
     }
+
+    clear_file_browser_text_input();
 }
 
 file_browser_scan_for_files :: (start_dir: string) {
@@ -74,6 +76,13 @@ file_browser_change_directory :: (dir: string) {
     selected_entry_index = -1;
 }
 
+clear_file_browser_text_input :: () {
+    using file_browser;
+
+    if state set_text(state, "");
+    if search_text search_text.count = 0;
+}
+
 update_file_browser :: () {
     loc := #location(); // remove it!
 
@@ -94,20 +103,19 @@ update_file_browser :: () {
         
         action, _, state := text_input(r, w.search_text, *text_theme, input_action=.ACTIVATE);
 
-        // if action & .TEXT_MODIFIED {
-        //     if state.text.count == 0 || state.text[state.text.count-1] == 0x7F { // Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace @Hacky
-        //         if state.text                    then modify_string(*state.text,                  "");
-        //         if state.pre_modification_text   then modify_string(*state.pre_modification_text, "");
-        //         if w.search_text                 then modify_string(*w.search_text,               "");
-            
-        //         w.items.count = 0;
-        //     } else {
-        //         modify_string(*w.search_text, state.text);
-        //     }
-        // } else if action & .ENTERED {
-        //     using file_browser;
-
-        // }
+        if action & .TEXT_MODIFIED {
+            if state.text {
+                if state.text[state.text.count-1] == 0x7F { // Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace @Hacky
+                    clear_file_browser_text_input();
+                } else {
+                    modify_string(*w.search_text, state.text);
+                }
+            } else {
+                if w.search_text {
+                    w.search_text.count = 0;
+                }
+            }
+        }
     }
 
     {
@@ -140,11 +148,25 @@ update_file_browser :: () {
 
         basedir := current_directory;
 
-        list, found := table_find(*table, basedir);
+        list, found := table_find(*table, basedir,, temp);
         if !found {
             log_error("I cannot found the basedir: '%'\n", basedir); // @Todo: error hint for the user 
             close_current_widget(); // this will prevent the flickering of the file browser window
             return;
+        }
+
+        _list: [..] Path_Info;
+        _list.allocator = temp;
+
+        if search_text {
+            for e: list {
+                index := index_of_string_nocase(e.name, search_text);
+                if index != -1 {
+                    array_add(*_list, e);
+                }
+            }
+
+            list = _list;
         }
 
         if should_recalc_scroll_offsets {
@@ -231,6 +253,8 @@ file_browser: File_Browser;
 
 File_Browser :: struct {
     search_text: string;
+    state: *Text_Input_State;
+
     scroll_value: float;
     should_recalc_scroll_offsets: bool;
 

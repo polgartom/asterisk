@@ -374,8 +374,6 @@ draw_find_text_dialog :: () {
     text_theme.font = my_font_small;
     action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
     
-    // PrintDev("[d]: [%] [%]\n", text.data, state.text.data);
-
     {
         hash := get_hash(loc, 0);
         state=, _ := find_or_create_state(Text_Input_State, hash, false);
@@ -388,7 +386,7 @@ draw_find_text_dialog :: () {
         if state.text.count && state.text[state.text.count-1] == 0x7F {
             // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
             reset_search_widget();
-        } else {
+        } else if state.text {
             modify_string(*text, state.text);
             find_occurences(text);
         }

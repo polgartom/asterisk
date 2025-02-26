@@ -1,14 +1,14 @@
 reset_search_widget :: () {
     using find_text_dialog;
 
+    array_reset_keeping_memory(*occurences);
+    current_occurance = -1;
+
     if state && state.text {
         state.text.count = 0;
     }
 
-    array_reset_keeping_memory(*occurences);
-    current_occurance = -1;
-
-    if text text.count = 0;
+    if text free(text);
 }
 
 find_occurences :: (_text: string) {
