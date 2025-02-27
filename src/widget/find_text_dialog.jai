@@ -7,8 +7,6 @@ reset_search_widget :: () {
     if state && state.text {
         state.text.count = 0;
     }
-
-    if text free(text);
 }
 
 find_occurences :: (_text: string) {

@@ -16,7 +16,7 @@ my_font_small: *Simp.Dynamic_Font;
 font_width: s64;
 line_height :: 0.0;
 font_size       :: 15;
-font_size_small :: 14; // @Incomplete: scale this by the window's ratio 
+font_size_small :: 14; // @Incomplete: scale this by the window's ratio
 
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
@@ -62,7 +62,7 @@ Args :: struct {
 main :: () {
     print("\n\n");
 
-    {    
+    {
         format := *context.print_style.default_format_struct;
         format.use_newlines_if_long_form = true;
         format.indentation_width = 2;
@@ -95,7 +95,7 @@ main :: () {
                 workdir = dir;
             } else {
                 log_error("Unable to locate the given directory's absolute location specified with the '-workdir %' argument!\n", dir);
-            }   
+            }
         }
 
         path_overwrite_separators(workdir, #char "/");
@@ -138,7 +138,7 @@ main :: () {
         // @Temporary
         open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
         open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
-        
+
     } else {
         for filepath: files_from_cmdline {
             open_file_or_create_empty_buffer(active_editor, filepath);
@@ -162,6 +162,7 @@ main :: () {
         }
 
         update_window_events();
+        clear_text_input_events();
 
         for get_window_resizes() {
             Simp.update_window(it.window);
@@ -182,7 +183,7 @@ main :: () {
             c := map_color_to_vec4(.BACKGROUND);
             Simp.clear_render_target(c.x, c.y, c.z, c.w);
         }
-        
+
         handle_user_events();
 
         {
@@ -207,7 +208,6 @@ main :: () {
                 }
             }
 
-
             if wait_for_this_key_to_release {
                 key_code := wait_for_this_key_to_release.*;
                 if key_code == cast,no_check(u32)event.key_code && event.key_pressed == 0 {
@@ -217,6 +217,8 @@ main :: () {
                 }
             }
 
+            handle_text_input_event(event);
+
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
             if handled {
@@ -225,12 +227,12 @@ main :: () {
             }
 
             // print("event: % ; % ; handled: %\n", event.modifier_flags.packed, event.ctrl_pressed, handled);
-        
+
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT && !event.ctrl_pressed {
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
 
-                    ZeroMemory(string_for_utf32_to_utf8.data, 0x4);
+                    zero_memory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
                     _, buffer := get_active_editor_and_buffer(); // @Temporary
@@ -258,16 +260,16 @@ main :: () {
 
             #if 1 {
                 PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-    
+
                 row := find_row_index(buffer, buffer._cursor.pos);
                 col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
                 cx  := get_cursor_x(buffer, *buffer._cursor);
                 cy  := get_cursor_y(buffer, *buffer._cursor);
 
                 PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
-                
-                PrintDev("rows: % ; gentime: %ms ; row_table size: %\n", 
-                    active_buffer.row_table.count, 
+
+                PrintDev("rows: % ; gentime: %ms ; row_table size: %\n",
+                    active_buffer.row_table.count,
                     formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
                     cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
                 );
@@ -277,7 +279,7 @@ main :: () {
                     s := to_string(buffer);
                     PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
                 }
-                
+
                 mx, my, ok := get_mouse_pointer_position(right_handed=false);
                 PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
 
@@ -290,7 +292,7 @@ main :: () {
 
         draw_frame(last_time);
         swap_buffers(my_window);
-        
+
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
     }
@@ -314,7 +316,7 @@ find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
 
     index := find_row_index(buffer, byte_pos);
     assert(index < row_table.count, "buffer: %\n", buffer.*);
-    
+
     return row_table[index];
 }
 
@@ -340,7 +342,7 @@ find_next_row_index :: (using buffer: *Buffer, offset: s64) -> (success: bool, i
 get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
     if cursor.pos == 0 return 1;
     assert(row_table.count != 0);
-    
+
     for row, row_index: row_table {
         if cursor.pos <= row.end {
             return row_index + 1;
@@ -362,7 +364,7 @@ byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
         at += 1 + trailingBytesForUTF8[byte];
         col += 1;
     }
-    
+
     assert(at == byte_pos);
 
     return col;
@@ -371,18 +373,18 @@ byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
 byte_pos_to_col_pos_hacky :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
-    // @HACKY!! 
-    // If we are on the first byte of the row, that may indicate that it is the last column of the 
+    // @HACKY!!
+    // If we are on the first byte of the row, that may indicate that it is the last column of the
     // previous row — if the current row is not the first row — because we use the '\n' character to
     // represent the line end. This means it serves as both the first character of the next row and the
     // last character of the previous row at the same time.
-    
+
     row := find_row(buffer, byte_pos);
     if row.start != 0 && row.start == byte_pos {
        byte_pos -= 1;
        row = find_row(buffer, byte_pos);
     }
-    
+
     col := 0;
     at  := row.start;
     while at < byte_pos {
@@ -390,7 +392,7 @@ byte_pos_to_col_pos_hacky :: (buffer: *Buffer, byte_pos: s64) -> s64 {
         at += 1 + trailingBytesForUTF8[byte];
         col += 1;
     }
-    
+
     // assert(at == byte_pos);
 
     return col;
@@ -411,7 +413,7 @@ get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64
 
 get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (col: s64, bytes_from_left: s64) {
     editor, buffer := get_active_editor_and_buffer();
-    
+
     if x_is_relative {
         x += editor.left_offset;
     }
@@ -424,10 +426,10 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
     while s.count {
         cw := Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
         if cast(float)x <= left break;
-                
+
         byte_step := 1 + trailingBytesForUTF8[s[0]];
         s = advance(s, byte_step);
-        
+
         left += cw;
         col += 1;
         bytes_from_left += byte_step;
@@ -438,7 +440,7 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
 
 get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
     rows: [..] Row_Info;
-    
+
     if !has_selection(cursor) return rows;
 
     start, end := selected_range(cursor);
@@ -450,7 +452,7 @@ get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
     }
 
     return rows;
-} 
+}
 
 measure_text_width :: inline (text: string) -> s64 {
     return Simp.prepare_text(my_font, text);
@@ -509,7 +511,7 @@ num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
         byte  := buffer.data[at];
         at    += 1 + trailingBytesForUTF8[byte];
         chars += 1;
-    } 
+    }
 
     assert(at == row.end);
 
@@ -520,7 +522,7 @@ num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
 //     index := find_row_index(buffer, offset);
 //     row := buffer.row_table[index];
 //     start := row.start;
-    
+
 //     t := slice(buffer, start, offset-start);
 //     return utf8_count_chars(t);
 // }
@@ -556,7 +558,7 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Fo
 
     s := get_row_as_string(buffer, row);
     s = slice(s, 0, cursor.pos - row.start);
-    
+
     if !font font = my_font;
     cx = measure_text_width(font, s);
 
@@ -612,7 +614,7 @@ my_init_fonts :: () {
     } else {
         my_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
         my_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
-        
+
         primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
         primary_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, font_xs_size);
@@ -731,7 +733,7 @@ utf8_count_chars :: inline (s: string) -> s64 {
 
 utf8_advance_one_character :: (s: string) -> string {
     assert(s.count > 0);
-    
+
     size := 1 + trailingBytesForUTF8[s[0]];
     t := advance(s, size);
 
@@ -740,9 +742,27 @@ utf8_advance_one_character :: (s: string) -> string {
 
 utf8_advance_one_character :: (s: *string) {
     assert(s.count > 0);
-    
+
     size := 1 + trailingBytesForUTF8[s.data[0]];
     advance(s, size);
+}
+
+seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
+    point := _point - 1;
+    while point > 0 {
+        c := s[point];
+        if (192 & c) != 128  return point;
+        point -= 1;
+    }
+
+    return 0;
+}
+
+seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
+    if point == s.count {
+        return point;
+    }
+    return point + 1 + trailingBytesForUTF8[s[point]];
 }
 
 find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
@@ -762,7 +782,7 @@ scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := tru
     if path.count > 1 && ends_with(path, "/") then path.count -= 1;
 
     // assert(is_directory(path)); // Error hint for the user @Todo
-    
+
     items : [..] string; // IS IT USING THE TEMP ALLOCATOR???
 
     visitor :: (info: *File_Visit_Info, user_data: *[..] string) {
@@ -813,7 +833,7 @@ parent_dir :: (path: string) -> string {
 
     index = find_index_of_any_from_right(t, "\\/");
     if index == -1 return t;
-    
+
     return slice(t, 0, index+1); // +1 because we want to keep the last "/" character
 }
 
@@ -831,9 +851,9 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
     a := (hex>>0)  & 0xFF;
 
     return .{
-        r / 255.0, 
-        g / 255.0, 
-        b / 255.0, 
+        r / 255.0,
+        g / 255.0,
+        b / 255.0,
         a / 255.0
     };
 }

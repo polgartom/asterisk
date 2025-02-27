@@ -101,15 +101,18 @@ cursor:                 FBDE2Dc0
 cursor_inactive:        3a3a3aff
 cursor_line_background: cccccc0A
 
+widget_cursor: 47253aff
+
 footer_background:        b0a070ff
 footer_background_darken: 8b7c4dff
 footer_text:              000000ff
 
 # Nice colors
-# 8b708bff
-# b0a070ff
-# 7b904dff
-# bb704dff     # red-ish
+#a397a3ff
+#8b708bff
+#b0a070ff
+#7b904dff
+#bb704dff   #red-ish
 
 CONFIG;
 

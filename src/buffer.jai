@@ -61,12 +61,12 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
-    print("cursor.col: % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
+    // print("cursor.col: % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
 
     set_cursor_pos(buffer, cursor, at + text.count, horizontal=true);
-    
-    print("cursor.col (after): % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
-        
+
+    // print("cursor.col (after): % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
+
     if buffer.history_enabled {
         if text == "\n" || text == " " {
             push_history_from_input_buffer(buffer);
@@ -78,7 +78,7 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
                 t.data = insert_at;
                 t.count = 0;
             }
-            
+
             t.count += text.count;
         }
     }
@@ -112,7 +112,7 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
                 t.data = insert_at;
                 t.count = 0;
             }
-            
+
             t.count += text.count;
         }
     }
@@ -184,7 +184,7 @@ find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, inde
 
 create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     buffer: *Buffer;
-    
+
     found, index := find_uninitialized_buffer_index(editor);
     if found {
         assert(index > -1);
@@ -195,7 +195,7 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
 
     maybe_grow(buffer, BUFFER_PAGE_SIZE);
     rescan_line_ends(buffer);
-    
+
     buffer.initialized = true;
 
     return buffer;
@@ -235,7 +235,7 @@ rescan_line_ends :: (using buffer: *Buffer) {
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
     // @Todo VALIDATIONS!
-    if at >= buffer.count return "";    
+    if at >= buffer.count return "";
     if buffer.data[at] == #char "\n" return ""; // @Hacky
 
     s := slice(buffer, at, buffer.count - at);
@@ -274,7 +274,7 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
     assert(size > -1);
-    
+
     if size == 0 then size = BUFFER_PAGE_SIZE;
     desired_size := buffer.count + size;
 
@@ -284,7 +284,7 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
 
         new_data := cast(*u8)c_malloc(xx new_size);
         assert(new_data != null);
-        ZeroMemory(new_data, new_size);
+        zero_memory(new_data, new_size);
 
         if buffer.data {
             SlowMemcpy(new_data, buffer.data, buffer.allocated);
@@ -296,12 +296,12 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
-buffer_reset_keeping_memory :: (using buffer: *Buffer) {    
+buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     free(row_table.data,, row_table.allocator);
-    
+
     if data != null  then c_free(data);
     if filepath      then free(filepath);
-    
+
     if history {
         for * history free_history_item(it);
         array_free(history);
@@ -346,12 +346,12 @@ find_color_region_index :: inline (regions: [] Color_Region, pos: s64) -> (index
 
 get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end_pos: s64) -> (color_regions: [] Color_Region) {
     assert(regions.count > 0);
-    
+
     start_index := find_color_region_index(regions, start_pos);
     if start_index == -1 {
         start_index = 0;
     }
-    
+
     end_index := find_color_region_index(regions, end_pos);
     if end_index == -1 {
         end_index = regions.count - 1;
@@ -359,7 +359,7 @@ get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end
 
     count := end_index - start_index;
     if count == 0 then count = 1;
-    
+
     return array_view(regions, start_index, count);
 }
 
@@ -415,7 +415,7 @@ undo_history :: (using buffer: *Buffer) {
         case .UNDEFINED;
         case .INSERT_STRING; {
             assert(!!h.text);
-            
+
             to := h.at;
             from := h.at + h.text.count;
             if from > buffer.count {
@@ -424,7 +424,7 @@ undo_history :: (using buffer: *Buffer) {
                 to   -= diff;
             }
             to = max(to, 0);
-            
+
             assert(from <= buffer.count, "%; %\n", from, buffer.count); // @Debug
 
             shift_left(buffer, to, from);
@@ -454,7 +454,7 @@ redo_history :: (using buffer: *Buffer) {
             assert(!!h.text);
             insert_text_at(buffer, h.at, h.text);
             assert(h.at + h.text.count <= buffer.count);
-            
+
             set_cursor_pos(buffer, *_cursor, h.at + h.text.count, horizontal=true);
         }
         case .DELETE_STRING; {
@@ -467,8 +467,8 @@ redo_history :: (using buffer: *Buffer) {
 }
 
 reset_history_item :: inline (h: *Buffer_History) {
-    free_history_item(h); 
-    ZeroMemory(h, size_of(Buffer_History));
+    free_history_item(h);
+    zero_memory(h, size_of(Buffer_History));
 }
 
 free_history_item :: inline (using h: *Buffer_History) {

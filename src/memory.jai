@@ -16,7 +16,7 @@ SlowMemcpy :: (destination: *void, source: *void, count: s64) {
     }
 }
 
-ZeroMemory :: inline (ptr: *void, size: s64) {
+zero_memory :: inline (ptr: *void, size: s64) {
     memset(ptr, 0, size);
 }
 

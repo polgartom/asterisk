@@ -1,6 +1,6 @@
 draw_frame :: (current_time: float64) {
     Simp.set_shader_for_color(true);
-    
+
     x, y, width, height := get_dimensions(my_window, true);
     ui_per_frame_update(my_window, width, height, current_time);
 
@@ -35,7 +35,7 @@ draw_frame :: (current_time: float64) {
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
     left_pad := cast(float32) primary_font.em_width;
-    
+
     r, footer_r := cut_top(rect, window_height-footer_height);
     _, r=       := cut_left(r, left_pad);
 
@@ -83,7 +83,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         line_height := get_line_height();
 
-        start_row: s64 = xx (top_offset / line_height); 
+        start_row: s64 = xx (top_offset / line_height);
         start_row = clamp(start_row - 1, 0, row_table.count-1);
 
         end_row := last_visible_row_index(editor, buffer);
@@ -122,7 +122,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     //         using editor;
     //         using buffer;
-            
+
     //         push_scissor(rect);
     //         defer pop_scissor();
 
@@ -165,9 +165,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         footer := footer_r;
         Simp.set_shader_for_color(true);
-        
+
         font := primary_font_xs;
-        
+
         bg_color := map_color_to_vec4(.FOOTER_BACKGROUND);
         if active_editor != editor {
             bg_color = map_color_to_vec4(.FOOTER_BACKGROUND_DARKEN);
@@ -214,7 +214,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             relative_index := 0;
             for * editor.buffers {
                 if !it.initialized continue;
-                
+
                 relative_index += 1;
                 if it == buffer break;
             }
@@ -227,7 +227,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         row := find_row_index(buffer, buffer._cursor.pos) + 1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
-        
+
         row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
         if show_debug_info {
             row_col_info = tprint("% Pos %", row_col_info, buffer._cursor.pos);
@@ -240,9 +240,22 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
 }
 
+draw_cursor :: (r: Rect, color := Color.CURSOR, text_color := Color.TEXT_UNDER_CURSOR) {
+    fg_color := map_color_to_vec4(text_color);
+    bg_color := map_color_to_vec4(color);
+
+    // left := rect.x + rect.w;
+    // cw := em(1.0, primary_font);
+    // ch := primary_font.character_height;
+
+    Simp.set_shader_for_color(true);
+    // Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
+    Simp.immediate_quad(r.x, r.y, r.x + r.w, r.y + r.h, bg_color);
+}
+
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     c  := *buffer._cursor;
-    
+
     row_index := find_row_index(buffer, c.pos);
     row := buffer.row_table[row_index];
     line_text := get_row_as_string(buffer, row);
@@ -251,7 +264,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     cx := r.x + Font.prepare_text(primary_font, line_text, start_x = xx editor.left_offset, max_width = xx r.w);
     cw := em(1.0, primary_font);
     ch := primary_font.character_height;
-    
+
     bottom := (r.h + r.y) - get_line_height(row_index + 1) + editor.top_offset;
 
     Simp.set_shader_for_color(true);
@@ -272,19 +285,19 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     //     Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // top
     //     Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // bottom
     // }
-    
+
     {
         // Current line indicator shape
         p1 := bottom + (ch-ch*0.1);
         p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
-        
+
         color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
         Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
     }
 
     // Cursor shape
     Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
-    
+
     // Change character's color under the cursor
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);
@@ -296,7 +309,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     c := *buffer._cursor;
     if !has_selection(c) return;
-    
+
     Simp.set_shader_for_color(true);
     selection_color := map_color_to_vec4(.TEXT_SELECTION);
 
@@ -354,45 +367,54 @@ draw_widgets :: () {
 }
 
 draw_find_text_dialog :: () {
-    using find_text_dialog;
-    loc := #location();
-    
-    ed_r            := active_editor.rect_for_draw;
-    k               := ed_r.h * .1;
-    width           := em(15.0, primary_font);
-    height          := em(2.0,  my_font_small);
-    right_pad       := 0.1 * k;
+    ed_r := active_editor.rect_for_draw;
+    h := cast(float)primary_font.character_height;
+    b := cast(float)window_height;
+    r := get_rect(0.0, b, xx window_width, h);
 
-    r := get_rect(
-        ed_r.x + ed_r.w - width * 2 - right_pad,
-        ed_r.h - height,
-        width * 2,
-        my_font_small.character_height * 2.0
-    );
+    input := text_input(r, xx #location());
 
-    text_theme := my_theme.text_input_theme;
-    text_theme.font = my_font_small;
-    action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
-    
-    {
-        hash := get_hash(loc, 0);
-        state=, _ := find_or_create_state(Text_Input_State, hash, false);
-    }
+// kacsa
 
-    if action & .ENTERED { // Enter pressed
-        to_next_occurance();
+    // using find_text_dialog;
+    // loc := #location();
 
-    } else if action & .TEXT_MODIFIED {
-        if state.text.count && state.text[state.text.count-1] == 0x7F {
-            // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
-            reset_search_widget();
-        } else if state.text {
-            modify_string(*text, state.text);
-            find_occurences(text);
-        }
-    } 
-    // if action & .ESCAPED {
+    // ed_r            := active_editor.rect_for_draw;
+    // k               := ed_r.h * .1;
+    // width           := em(15.0, primary_font);
+    // height          := em(2.0,  my_font_small);
+    // right_pad       := 0.1 * k;
+
+    // r := get_rect(
+    //     ed_r.x + ed_r.w - width * 2 - right_pad,
+    //     ed_r.h - height,
+    //     width * 2,
+    //     my_font_small.character_height * 2.0
+    // );
+
+    // text_theme := my_theme.text_input_theme;
+    // text_theme.font = my_font_small;
+    // action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
+
+    // {
+    //     hash := get_hash(loc, 0);
+    //     state=, _ := find_or_create_state(Text_Input_State, hash, false);
     // }
+
+    // if action & .ENTERED { // Enter pressed
+    //     to_next_occurance();
+
+    // } else if action & .TEXT_MODIFIED {
+    //     if state.text.count && state.text[state.text.count-1] == 0x7F {
+    //         // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
+    //         reset_search_widget();
+    //     } else if state.text {
+    //         modify_string(*text, state.text);
+    //         find_occurences(text);
+    //     }
+    // }
+    // // if action & .ESCAPED {
+    // // }
 }
 
 draw_global_debug_info :: (r: Rect) {
@@ -408,9 +430,9 @@ draw_global_debug_info :: (r: Rect) {
     }
 
     PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
-    PrintDev("%fps %ms %sec\n", 
-        formatFloat(fps, trailing_width=0), 
-        formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO), 
+    PrintDev("%fps %ms %sec\n",
+        formatFloat(fps, trailing_width=0),
+        formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO),
         formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO)
     );
 
@@ -563,13 +585,13 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
                 while s.count {
                     cw = Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
                     if cast(float)mx <= left break;
-                    
+
                     left += cw;
-                    
+
                     bytes := 1 + trailingBytesForUTF8[s[0]];
                     s = advance(s, bytes);
                 }
-                
+
                 if cw == 0 {
                     cw = my_font.em_width;
                     Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), cast(float)cw, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
