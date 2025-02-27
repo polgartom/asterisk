@@ -100,17 +100,6 @@ move_cursor_left :: (using i: *Text_Input, shift_pressed := false) {
     if !text || cursor.pos == 0 return;
 
     cursor.pos = seek_left_one_utf8_character_byte_pos(text, cursor.pos);
-    // pos := 0;
-    // while pos < text.count {
-    //     size := 1 + trailingBytesForUTF8[text[pos]];
-    //     pos += size; 
-
-    //     if pos == cursor.pos {
-    //         assert(cursor.pos - size > -1);
-    //         cursor.pos -= size;
-    //         break;
-    //     }
-    // }
 }
 
 move_cursor_right :: (using i: *Text_Input, shift_pressed := false) {
@@ -121,21 +110,19 @@ move_cursor_right :: (using i: *Text_Input, shift_pressed := false) {
 backspace_from_cursor :: (using i: *Text_Input) {
     if !text || !cursor.pos return;
 
-    // if nonempty(selection) {
-    //     replace_selection(state, "");
-    //     pending_result_actions |= .TEXT_MODIFIED;
-    // } else if (insert_point <= text.count) && (insert_point >= 1) {
-    //     prev_point := seek_left_one_utf8_character(text, insert_point);
-    //     nbytes := insert_point - prev_point;
-    //     for i: prev_point..text.count-1-nbytes {
-    //         text[i] = text[i+nbytes];
-    //     }
+    from := cursor.pos;
+    to   := seek_left_one_utf8_character_byte_pos(text, from);
+    defer cursor.pos = to;
 
-    //     insert_point -= nbytes;
-    //     text.count   -= nbytes;
-    //     update_auto_complete(state);
-    //     pending_result_actions |= .TEXT_MODIFIED;
-    // }
+    if to == from return;
+    assert(to < from);
+
+    dest   := text.data  + to;
+    source := text.data  + from;
+    size   := text.count - from;
+
+    c_memmove(dest, source, xx size);
+    text.count -= (from - to);
 }
 
 events_to_handle_this_frame: [..] Event;
