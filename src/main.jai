@@ -765,6 +765,24 @@ seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
     return point + 1 + trailingBytesForUTF8[s[point]];
 }
 
+seek_left_utf8_until_alphanum :: (s: string, point: int) -> int {
+    while point {
+        point = seek_left_one_utf8_character_byte_pos(s, point);
+        if !is_alphanum(s[point]) break;
+    }
+
+    return point;
+}
+
+seek_left_utf8_until_separator :: (s: string, point: int) -> int {
+    while point {
+        point = seek_left_one_utf8_character_byte_pos(s, point);
+        if !is_separator(s[point]) break;
+    }
+    
+    return point;
+}
+
 find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
     if s.count < substring.count  return -1, false;
 

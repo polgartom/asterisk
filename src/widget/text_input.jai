@@ -10,6 +10,8 @@ text_input :: (r: Rect, ui_id: u64) -> *Text_Input {
 
     for event: events_to_handle_this_frame {
         if event.type == .TEXT_INPUT {
+            #if OS == .WINDOWS if event.utf32 == 0x7F continue;
+
             utf8_text := character_utf32_to_utf8(event.utf32);
             defer free(utf8_text);
 
@@ -19,16 +21,13 @@ text_input :: (r: Rect, ui_id: u64) -> *Text_Input {
             using Key_Code;
             if event.key_pressed {
                 if key == {
-                    case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed);
-                    case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed);
-                    case BACKSPACE;    backspace_from_cursor(input);
+                    case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
+                    case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
+                    case BACKSPACE;    backspace_from_cursor(input, event.ctrl_pressed);
                 }
             }
         }
     }
-
-    // push_scissor(r);
-    // defer pop_scissor();
 
     left_pad := 5.0;
     pad := 0.0;
@@ -96,25 +95,58 @@ clamp_cursor_pos :: (using i: *Text_Input) {
     Clamp(*cursor.pos, 0, text.count);
 }
 
-move_cursor_left :: (using i: *Text_Input, shift_pressed := false) {
-    if !text || cursor.pos == 0 return;
+move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
+    if !text || !cursor.pos return;
 
-    cursor.pos = seek_left_one_utf8_character_byte_pos(text, cursor.pos);
+    at := seek_left_one_utf8_character_byte_pos(text, cursor.pos);
+    if (ctrl_pressed) {
+        if is_separator(text[at]) {
+            while at {
+                point := seek_left_one_utf8_character_byte_pos(text, at);
+                if is_alphanum(text[point]) break;
+                at = point;
+            }
+        } else {
+            while at {
+                point := seek_left_one_utf8_character_byte_pos(text, at);
+                if !is_alphanum(text[point]) break;
+                at = point;
+            }
+        }
+    }
+
+    cursor.pos = at;
 }
 
-move_cursor_right :: (using i: *Text_Input, shift_pressed := false) {
+move_cursor_right :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
     if !text || cursor.pos == text.count return;
-    cursor.pos = seek_right_one_utf8_character_byte_pos(text, cursor.pos);
+
+    at := seek_right_one_utf8_character_byte_pos(text, cursor.pos);
+    if (ctrl_pressed && at != text.count) {
+        if is_separator(text[at]) {
+            while at {
+                at = seek_right_one_utf8_character_byte_pos(text, at);
+                if at == text.count || is_alphanum(text[at]) break;
+            }
+        } else {
+            while at {
+                at = seek_right_one_utf8_character_byte_pos(text, at);
+                if at == text.count || !is_alphanum(text[at]) break;
+            }
+        }
+    }
+
+    cursor.pos = at;
 }
 
-backspace_from_cursor :: (using i: *Text_Input) {
+backspace_from_cursor :: (using i: *Text_Input, ctrl_pressed := false) {
     if !text || !cursor.pos return;
 
     from := cursor.pos;
-    to   := seek_left_one_utf8_character_byte_pos(text, from);
-    defer cursor.pos = to;
+    move_cursor_left(i, ctrl_pressed=ctrl_pressed);
+    to := cursor.pos;
+    if from == to return;
 
-    if to == from return;
     assert(to < from);
 
     dest   := text.data  + to;

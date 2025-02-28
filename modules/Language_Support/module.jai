@@ -19,7 +19,7 @@ tokenize :: (s: string, $language: Language) -> [] Token {
     return Token.[];
 }
 
-is_separator :: inline (c: s64, $include_underscore := true) -> bool {
+is_separator :: inline (c: u8, $include_underscore := true) -> bool {
     #if include_underscore {
         if c == #char "_" return true;
     }
