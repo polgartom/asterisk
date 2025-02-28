@@ -6,3 +6,4 @@ active_widget: Type;
 
 #load "widget/label.jai";
 #load "widget/text_input.jai";
+#load "widget/list_input.jai";

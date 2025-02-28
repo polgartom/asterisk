@@ -1,4 +1,4 @@
-text_input :: (r: Rect, ui_id: u64) -> *Text_Input {
+text_input :: (r: Rect, ui_id: u64, placeholder := "") -> *Text_Input {
     input, found := table_find(*inputs, ui_id);
     if !found {
         input = New(Text_Input);
@@ -42,10 +42,10 @@ text_input :: (r: Rect, ui_id: u64) -> *Text_Input {
         Simp.prepare_text(primary_font, text);
         center := t - (r.h*1.5*0.5) - ch*.3;
         Simp.draw_prepared_text(primary_font, xx (r.x + left_pad), xx center, .{.0,.0,.0,1.0});
-    } else {
+    } else if placeholder {
         left   := r.x + left_pad * 2;
         bottom := t - (r.h*1.5*0.5) - ch*.3; // center
-        label(xx left, xx bottom, "Try to type something...", primary_font, .{.0,.0,.0,.5});
+        label(xx left, xx bottom, placeholder, primary_font, .{.0,.0,.0,.5});
     }
 
     {

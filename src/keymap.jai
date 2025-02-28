@@ -10,62 +10,6 @@ CloseCurrentWidget :: () {
     close_current_widget();
 }
 
-ListUp :: () {
-    if active_widget == {
-        case File_Browser; {
-            using file_browser;
-            
-            entries, found := table_find(*table, current_directory);
-            assert(found, "%\n", current_directory);
-            
-            i := selected_entry_index;
-            i -= 1;
-            
-            // -1 means the first entry of the file list which is the parent directory 
-            if i < -1 && entries.count i = entries.count - 1;
-
-            selected_entry_index = i;
-            should_recalc_scroll_offsets = true;
-        }
-    }
-}
-
-ListDown :: () {
-    if active_widget == {
-        case File_Browser; {
-            using file_browser;
-            
-            entries, found := table_find(*table, current_directory);
-            assert(found, "%\n", current_directory);
-            
-            i := selected_entry_index;
-            i += 1;
-
-            // -1 means the first entry of the file list which is the parent directory 
-            if i + 1 > entries.count then i = -1;
-
-            selected_entry_index = i;
-            should_recalc_scroll_offsets = true;
-        }
-    }
-
-}
-
-ListEntered :: () {
-    if active_widget == {
-        case File_Browser; {
-            using file_browser;
-
-            if selected_entry_index == -1 {
-                parent := parent_dir(current_directory);
-                file_browser_change_directory(parent);
-            } else {
-                file_browser_select_entry(selected_entry_index);
-            }
-        }
-    }
-}
-
 // [Editor]
 
 SwitchOrSplitEditorPanel :: () {
@@ -1126,10 +1070,6 @@ register_keymap_procedures :: () {
 
     Add(widget_keymap, CloseCurrentWidget);
     
-    Add(widget_keymap, ListUp);
-    Add(widget_keymap, ListDown);
-    Add(widget_keymap, ListEntered);
-
     // Editor
 
     Add(editor_keymap, SwitchOrSplitEditorPanel);
@@ -1239,10 +1179,6 @@ A-F4 Quit
 [Widget]
 
 ESC CloseCurrentWidget
-
-ArrowUp ListUp
-ArrowDown ListDown
-Enter ListEntered
 
 [Editor]
 

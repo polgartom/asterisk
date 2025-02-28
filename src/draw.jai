@@ -97,7 +97,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             row := row_table[row_index];
             if row.size == 0 continue;
 
-            time := seconds_since_init() * 1000;
+            // time := seconds_since_init() * 1000;
 
             bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
 
@@ -106,12 +106,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             Font.prepare_text(primary_font, line_text, start_x = xx left_offset, max_width = cast(s64)(r.w-left_pad));
             Font.draw_prepared_text(primary_font, xx left, xx bottom, color);
 
-            avg_row_render_time += (seconds_since_init() * 1000 - time);
-            rendered_rows += 1;
+            // avg_row_render_time += (seconds_since_init() * 1000 - time);
+            // rendered_rows += 1;
         }
 
-        avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
-        PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
+        // avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
+        // PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
     // if active_editor == editor {
@@ -362,59 +362,81 @@ draw_widgets :: () {
 
     if active_widget == {
         case Find_Text_Dialog; draw_find_text_dialog();
-        case File_Browser;     update_file_browser();
+        case File_Browser;     draw_file_browser_dialog();
     }
 }
 
-draw_find_text_dialog :: () {
+draw_file_browser_dialog :: () {
     ed_r := active_editor.rect_for_draw;
     h := cast(float)primary_font.character_height;
     b := cast(float)window_height;
     r := get_rect(0.0, b, xx window_width, h);
 
-    input := text_input(r, xx #location());
+    tinp := text_input(r, xx #location(), placeholder="Search files by name");
 
-// kacsa
+    k := ed_r.h * .1;
+    r.y -= r.h * 1.5;
+    r.h = 1*k;
 
-    // using find_text_dialog;
-    // loc := #location();
+    test_options :: #run -> [] List_Input.Option {
+        wd := get_working_directory();
+        path_overwrite_separators(wd, #char "/");
+        files := scan_dir(wd, follow_directory_symlinks=false, files_only=false);
+        
+        options: [..] List_Input.Option;
+        for f: files {
+            s := advance(f, wd.count);
+            array_add(*options, .{label=s});
+        }
 
-    // ed_r            := active_editor.rect_for_draw;
-    // k               := ed_r.h * .1;
-    // width           := em(15.0, primary_font);
-    // height          := em(2.0,  my_font_small);
-    // right_pad       := 0.1 * k;
+        return options;
+    }
 
-    // r := get_rect(
-    //     ed_r.x + ed_r.w - width * 2 - right_pad,
-    //     ed_r.h - height,
-    //     width * 2,
-    //     my_font_small.character_height * 2.0
-    // );
+    linp := list_input(r, xx #location(), new_options=test_options);
 
-    // text_theme := my_theme.text_input_theme;
-    // text_theme.font = my_font_small;
-    // action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
+    // linp := list_input(r, xx #location(), new_options=.[]);
+}
 
-    // {
-    //     hash := get_hash(loc, 0);
-    //     state=, _ := find_or_create_state(Text_Input_State, hash, false);
+draw_find_text_dialog :: () {
+    using find_text_dialog;
+    loc := #location();
+
+    ed_r            := active_editor.rect_for_draw;
+    k               := ed_r.h * .1;
+    width           := em(15.0, primary_font);
+    height          := em(2.0,  my_font_small);
+    right_pad       := 0.1 * k;
+
+    r := get_rect(
+        ed_r.x + ed_r.w - width * 2 - right_pad,
+        ed_r.h - height,
+        width * 2,
+        my_font_small.character_height * 2.0
+    );
+
+    text_theme := my_theme.text_input_theme;
+    text_theme.font = my_font_small;
+    action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
+
+    {
+        hash := get_hash(loc, 0);
+        state=, _ := find_or_create_state(Text_Input_State, hash, false);
+    }
+
+    if action & .ENTERED { // Enter pressed
+        to_next_occurance();
+
+    } else if action & .TEXT_MODIFIED {
+        if state.text.count && state.text[state.text.count-1] == 0x7F {
+            // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
+            reset_search_widget();
+        } else if state.text {
+            modify_string(*text, state.text);
+            find_occurences(text);
+        }
+    }
+    // if action & .ESCAPED {
     // }
-
-    // if action & .ENTERED { // Enter pressed
-    //     to_next_occurance();
-
-    // } else if action & .TEXT_MODIFIED {
-    //     if state.text.count && state.text[state.text.count-1] == 0x7F {
-    //         // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
-    //         reset_search_widget();
-    //     } else if state.text {
-    //         modify_string(*text, state.text);
-    //         find_occurences(text);
-    //     }
-    // }
-    // // if action & .ESCAPED {
-    // // }
 }
 
 draw_global_debug_info :: (r: Rect) {

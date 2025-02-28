@@ -101,8 +101,6 @@ main :: () {
         path_overwrite_separators(workdir, #char "/");
         set_working_directory(workdir);
         print("Working directory: '%'\n", workdir);
-
-        file_browser_scan_for_files(workdir);
     }
 
     load_global_config();
@@ -163,6 +161,7 @@ main :: () {
 
         update_window_events();
         clear_text_input_events();
+        clear_list_input_events();
 
         for get_window_resizes() {
             Simp.update_window(it.window);
@@ -218,6 +217,7 @@ main :: () {
             }
 
             handle_text_input_event(event);
+            handle_list_input_event(event);
 
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
