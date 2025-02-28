@@ -367,32 +367,37 @@ draw_widgets :: () {
 }
 
 draw_file_browser_dialog :: () {
+    pad := cast(float32) primary_font.em_width * .5;
+
     ed_r := active_editor.rect_for_draw;
     h := cast(float)primary_font.character_height;
     b := cast(float)window_height;
-    r := get_rect(0.0, b, xx window_width, h);
+    r := get_rect(ed_r.x-pad, b-pad, ed_r.w, h);
+
+    {
+        test_options :: #run -> [] List_Input.Option {
+            wd := get_working_directory();
+            path_overwrite_separators(wd, #char "/");
+            files := scan_dir(wd, follow_directory_symlinks=false, files_only=false);
+            
+            options: [..] List_Input.Option;
+            for f: files {
+                s := advance(f, wd.count);
+                array_add(*options, .{label=s});
+            }
+
+            return options;
+        }
+
+        list_rect := r;
+        k := ed_r.h * .1;
+        list_rect.y -= list_rect.h * 1.5;
+        list_rect.h = 1.5*k;
+        linp := list_input(list_rect, xx #location(), new_options=test_options);
+    }
 
     tinp := text_input(r, xx #location(), placeholder="Search files by name");
 
-    k := ed_r.h * .1;
-    r.y -= r.h * 1.5;
-    r.h = 1*k;
-
-    test_options :: #run -> [] List_Input.Option {
-        wd := get_working_directory();
-        path_overwrite_separators(wd, #char "/");
-        files := scan_dir(wd, follow_directory_symlinks=false, files_only=false);
-        
-        options: [..] List_Input.Option;
-        for f: files {
-            s := advance(f, wd.count);
-            array_add(*options, .{label=s});
-        }
-
-        return options;
-    }
-
-    linp := list_input(r, xx #location(), new_options=test_options);
 
     // linp := list_input(r, xx #location(), new_options=.[]);
 }

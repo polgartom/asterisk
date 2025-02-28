@@ -32,45 +32,53 @@ list_input :: (r: Rect, ui_id: u64, new_options: [] List_Input.Option = .[]) -> 
     t   := r.y - pad;
 
     Simp.set_shader_for_color(true);
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x0c1021ff));
+    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x382d38ff));
 
     if (options.count) {
-        rect := get_rect(r.x, b, r.w, t-b);
+        rect := get_rect(r.x, b+5.0, r.w, t-b);
+
         push_scissor(rect);
         defer pop_scissor();
 
+        y_pad := ch;
+
         x := r.x + left_pad * 1.5;
-        y_pad := ch + ch*.01 * 1.25;
-        y_off := y_pad * 2.0 + ch*.5;
-        y := t - y_pad * 1.5;
+        y_off := ch * 2.0;
+        y := t - y_pad-ch*.75;
 
         y += scroll_value;
 
         if selected_option_index != -1 {
             i := selected_option_index;
             vy := y - (i*y_off);
-            if vy <= b {
-                scroll_value += y_off;//*.25;
+            if vy < b + ch {
+                scroll_value += y_off;
             } else if vy >= t {
-                scroll_value -= y_off;//*.25;
+                scroll_value -= y_off;
             }
+            
             Clamp(*scroll_value, 0.0, options.count*y_off);
         }
 
         for opt, i: options {
-            color := Vector4.{1.0,1.0,1.0,.5};
-            if i == selected_option_index then color = #run hex_to_vec4(0xb0a070ff);
+            color := Vector4;
+            if i == selected_option_index {
+                Simp.set_shader_for_color(true);
+                Simp.immediate_quad(x, y+ch*1.5, r.x + r.w, y-ch*.5, #run hex_to_vec4(0x2f262fff));
+            }
 
-            label(xx x, xx y, opt.label, primary_font, color);
+            label(xx x, xx (y+ch*.25), opt.label, primary_font, .{1.0,1.0,1.0,.5});
+            
             Simp.set_shader_for_color(true);
-            Simp.immediate_quad(x, y-ch+1.0, r.x + r.w, y-ch, .{1.0,1.0,1.0,.09});
+            Simp.immediate_quad(x, y-ch*.5+1.0, r.x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
+            
             y -= y_off;
         }
 
     } else {
         left   := r.x + left_pad * 1.5;
         bottom := t - (r.h*1.5*2.0*0.5) - ch*.3; // center
-        label(xx left, xx bottom, "No items ...", primary_font, .{1.0,1.0,1.0,.3});
+        label(xx left, xx bottom, "No items ...", primary_font, .{.5,.5,.5,1.0});
     }
 
     return input;
