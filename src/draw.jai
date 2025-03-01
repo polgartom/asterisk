@@ -362,11 +362,11 @@ draw_widgets :: () {
 
     if active_widget == {
         case Find_Text_Dialog; draw_find_text_dialog();
-        case File_Browser;     draw_file_browser_dialog();
+        case File_Browser;     draw_file_browser();
     }
 }
 
-draw_file_browser_dialog :: () {
+draw_file_browser :: () {
     pad := cast(float32) primary_font.em_width * .5;
 
     font := my_font_small;
@@ -376,29 +376,77 @@ draw_file_browser_dialog :: () {
     b := cast(float)window_height;
     r := get_rect(ed_r.x-pad, b-pad, ed_r.w, h);
 
-    {
-        test_options :: #run -> [] List_Input.Option {
-            wd := get_working_directory();
-            path_overwrite_separators(wd, #char "/");
-            files := scan_dir(wd, follow_directory_symlinks=false, files_only=false);
-            
-            options: [..] List_Input.Option;
-            for f: files {
-                s := advance(f, wd.count);
-                array_add(*options, .{label=s});
-            }
+    tinp := text_input(r, xx #location(), font, placeholder=file_browser.current_dir);
 
-            return options;
+    {
+        // @Speed: !!!
+        using file_browser;
+
+        options: [..] List_Input.Option;
+        options.allocator = temp;
+        array_reserve(*options, items.count);
+
+        if tinp.text {
+            for items {
+                found, rem := contains_nocase(it.short_name, tinp.text);
+                if found {
+                    array_add(*options, .{label=copy_temporary_string(it.short_name)});
+                }
+            }
+        } else {
+            for items array_add(*options, .{label=copy_temporary_string(it.short_name)});
         }
 
         list_rect := r;
         k := ed_r.h * .1;
         list_rect.y -= list_rect.h * 1.5;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), font, new_options=test_options);
+        linp := list_input(list_rect, xx #location(), font, new_options=options);
+        
+        if linp.selected_option_index == -1 then linp.selected_option_index = 0;
+
+        if linp.entered && linp.options.count {
+            if linp.selected_option_index >= linp.options.count || linp.selected_option_index < 0 {
+                assert(false, "Invalid index: % ; linp.options: % ; items: %\n", linp.selected_option_index, linp.options, items);
+                return;                
+            }
+            selected_option := linp.options[linp.selected_option_index];
+
+            index := -1;        
+            for items {
+                if it.short_name == selected_option.label {
+                    index = it_index;
+                    break;
+                }
+            }
+            assert(index != -1);
+
+            item := items[index];
+            if item.is_directory {
+                ok := file_browser_change_dir(item);
+                assert(ok);
+                file_browser_scan();
+
+                clear_text(tinp);
+
+                linp.scroll_value = 0.0;
+                linp.selected_option_index = 0;
+            } else {
+                clear_text(tinp);
+                linp.scroll_value = 0.0;
+                linp.selected_option_index = 0;
+
+                open_file_or_create_empty_buffer(active_editor, item.full_name);
+                array_add(*user_events, .{ type = .CLOSE_WIDGET });
+            }
+
+        }
+
+        if tinp.typed && items.count {
+            linp.selected_option_index = 0;
+        }
     }
 
-    tinp := text_input(r, xx #location(), font, placeholder="Search files by name");
 }
 
 draw_find_text_dialog :: () {

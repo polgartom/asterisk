@@ -35,13 +35,6 @@ OpenFindTextDialog :: () {
     find_text_dialog_handle_event();
 }
 
-OpenFileBrowser :: () {
-    switch_editor_mode(.WIDGET);
-    active_widget = File_Browser;
-
-    // using file_browser;
-}
-
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
     editor.active_buffer = create_or_find_empty_buffer(editor);
@@ -1076,7 +1069,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, HideSecondEditorPanel);
 
     Add(editor_keymap, OpenFindTextDialog);
-    Add(editor_keymap, OpenFileBrowser);
+    Add(editor_keymap, file_browser_open);
 
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
@@ -1186,7 +1179,7 @@ C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
 C-f OpenFindTextDialog
-C-o OpenFileBrowser
+C-o file_browser_open
 
 F1 ToggleDevInfo
 

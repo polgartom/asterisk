@@ -98,7 +98,6 @@ main :: () {
             }
         }
 
-        path_overwrite_separators(workdir, #char "/");
         set_working_directory(workdir);
         print("Working directory: '%'\n", workdir);
     }
@@ -818,12 +817,11 @@ scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := tru
     return items;
 }
 
-scan_dir2 :: (_path: string, recursive := false, follow_directory_symlinks := true, $files_only := true) -> [] File_Visit_Info #must {
-    path := _path;
-
+scan_dir2 :: (path: string, recursive := false, follow_directory_symlinks := true, $files_only := true) -> [] File_Visit_Info #must {
     if path.count > 1 && ends_with(path, "/") then path.count -= 1;
 
-    items : [..] File_Visit_Info; // IS IT USING THE TEMP ALLOCATOR???
+    items : [..] File_Visit_Info;
+    items.allocator = temp;
 
     visitor :: (info: *File_Visit_Info, user_data: *[..] File_Visit_Info) {
         _info := array_add(user_data);
@@ -833,6 +831,14 @@ scan_dir2 :: (_path: string, recursive := false, follow_directory_symlinks := tr
     visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
 
     return items;
+}
+
+path_unify_sepa :: inline (path: string) {
+    for 0..path.count-1 {
+        if path[it] == #char "\\" {
+            path[it] = #char "/";
+        }
+    }
 }
 
 modify_string :: (target: *string, new_value: string) {

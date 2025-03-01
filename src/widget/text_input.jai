@@ -1,4 +1,7 @@
 text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "") -> *Text_Input {
+    timer := seconds_since_init();
+    defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
+    
     input, found := table_find(*inputs, ui_id);
     if !found {
         input = New(Text_Input);
@@ -8,6 +11,8 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "")
 
     using input;
 
+    typed = false;
+    
     for event: events_to_handle_this_frame {
         if event.type == .TEXT_INPUT {
             #if OS == .WINDOWS if event.utf32 == 0x7F continue;
@@ -16,6 +21,9 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "")
             defer free(utf8_text);
 
             insert_text(input, utf8_text);
+            
+            typed = true;
+
         } else if event.type == .KEYBOARD {
             key := event.key_code;
             using Key_Code;
@@ -79,6 +87,10 @@ insert_text :: (using input: *Text_Input, s: string) -> bool {
     cursor.pos += s.count;
 
     return true;
+}
+
+clear_text :: (using i: *Text_Input) {
+    text.count = 0;
 }
 
 handle_text_input_event :: (event: Event) {
@@ -166,6 +178,8 @@ inputs: Table(u64, *Text_Input);
 Text_Input :: struct {
     text: string;
     cursor: Cursor;
+
+    typed := false;
 
     MAX_BUFFER_SIZE :: 8000;
     input_buffer: [MAX_BUFFER_SIZE] u8;
