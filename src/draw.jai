@@ -386,31 +386,28 @@ draw_file_browser :: () {
         options.allocator = temp;
         array_reserve(*options, items.count);
 
-        if tinp.text {
-            for items {
+        for items {
+            if tinp.text {
                 found, rem := contains_nocase(it.short_name, tinp.text);
-                if found {
-                    array_add(*options, .{label=copy_temporary_string(it.short_name)});
-                }
+                if !found continue;
             }
-        } else {
-            for items array_add(*options, .{label=copy_temporary_string(it.short_name)});
+            array_add(*options, .{label=copy_temporary_string(it.short_name)});
         }
 
         list_rect := r;
         k := ed_r.h * .1;
         list_rect.y -= list_rect.h * 1.5;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), font, new_options=options);
+        linp := list_input(list_rect, xx #location(), font, options);
         
-        if linp.selected_option_index == -1 then linp.selected_option_index = 0;
+        if linp.selected_index == -1 then linp.selected_index = 0;
 
-        if linp.entered && linp.options.count {
-            if linp.selected_option_index >= linp.options.count || linp.selected_option_index < 0 {
-                assert(false, "Invalid index: % ; linp.options: % ; items: %\n", linp.selected_option_index, linp.options, items);
+        if linp.entered && options.count {
+            if linp.selected_index >= options.count || linp.selected_index < 0 {
+                assert(false, "Invalid index: % ; options: % ; items: %\n", linp.selected_index, options, items);
                 return;                
             }
-            selected_option := linp.options[linp.selected_option_index];
+            selected_option := options[linp.selected_index];
 
             index := -1;        
             for items {
@@ -430,11 +427,11 @@ draw_file_browser :: () {
                 clear_text(tinp);
 
                 linp.scroll_value = 0.0;
-                linp.selected_option_index = 0;
+                linp.selected_index = 0;
             } else {
                 clear_text(tinp);
                 linp.scroll_value = 0.0;
-                linp.selected_option_index = 0;
+                linp.selected_index = 0;
 
                 open_file_or_create_empty_buffer(active_editor, item.full_name);
                 array_add(*user_events, .{ type = .CLOSE_WIDGET });
@@ -443,7 +440,7 @@ draw_file_browser :: () {
         }
 
         if tinp.typed && items.count {
-            linp.selected_option_index = 0;
+            linp.selected_index = 0;
         }
     }
 

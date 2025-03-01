@@ -868,6 +868,15 @@ advance :: (arr: *[]$T, steps := 1) {
     arr.count -= steps;
 }
 
+rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
+    return .{
+        r / 255.0,
+        g / 255.0,
+        b / 255.0,
+        a
+    };    
+}
+
 hex_to_vec4 :: (hex: u32) -> Vector4 {
     r := (hex>>24) & 0xFF;
     g := (hex>>16) & 0xFF;
