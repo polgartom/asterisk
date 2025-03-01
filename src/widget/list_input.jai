@@ -1,4 +1,4 @@
-list_input :: (r: Rect, ui_id: u64, new_options: [] List_Input.Option = .[]) -> *List_Input {
+list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, new_options: [] List_Input.Option = .[]) -> *List_Input {
     input, found := table_find(*inputs, ui_id);
     if !found {
         input = New(List_Input);
@@ -27,12 +27,15 @@ list_input :: (r: Rect, ui_id: u64, new_options: [] List_Input.Option = .[]) -> 
 
     left_pad := 5.0;
     pad := 0.0;
-    ch  := primary_font.character_height;
+    ch  := font.character_height;
     b   := r.y - pad - r.h*1.5*2.0;
     t   := r.y - pad;
 
     Simp.set_shader_for_color(true);
     Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x382d38ff));
+
+    timer := seconds_since_init();
+    defer PrintDev("[lip]: %ms\n", (seconds_since_init()-timer)*1000);
 
     if (options.count) {
         rect := get_rect(r.x, b+5.0, r.w, t-b);
@@ -61,24 +64,23 @@ list_input :: (r: Rect, ui_id: u64, new_options: [] List_Input.Option = .[]) -> 
         }
 
         for opt, i: options {
-            color := Vector4;
+            defer y -= y_off;
+            if y < b || y >= t continue;
+
+            Simp.set_shader_for_color(true);
+            Simp.immediate_quad(x, y-ch*.5+1.0, r.x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
+
             if i == selected_option_index {
-                Simp.set_shader_for_color(true);
                 Simp.immediate_quad(x, y+ch*1.5, r.x + r.w, y-ch*.5, #run hex_to_vec4(0x2f262fff));
             }
 
-            label(xx x, xx (y+ch*.25), opt.label, primary_font, .{1.0,1.0,1.0,.5});
-            
-            Simp.set_shader_for_color(true);
-            Simp.immediate_quad(x, y-ch*.5+1.0, r.x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
-            
-            y -= y_off;
+            label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
         }
 
     } else {
         left   := r.x + left_pad * 1.5;
         bottom := t - (r.h*1.5*2.0*0.5) - ch*.3; // center
-        label(xx left, xx bottom, "No items ...", primary_font, .{.5,.5,.5,1.0});
+        label(xx left, xx bottom, "No items ...", font, .{.5,.5,.5,1.0});
     }
 
     return input;

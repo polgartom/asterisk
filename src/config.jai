@@ -89,7 +89,8 @@ background: 0c1a21ff
 
 layout_separator: dddddd1B
 
-text_default:               ddddddff
+#text_default:               ddddddff
+text_default:               d0d0d0ff
 text_dimmed:                bbbbbbff
 text_selection:             ffffff20
 text_highlight:             73ffff73

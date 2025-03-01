@@ -369,8 +369,10 @@ draw_widgets :: () {
 draw_file_browser_dialog :: () {
     pad := cast(float32) primary_font.em_width * .5;
 
+    font := my_font_small;
+
     ed_r := active_editor.rect_for_draw;
-    h := cast(float)primary_font.character_height;
+    h := cast(float)font.character_height;
     b := cast(float)window_height;
     r := get_rect(ed_r.x-pad, b-pad, ed_r.w, h);
 
@@ -393,13 +395,10 @@ draw_file_browser_dialog :: () {
         k := ed_r.h * .1;
         list_rect.y -= list_rect.h * 1.5;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), new_options=test_options);
+        linp := list_input(list_rect, xx #location(), font, new_options=test_options);
     }
 
-    tinp := text_input(r, xx #location(), placeholder="Search files by name");
-
-
-    // linp := list_input(r, xx #location(), new_options=.[]);
+    tinp := text_input(r, xx #location(), font, placeholder="Search files by name");
 }
 
 draw_find_text_dialog :: () {

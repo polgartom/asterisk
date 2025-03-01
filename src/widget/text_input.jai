@@ -1,4 +1,4 @@
-text_input :: (r: Rect, ui_id: u64, placeholder := "") -> *Text_Input {
+text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "") -> *Text_Input {
     input, found := table_find(*inputs, ui_id);
     if !found {
         input = New(Text_Input);
@@ -31,7 +31,7 @@ text_input :: (r: Rect, ui_id: u64, placeholder := "") -> *Text_Input {
 
     left_pad := 5.0;
     pad := 0.0;
-    ch  := primary_font.character_height;
+    ch  := font.character_height;
     b   := r.y - pad - r.h*1.5;
     t   := r.y - pad;
 
@@ -39,13 +39,13 @@ text_input :: (r: Rect, ui_id: u64, placeholder := "") -> *Text_Input {
     Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0xa397a3ff));
 
     if text {
-        Simp.prepare_text(primary_font, text);
+        Simp.prepare_text(font, text);
         center := t - (r.h*1.5*0.5) - ch*.3;
-        Simp.draw_prepared_text(primary_font, xx (r.x + left_pad), xx center, .{.0,.0,.0,1.0});
+        Simp.draw_prepared_text(font, xx (r.x + left_pad), xx center, .{.0,.0,.0,1.0});
     } else if placeholder {
         left   := r.x + left_pad * 2;
         bottom := t - (r.h*1.5*0.5) - ch*.3; // center
-        label(xx left, xx bottom, placeholder, primary_font, .{.0,.0,.0,.5});
+        label(xx left, xx bottom, placeholder, font, .{.0,.0,.0,.5});
     }
 
     {
@@ -53,9 +53,9 @@ text_input :: (r: Rect, ui_id: u64, placeholder := "") -> *Text_Input {
         if cursor.pos && text {
             t := text;
             t.count = cursor.pos;
-            left += measure_text_width(primary_font, t);
+            left += measure_text_width(font, t);
         }
-        rect := get_rect(left, b + ch * .25, em(.25, primary_font), xx ch);
+        rect := get_rect(left, b + ch * .25, em(.25, font), xx ch);
         draw_cursor(rect, Color.WIDGET_CURSOR);
     }
 
