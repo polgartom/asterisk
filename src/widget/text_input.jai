@@ -1,20 +1,29 @@
-text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) -> *Text_Input {    
-
+text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) -> *Text_Input {
     timer := seconds_since_init();
     defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
     input, found := table_find(*inputs, ui_id);
     if !found {
-        input = New(Text_Input);
-        input.text.data = *input.input_buffer[0];
-        table_add(*inputs, ui_id, input);
+        input = create_text_input(ui_id);
     }
 
-    using input;
+    update_text_input(input, r, font, placeholder, theme);
 
+    return input;
+}
+
+create_text_input :: (ui_id: u64) -> *Text_Input {
+    input := New(Text_Input);
+    input.text.data = *input.input_buffer[0];
+    table_add(*inputs, ui_id, input);
+
+    return input;
+}
+
+update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) {
     typed = false;
-    
-    for event: events_to_handle_this_frame {
+
+    for event: events_to_handle_this_frame_for_widgets {
         if event.type == .TEXT_INPUT {
             #if OS == .WINDOWS if event.utf32 == 0x7F continue;
 
@@ -32,7 +41,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
                 if key == {
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
-                    case BACKSPACE;    backspace_from_cursor(input, event.ctrl_pressed);
+                    case BACKSPACE;    { backspace_from_cursor(input, event.ctrl_pressed); typed = true; };
                 }
             }
         }
@@ -67,8 +76,6 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
         rect := get_rect(left, b + ch * .25, em(.25, font), xx ch);
         draw_cursor(rect, bg_color=theme.cursor_color, fg_color=DEFAULT_COLOR[Color.TEXT_UNDER_CURSOR]);
     }
-
-    return input;
 }
 
 insert_text :: (using input: *Text_Input, s: string) -> bool {
@@ -92,14 +99,9 @@ insert_text :: (using input: *Text_Input, s: string) -> bool {
 
 clear_text :: (using i: *Text_Input) {
     text.count = 0;
-}
-
-handle_text_input_event :: (event: Event) {
-    array_add(*events_to_handle_this_frame, event);
-}
-
-clear_text_input_events :: () {
-    array_reset_keeping_memory(*events_to_handle_this_frame);
+    
+    cursor.pos = 0;
+    cursor.sel = 0;
 }
 
 #scope_file
@@ -169,8 +171,6 @@ backspace_from_cursor :: (using i: *Text_Input, ctrl_pressed := false) {
     c_memmove(dest, source, xx size);
     text.count -= (from - to);
 }
-
-events_to_handle_this_frame: [..] Event;
 
 inputs: Table(u64, *Text_Input);
 

@@ -159,8 +159,7 @@ main :: () {
         }
 
         update_window_events();
-        clear_text_input_events();
-        clear_list_input_events();
+        clear_widget_events();
 
         for get_window_resizes() {
             Simp.update_window(it.window);
@@ -215,8 +214,7 @@ main :: () {
                 }
             }
 
-            handle_text_input_event(event);
-            handle_list_input_event(event);
+            register_widget_event(event);
 
             last_input_event = event;
             handled := handle_event(*keymap_set, event);
@@ -912,9 +910,6 @@ mode := Program_Mode.EDITOR;
 #load "color.jai";
 
 #load "widget.jai";
-#load "widget/file_browser.jai";
-#load "widget/find_text_dialog.jai";
-#load "widget/find_global_text_dialog.jai";
 
 // Local modules
 #import "Language_Support";

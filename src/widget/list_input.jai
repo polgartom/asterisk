@@ -15,7 +15,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     // }
 
     entered = false;
-    for event: events_to_handle_this_frame {
+    for event: events_to_handle_this_frame_for_widgets {
         if event.type == .KEYBOARD {
             key := event.key_code;
             using Key_Code;
@@ -96,14 +96,6 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     return input;
 }
 
-handle_list_input_event :: (event: Event) {
-    array_add(*events_to_handle_this_frame, event);
-}
-
-clear_list_input_events :: () {
-    array_reset_keeping_memory(*events_to_handle_this_frame);
-}
-
 #scope_file
 
 move_to_next_option :: (using i: *List_Input, options: [] List_Input.Option) {
@@ -132,7 +124,6 @@ move_to_prev_option :: (using i: *List_Input, options: [] List_Input.Option) {
 //     }
 // }
 
-events_to_handle_this_frame: [..] Event;
 inputs: Table(u64, *List_Input);
 
 #scope_export

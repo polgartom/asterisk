@@ -364,10 +364,8 @@ draw_widgets :: () {
 }
 
 draw_file_browser :: () {
-    pad := cast(float32) primary_font.em_width * .5;
-
     font := my_font_small;
-
+    pad := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     h := cast(float)font.character_height;
     b := cast(float)window_height;
@@ -445,44 +443,36 @@ draw_file_browser :: () {
 
 draw_find_text_dialog :: () {
     using find_text_dialog;
-    loc := #location();
-
-    ed_r            := active_editor.rect_for_draw;
-    k               := ed_r.h * .1;
-    width           := em(15.0, primary_font);
-    height          := em(2.0,  my_font_small);
-    right_pad       := 0.1 * k;
-
-    r := get_rect(
-        ed_r.x + ed_r.w - width * 2 - right_pad,
-        ed_r.h - height,
-        width * 2,
-        my_font_small.character_height * 2.0
-    );
-
-    text_theme := my_theme.text_input_theme;
-    text_theme.font = my_font_small;
-    action, _, state= := text_input(r, text, *text_theme, input_action=.ACTIVATE, loc=loc);
 
     {
-        hash := get_hash(loc, 0);
-        state=, _ := find_or_create_state(Text_Input_State, hash, false);
+        font := my_font_small;
+        
+        // pad := cast(float32) primary_font.em_width * .5;
+        // ed_r := active_editor.rect_for_draw;
+        // h := cast(float)font.character_height;
+        // r := get_rect(ed_r.x-pad*2, r.h-h*1.5, ed_r.w+pad*2, h);
+
+        ed_r            := active_editor.rect_for_draw;
+        k               := ed_r.h * .1;
+        width           := em(15.0, font);
+        height          := em(2.0,  font);
+        right_pad       := 0.1 * k;
+
+        r := get_rect(
+            ed_r.x + ed_r.w - width * 2 - right_pad,
+            ed_r.h - height,
+            width * 2,
+            xx font.character_height
+        );
+
+        theme := Text_Input.DEFAULT_THEME;
+        theme.bg_color = map_color_to_vec4(Color.FOOTER_BACKGROUND_DARKEN);
+        theme.fg_color = map_color_to_vec4(Color.FOOTER_TEXT);
+
+        update_text_input(input, r, font, placeholder="Find", theme);
     }
 
-    if action & .ENTERED { // Enter pressed
-        to_next_occurance();
-
-    } else if action & .TEXT_MODIFIED {
-        if state.text.count && state.text[state.text.count-1] == 0x7F {
-            // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
-            reset_search_widget();
-        } else if state.text {
-            modify_string(*text, state.text);
-            find_occurences(text);
-        }
-    }
-    // if action & .ESCAPED {
-    // }
+    update_find_text_dialog();
 }
 
 draw_global_debug_info :: (r: Rect) {

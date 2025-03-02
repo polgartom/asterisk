@@ -31,10 +31,6 @@ HideSecondEditorPanel :: () {
     editors[1].visible = false;
 }
 
-OpenFindTextDialog :: () {
-    find_text_dialog_handle_event();
-}
-
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
     editor.active_buffer = create_or_find_empty_buffer(editor);
@@ -1063,13 +1059,13 @@ register_keymap_procedures :: () {
 
     Add(widget_keymap, CloseCurrentWidget);
     
+    Add(editor_keymap, open_find_text_dialog);
+    Add(editor_keymap, file_browser_open);
+
     // Editor
 
     Add(editor_keymap, SwitchOrSplitEditorPanel);
     Add(editor_keymap, HideSecondEditorPanel);
-
-    Add(editor_keymap, OpenFindTextDialog);
-    Add(editor_keymap, file_browser_open);
 
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, DrawSpecialChars);
@@ -1178,7 +1174,7 @@ ESC CloseCurrentWidget
 C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
-C-f OpenFindTextDialog
+C-f open_find_text_dialog
 C-o file_browser_open
 
 F1 ToggleDevInfo

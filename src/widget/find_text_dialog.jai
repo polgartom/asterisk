@@ -1,14 +1,3 @@
-reset_search_widget :: () {
-    using find_text_dialog;
-
-    array_reset_keeping_memory(*occurences);
-    current_occurance = -1;
-
-    if state && state.text {
-        state.text.count = 0;
-    }
-}
-
 find_occurences :: (_text: string) {
     using find_text_dialog;
 
@@ -31,7 +20,7 @@ find_occurences :: (_text: string) {
     }
 }
 
-to_next_occurance :: () {
+next_occurance :: () {
     using find_text_dialog;
 
     _, buffer := get_active_editor_and_buffer();
@@ -55,23 +44,48 @@ to_next_occurance :: () {
         }
     }
 
-    pos := occurences[current_occurance]; 
+    pos := occurences[current_occurance];
 
     assert(pos != -1, "occurences: % ; current: %\n", occurences, current_occurance);
 
     set_cursor_pos(buffer, *buffer._cursor, pos, horizontal=true, with_selection=true);
 }
 
-find_text_dialog_handle_event :: () {
+open_find_text_dialog :: () {
+    using find_text_dialog;
+    
+    if !input then input = create_text_input(cast(u64, #location()));
+    clear_text(input);
+
     switch_editor_mode(.WIDGET);
     active_widget = Find_Text_Dialog;
+}
+
+update_find_text_dialog :: () {
+    using find_text_dialog;
+
+    if input.typed && input.text {
+        find_occurences(input.text);
+    }
+
+    for event: events_to_handle_this_frame_for_widgets {
+        if event.type == .KEYBOARD {
+            key := event.key_code;
+            using Key_Code;
+            if event.key_pressed {
+                if key == {
+                    case ENTER; next_occurance();
+                }
+            }
+        }
+    }
+
 }
 
 find_text_dialog: Find_Text_Dialog;
 
 Find_Text_Dialog :: struct {
-    text: string;
-    state: *Text_Input_State;
+    input: *Text_Input;
 
     occurences: [..] s64;
     current_occurance: s64 = -1;
