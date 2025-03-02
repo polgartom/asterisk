@@ -1,4 +1,5 @@
-text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "") -> *Text_Input {
+text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) -> *Text_Input {    
+
     timer := seconds_since_init();
     defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
@@ -44,16 +45,16 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "")
     t   := r.y - pad;
 
     Simp.set_shader_for_color(true);
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0xa397a3ff));
+    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
 
     if text {
         Simp.prepare_text(font, text);
         center := t - (r.h*1.5*0.5) - ch*.3;
-        Simp.draw_prepared_text(font, xx (r.x + left_pad), xx center, .{.0,.0,.0,1.0});
+        Simp.draw_prepared_text(font, xx (r.x + left_pad), xx center, theme.fg_color);
     } else if placeholder {
         left   := r.x + left_pad * 2;
         bottom := t - (r.h*1.5*0.5) - ch*.3; // center
-        label(xx left, xx bottom, placeholder, font, .{.0,.0,.0,.5});
+        label(xx left, xx bottom, placeholder, font, theme.placeholder_color);
     }
 
     {
@@ -64,7 +65,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "")
             left += measure_text_width(font, t);
         }
         rect := get_rect(left, b + ch * .25, em(.25, font), xx ch);
-        draw_cursor(rect, Color.WIDGET_CURSOR);
+        draw_cursor(rect, bg_color=theme.cursor_color, fg_color=DEFAULT_COLOR[Color.TEXT_UNDER_CURSOR]);
     }
 
     return input;
@@ -183,4 +184,18 @@ Text_Input :: struct {
 
     MAX_BUFFER_SIZE :: 8000;
     input_buffer: [MAX_BUFFER_SIZE] u8;
+
+    DEFAULT_THEME :: Theme.{
+        fg_color          = #run hex_to_vec4(0x000000ff),
+        bg_color          = #run hex_to_vec4(0xa397a3ff),
+        placeholder_color = Vector4.{0,0,0,.5},
+        cursor_color      = #run hex_to_vec4(0x47253aff),
+    };
+    
+    Theme :: struct {
+        fg_color:          Vector4;
+        bg_color:          Vector4;
+        placeholder_color: Vector4;
+        cursor_color:      Vector4;
+    }
 }

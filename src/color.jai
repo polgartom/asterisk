@@ -3,6 +3,10 @@ map_color_to_vec4 :: inline (color: Color) -> Vector4 {
     return COLOR_MAP[cast(s64) color];
 }
 
+map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
+    return DEFAULT_COLOR[cast(s64) color];
+}
+
 map_name_to_color :: (name: string) -> Color {
     #insert -> string {
         b: String_Builder;
@@ -22,10 +26,43 @@ map_name_to_color :: (name: string) -> Color {
     return .NONE;
 }
 
-COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 COLOR_MAP_SIZE :: #run enum_highest_value(Color) + 1;
+COLOR_MAP: [COLOR_MAP_SIZE] Vector4 = #run -> [] Vector4 {
+    colors: [..]Vector4;
+    for c: DEFAULT_COLOR array_add(*colors, c);
+    return colors;
+};
 
-Color :: enum u16 {
+DEFAULT_COLOR :: #run -> [] Vector4 {
+    colors: [..] Vector4;
+    Add :: ($c: u32) #expand {
+        array_add(*colors, #run hex_to_vec4(c));
+    }
+
+    for c: enum_values_as_enum(Color) {
+        if #complete c == {
+            case .NONE;                        Add(0x00000000);
+            case .BACKGROUND;                  Add(0x0c1a21ff);
+            case .LAYOUT_SEPARATOR;            Add(0xdddddd1B);
+            case .TEXT_DEFAULT;                Add(0xd0d0d0ff);
+            case .TEXT_DIMMED;                 Add(0xbbbbbbff);
+            case .TEXT_SELECTION;              Add(0xffffff20);
+            case .TEXT_HIGHLIGHT;              Add(0x73ffff73);
+            case .TEXT_UNDER_CURSOR;           Add(0x0c1021ff);
+            case .TEXT_UNDER_INACTIVE_CURSOR;  Add(0xFBDE2Da0);
+            case .CURSOR;                      Add(0xFBDE2Dc0);
+            case .CURSOR_INACTIVE;             Add(0x3a3a3aff);
+            case .CURSOR_LINE_BACKGROUND;      Add(0xcccccc0A);
+            case .FOOTER_BACKGROUND;           Add(0xb0a070ff);
+            case .FOOTER_BACKGROUND_DARKEN;    Add(0x8b7c4dff);
+            case .FOOTER_TEXT;                 Add(0x000000ff);
+        }
+    }
+
+    return colors;
+}
+
+Color :: enum u8 {
     NONE :: 0;
 
     BACKGROUND;
@@ -42,8 +79,6 @@ Color :: enum u16 {
     CURSOR;
     CURSOR_INACTIVE;
     CURSOR_LINE_BACKGROUND;
-
-    WIDGET_CURSOR;
 
     FOOTER_BACKGROUND;
     FOOTER_BACKGROUND_DARKEN;

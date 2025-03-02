@@ -240,10 +240,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
 }
 
-draw_cursor :: (r: Rect, color := Color.CURSOR, text_color := Color.TEXT_UNDER_CURSOR) {
-    fg_color := map_color_to_vec4(text_color);
-    bg_color := map_color_to_vec4(color);
-
+draw_cursor :: (r: Rect, bg_color: Vector4, fg_color: Vector4) {
     // left := rect.x + rect.w;
     // cw := em(1.0, primary_font);
     // ch := primary_font.character_height;

@@ -51,19 +51,19 @@ parse_color_config :: () {
             rhs = join(..split(rhs, "_")); // The jai's numeric separation thing is supported, like '0c_10_21_ff' -> '0c1021ff' 
             if rhs.count != 8 {
                 error(handler, "Invalid hex value ('%') given after the '%' key specifier!\n", rhs, key);
-                return;
+                continue;
             }
 
             result, success, rem := string_to_int(rhs, base=16, u32);
             if !success || rem {
                 error(handler, "Unable to parse the hex value ('%') given after the '%' key specifier!\n", rhs, key);
-                return;
+                continue;
             }
 
             color_enum := map_name_to_color(key);
             if color_enum == .NONE {
                 error(handler, "Unable to find the color '%'!\n", key);
-                return;
+                continue;
             }
 
             COLOR_MAP[color_enum] = hex_to_vec4(result); 
@@ -84,29 +84,29 @@ DEFAULT_CONFIG_STRING :: #string CONFIG
 [1] # Version number; do not delete!
 
 [Color]
-#background: 0c1021ff
-background: 0c1a21ff
-
-layout_separator: dddddd1B
-
-#text_default:               ddddddff
+background:                 0c1a21ff
+layout_separator:           dddddd1b
 text_default:               d0d0d0ff
 text_dimmed:                bbbbbbff
 text_selection:             ffffff20
 text_highlight:             73ffff73
 text_under_cursor:          0c1021ff
-text_under_inactive_cursor: FBDE2D_a0
+text_under_inactive_cursor: fbde2da0
+cursor:                     fbde2dc0
+cursor_inactive:            3a3a3aff
+cursor_line_background:     cccccc0a
+footer_background:          b0a070ff
+footer_background_darken:   8b7c4dff
+footer_text:                000000ff
 
-cursor:                 FBDE2Dc0
-#cursor:                 ABDE2Dc0
-cursor_inactive:        3a3a3aff
-cursor_line_background: cccccc0A
+#background:    0c1021ff
+#text_default:  ddddddff
+#widget_cursor: 47253aff
+#cursor:        abde2dc0
 
-widget_cursor: 47253aff
-
-footer_background:        b0a070ff
-footer_background_darken: 8b7c4dff
-footer_text:              000000ff
+#white:  ffffffff
+#black:  000000ff
+#chreme: a397a3ff
 
 # Nice colors
 #a397a3ff
