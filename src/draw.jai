@@ -444,16 +444,11 @@ draw_file_browser :: () {
 draw_find_text_dialog :: () {
     using find_text_dialog;
 
+    ed_r := active_editor.rect_for_draw;
+
     {
         font := my_font_small;
-        
-        // pad := cast(float32) primary_font.em_width * .5;
-        // ed_r := active_editor.rect_for_draw;
-        // h := cast(float)font.character_height;
-        // r := get_rect(ed_r.x-pad*2, r.h-h*1.5, ed_r.w+pad*2, h);
-
-        ed_r            := active_editor.rect_for_draw;
-        k               := ed_r.h * .1;
+        k := ed_r.h * .1;
         width           := em(15.0, font);
         height          := em(2.0,  font);
         right_pad       := 0.1 * k;
@@ -473,6 +468,42 @@ draw_find_text_dialog :: () {
     }
 
     update_find_text_dialog();
+
+    if !input.text return;
+
+    r := ed_r;
+    
+    push_scissor(r);
+    defer pop_scissor();
+
+    editor, buffer := get_active_editor_and_buffer();
+    rs_i := first_visible_row_index(editor, buffer);
+    re_i := last_visible_row_index(editor, buffer);
+
+    line_height := get_line_height();
+    ch := primary_font.character_height;
+    color := map_color_to_vec4(.TEXT_HIGHLIGHT);
+
+    for pos: occurences {
+        ri := find_row_index(buffer, pos);
+        if ri < rs_i || ri > re_i continue;
+    
+        row := buffer.row_table[ri];
+
+        left := r.x - editor.left_offset;
+        rem_left  := slice(buffer, row.start, pos - row.start);
+        if rem_left then left += cast(float32) measure_text_width(primary_font, rem_left);
+
+        text := slice(buffer, row.start, row.end);
+        text  = advance(text, rem_left.count);
+        text  = slice(text, 0, input.text.count);
+        width := measure_text_width(primary_font, text);
+
+        bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
+
+        Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), color);
+    }
+
 }
 
 draw_global_debug_info :: (r: Rect) {
