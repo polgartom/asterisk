@@ -606,7 +606,7 @@ my_init_fonts :: () {
         my_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
 
         primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
-        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height/2);
+        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, xx font_xs_size);
     } else {
         my_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
@@ -896,6 +896,11 @@ Program_Mode :: enum u8 {
 };
 
 mode := Program_Mode.EDITOR;
+
+Range :: struct {
+    start: s64;
+    end:   s64;
+}
 
 #load "workspace.jai";
 #load "editor.jai";

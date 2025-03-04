@@ -488,18 +488,15 @@ DeleteFromRight :: () {
     if _cursor.pos == 0 return;
 
     text := to_string(buffer);
-
     bytes_to_del := _cursor.pos - prev_char_byte_offset(buffer, _cursor.pos);
-    
-    space_char := ifx draw_special_chars #char "~" else #char " ";  // @Temporary: this is a stupid fix for the special char visualization
 
     // Check if we should delete a "tab"
     ch := text.data[_cursor.pos-1];
-    if ch == space_char {
+    if ch == #char " " {
         i := 0;
         spaces := 1;
         for #v2 < 0.._cursor.pos-1 {
-            if text.data[it] == space_char {
+            if text.data[it] == #char " " {
                 spaces += 1;
                 if spaces == TAB_SIZE_IN_SPACES {
                     bytes_to_del = TAB_SIZE_IN_SPACES;
@@ -512,8 +509,19 @@ DeleteFromRight :: () {
     }
 
     if bytes_to_del {
-        to   := _cursor.pos-bytes_to_del;
+        to   := _cursor.pos - bytes_to_del;
         from := _cursor.pos;
+
+        s := slice(buffer, to, from - to);
+        if s {
+            h := array_add(*buffer.history);
+            modify_string(*h.text, s);
+            h.range = .{to, from};
+            h.type   = .DELETE_STRING;
+            h.cursor = buffer._cursor;
+            buffer.history_index += 1;
+        }
+
         shift_left(buffer, to, from);
         set_cursor_pos(buffer, *_cursor, to, horizontal=true);
     }
@@ -1029,13 +1037,13 @@ ExtendSelectionByToken :: () {
 Undo :: () {
     _, buffer := get_active_editor_and_buffer();
 
-    undo_history(buffer);
+    undo(buffer);
 }
 
 Redo :: () {
     _, buffer := get_active_editor_and_buffer();
 
-    redo_history(buffer);
+    // redo_history(buffer);
 }
 
 ////////////////////////////////////
