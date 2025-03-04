@@ -44,7 +44,7 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
-insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
+insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     assert(at > -1);
 
     maybe_grow(buffer, text.count);
@@ -61,13 +61,18 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
     buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
-    h := array_add(*buffer.history);
-    modify_string(*h.text, text);
-    h.range = .{at, at + text.count};
-    h.type   = .INSERT_STRING;
-    h.cursor = buffer._cursor;
-    buffer.history_index += 1;
+    #if history {
+        // if buffer.history_index -1 {
+        //     buffer.history.count = buffer.history_index; 
+        // }
 
+        h := array_add(*buffer.history);
+        modify_string(*h.text, text);
+        h.range = .{at, at + text.count};
+        h.type   = .INSERT_STRING;
+        h.cursor = buffer._cursor;
+        buffer.history_index += 1;
+    }
 }
 
 MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
@@ -316,30 +321,28 @@ get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end
 }
 
 undo :: (using buffer: *Buffer) {
-    if !history.count return;
-
-    if history_index == -1 {
-        history_index = history.count-1;
-    }
+    if !history.count || history_index == -1 return;
 
     h := *history[history_index];
     if h.type == {
         case .INSERT_STRING;
-            to   := h.range.start; //h.cursor.pos - h.text.count;
+            to   := h.range.start;
             from := h.range.end;
             shift_left(buffer, to, from);
 
             buffer._cursor = h.cursor;
             set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
 
             history_index -= 1;
 
         case .DELETE_STRING;
             to := h.range.start;
-            insert_text_at(buffer, to, h.text);
+            insert_text_at(buffer, to, h.text, history=false);
 
             buffer._cursor = h.cursor;
-            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
+            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true);
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
 
             history_index -= 1;
 

@@ -41,7 +41,7 @@ draw_frame :: (current_time: float64) {
         array_reserve(*options, buf.history.count);
         for h, i: buf.history {
             o := array_add(*options);
-            o.label = tprint("% % % %", i, h.type, h.text, ifx buf.history_index==i then "!!" else "");
+            o.label = tprint("% % % %", i, h.type, h.text, ifx buf.history_index==i then " <<" else "");
         }
 
         list_input(r, xx #location(), primary_font_xs, options);
