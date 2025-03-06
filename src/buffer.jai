@@ -45,8 +45,6 @@ insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
 }
 
 insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
-    assert(at > -1);
-
     maybe_grow(buffer, text.count);
 
     insert_at      := buffer.data  + at;
@@ -62,9 +60,13 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     buffer.dirty = true;
 
     #if history {
-        // if buffer.history_index -1 {
-        //     buffer.history.count = buffer.history_index; 
-        // }
+        using buffer;
+        if history.count && history_index > -1 && history_index != history.count-1 {
+            // We should truncate the history because... @Todo: Explain it 
+            new_size := buffer.history_index+1;
+            history.count = new_size;
+            Clamp(*history_index, -1, history.count-1);
+        }
 
         h := array_add(*buffer.history);
         modify_string(*h.text, text);
@@ -75,7 +77,34 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     }
 }
 
-MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
+remove_text_from_left :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    pos1 := clamp(at, 0, buffer.count-1);
+    pos2 := clamp(at + bytes_to_del, 0, buffer.count-1);
+    if pos1 == pos2 return; // @Cleanup: We do the same check in the shift_left() procedure.
+    
+    #if history {
+        using buffer;
+
+        if history.count && history_index > -1 && history_index != history.count-1 {
+            // We should truncate the history because... @Todo: Explain it 
+            new_size := buffer.history_index+1;
+            history.count = new_size;
+            Clamp(*history_index, -1, history.count-1);
+        }
+
+        h := array_add(*buffer.history);
+        deleted_text := slice(buffer, pos1, pos2 - pos1);
+        modify_string(*h.text, deleted_text);
+        h.range = .{pos1, pos2};
+        h.type   = .DELETE_STRING;
+        h.cursor = _cursor;
+        history_index += 1;
+    }
+
+    shift_left(buffer, pos1, pos2);
+}
+
+delete_selected_range_if_has_any :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
     if has_selection(buffer._cursor) {
         delete_selected_range(buffer, *buffer._cursor);
         return true;
@@ -324,6 +353,8 @@ undo :: (using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
     h := *history[history_index];
+    print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
+
     if h.type == {
         case .INSERT_STRING;
             to   := h.range.start;
@@ -337,10 +368,45 @@ undo :: (using buffer: *Buffer) {
             history_index -= 1;
 
         case .DELETE_STRING;
+            buffer._cursor = h.cursor;
+
             to := h.range.start;
             insert_text_at(buffer, to, h.text, history=false);
 
+            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true);
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index -= 1;
+
+        case .UNDEFINED;
+            assert(false);
+    }
+}
+
+redo :: (using buffer: *Buffer) {
+    if !history.count || history_index == history.count-1 return;
+
+    history_index += 1;
+    h := *history[history_index];
+
+    if h.type == {
+        case .INSERT_STRING;
+            to   := h.range.start;
+            from := h.range.end;
+            shift_left(buffer, to, from);
+
             buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index -= 1;
+
+        case .DELETE_STRING;
+            buffer._cursor = h.cursor;
+
+            to := h.range.start;
+            insert_text_at(buffer, to, h.text, history=false);
+
             set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true);
             Clamp(*buffer._cursor.pos, 0, buffer.count);
 

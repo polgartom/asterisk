@@ -390,13 +390,13 @@ draw_file_browser :: () {
     tinp := text_input(r, xx #location(), font, placeholder=file_browser.current_dir);
 
     {
-        // @Speed: !!!
         using file_browser;
 
         options: [..] List_Input.Option;
         options.allocator = temp;
         array_reserve(*options, items.count);
 
+        // @Speed: We are doing this on every frame!!!
         for items {
             if tinp.text {
                 found, rem := contains_nocase(it.short_name, tinp.text);

@@ -469,7 +469,8 @@ DeleteEverythingFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
+    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    if range_deleted return;
 
     row_index := find_row_index(buffer, _cursor.pos);
     row       := row_table[row_index];
@@ -483,7 +484,8 @@ DeleteFromRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
+    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    if range_deleted return;
 
     if _cursor.pos == 0 return;
 
@@ -509,21 +511,9 @@ DeleteFromRight :: () {
     }
 
     if bytes_to_del {
-        to   := _cursor.pos - bytes_to_del;
-        from := _cursor.pos;
-
-        s := slice(buffer, to, from - to);
-        if s {
-            h := array_add(*buffer.history);
-            modify_string(*h.text, s);
-            h.range = .{to, from};
-            h.type   = .DELETE_STRING;
-            h.cursor = buffer._cursor;
-            buffer.history_index += 1;
-        }
-
-        shift_left(buffer, to, from);
-        set_cursor_pos(buffer, *_cursor, to, horizontal=true);
+        at := _cursor.pos - bytes_to_del;
+        set_cursor_pos(buffer, *_cursor, at, horizontal=true);
+        remove_text_from_left(buffer, at, bytes_to_del);
     }
 }
 
@@ -539,7 +529,7 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+    delete_selected_range_if_has_any(buffer, *buffer._cursor);
 
     text := to_string(buffer);
     if text.count == 0 || _cursor.pos == text.count return;
@@ -573,7 +563,8 @@ DeleteFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
+    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    if range_deleted return;
 
     assert(_cursor.pos <= buffer.count);
     if _cursor.pos == buffer.count return;
@@ -603,7 +594,8 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     using editor;
     using buffer;
 
-    if MaybeDeleteSelectedText(buffer, *buffer._cursor) return;
+    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    if range_deleted return;
 
     if _cursor.pos == 0 return;
 
@@ -651,7 +643,7 @@ InsertLine :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    MaybeDeleteSelectedText(buffer, *buffer._cursor);
+    delete_selected_range_if_has_any(buffer, *_cursor);
 
     text := to_string(buffer);
     rebuild_row_table = true;
@@ -1041,9 +1033,10 @@ Undo :: () {
 }
 
 Redo :: () {
+    print("REDO!\n");
     _, buffer := get_active_editor_and_buffer();
 
-    // redo_history(buffer);
+    // redo(buffer);
 }
 
 ////////////////////////////////////
@@ -1246,7 +1239,6 @@ C-] IndentRight
 C-[ IndentLeft
 
 C-z Undo
-C-S-z Redo
 C-y Redo
 
 DONE;
