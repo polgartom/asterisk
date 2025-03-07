@@ -35,58 +35,16 @@ insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
     text := Clipboard.os_clipboard_get_text();
     defer free(text);
 
-    buffer.history_enabled       = false;
-    defer buffer.history_enabled = true;
-
-    at := cursor.pos;
-
     insert_text_at_cursor(buffer, cursor, text);
-    push_history(buffer, text, at);
 }
 
-insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
-    MaybeDeleteSelectedText(buffer, cursor);
+insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    insert_text_at(buffer, cursor.pos, text, history);
 
-    maybe_grow(buffer, text.count);
-
-    at             := cursor.pos;
-    insert_at      := buffer.data  + at;
-    new_right      := insert_at    + text.count;
-    right_rem_size := buffer.count - (insert_at - buffer.data);
-
-    if right_rem_size then c_memmove(new_right, insert_at, xx right_rem_size);
-    SlowMemcpy(insert_at, text.data, text.count);
-
-    buffer.count += text.count;
-    buffer.rebuild_row_table = true;
-    buffer.dirty = true;
-
-    // print("cursor.col: % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
-
-    set_cursor_pos(buffer, cursor, at + text.count, horizontal=true);
-
-    // print("cursor.col (after): % ; target_pos: % ; at: %\n", cursor.col, at + text.count, at);
-
-    if buffer.history_enabled {
-        if text == "\n" || text == " " {
-            push_history_from_input_buffer(buffer);
-            push_history(buffer, text, at);
-        } else {
-            t := *buffer.history_temp_text;
-
-            if !t || t.data == null {
-                t.data = insert_at;
-                t.count = 0;
-            }
-
-            t.count += text.count;
-        }
-    }
+    set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
-insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
-    assert(at > -1);
-
+insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     maybe_grow(buffer, text.count);
 
     insert_at      := buffer.data  + at;
@@ -101,24 +59,52 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string) {
     buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
-    if buffer.history_enabled {
-        if text == "\n" || text == " " {
-            push_history_from_input_buffer(buffer);
-            push_history(buffer, text, at);
-        } else {
-            t := *buffer.history_temp_text;
-
-            if !t || t.data == null {
-                t.data = insert_at;
-                t.count = 0;
-            }
-
-            t.count += text.count;
+    #if history {
+        using buffer;
+        if history.count && history_index > -1 && history_index != history.count-1 {
+            // We should truncate the history because... @Todo: Explain it 
+            new_size := buffer.history_index+1;
+            history.count = new_size;
+            Clamp(*history_index, -1, history.count-1);
         }
+
+        h := array_add(*buffer.history);
+        modify_string(*h.text, text);
+        h.range = .{at, at + text.count};
+        h.type   = .INSERT_STRING;
+        h.cursor = buffer._cursor;
+        buffer.history_index += 1;
     }
 }
 
-MaybeDeleteSelectedText :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
+remove_text_from_left :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    pos1 := clamp(at, 0, buffer.count-1);
+    pos2 := clamp(at + bytes_to_del, 0, buffer.count-1);
+    if pos1 == pos2 return; // @Cleanup: We do the same check in the shift_left() procedure.
+    
+    #if history {
+        using buffer;
+
+        if history.count && history_index > -1 && history_index != history.count-1 {
+            // We should truncate the history because... @Todo: Explain it 
+            new_size := buffer.history_index+1;
+            history.count = new_size;
+            Clamp(*history_index, -1, history.count-1);
+        }
+
+        h := array_add(*buffer.history);
+        deleted_text := slice(buffer, pos1, pos2 - pos1);
+        modify_string(*h.text, deleted_text);
+        h.range = .{pos1, pos2};
+        h.type   = .DELETE_STRING;
+        h.cursor = _cursor;
+        history_index += 1;
+    }
+
+    shift_left(buffer, pos1, pos2);
+}
+
+delete_selected_range_if_has_any :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
     if has_selection(buffer._cursor) {
         delete_selected_range(buffer, *buffer._cursor);
         return true;
@@ -155,8 +141,7 @@ count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
     return count;
 }
 
-find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64)
-{
+find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64) {
     for * editor.buffers {
         if it == buffer return true, it_index;
     }
@@ -164,8 +149,7 @@ find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, i
     return false, -1;
 }
 
-find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
-{
+find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * editor.buffers {
         if it.initialized return true, it_index;
     }
@@ -173,8 +157,7 @@ find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index:
     return false, -1;
 }
 
-find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
-{
+find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * editor.buffers {
         if !it.initialized return true, it_index;
     }
@@ -302,10 +285,10 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     if data != null  then c_free(data);
     if filepath      then free(filepath);
 
-    if history {
-        for * history free_history_item(it);
-        array_free(history);
-    }
+    // if history {
+    //     for * history free_history_item(it);
+    //     array_free(history);
+    // }
 
     new_buffer: Buffer;
     buffer.* = new_buffer;
@@ -363,140 +346,102 @@ get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end
     return array_view(regions, start_index, count);
 }
 
-push_history :: (b: *Buffer, text: string, at: s64) {
-    assert(at > -1); // Unnecessary @Cleanup
-    assert(!!text); // how can be?
-
-    if !text {
-        log_error("push_history() -> skipped, empty string given (buffer: [%] ; at: %)!", b, at);
-        return;
-    }
-
-    // defer print("push_history() -> text: |%| (%) at: %\n", text, text.count, at);
-
-    reset_history_temp_text(b);
-
-    if b.history_index != -1 && b.history_index < b.history.count-1 {
-        trim_history_right(b, b.history_index);
-    }
-
-    array_add(*b.history, Buffer_History.{
-        text = copy_string(text),
-        at   = at,
-        type = Buffer_History.Type.INSERT_STRING
-    });
-
-    b.history_index = b.history.count - 1;
-}
-
-// @Cleanup: Naming!!!!!
-push_history_from_input_buffer :: (using buffer: *Buffer) {
-    if !history_temp_text {
-        reset_history_temp_text(buffer);
-        return;
-    }
-
-    text := history_temp_text;
-    at   := text.data - buffer.data;
-
-    push_history(buffer, text, at);
-}
-
-// @Todo: Simplify
-undo_history :: (using buffer: *Buffer) {
+undo :: (using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
-    push_history_from_input_buffer(buffer); // @Todo: Explain it!
+    h := *history[history_index];
+    print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
 
-    history_enabled = false;
-
-    h := history[history_index];
     if h.type == {
-        case .UNDEFINED;
-        case .INSERT_STRING; {
-            assert(!!h.text);
-
-            to := h.at;
-            from := h.at + h.text.count;
-            if from > buffer.count {
-                diff := from - buffer.count;
-                from -= diff;
-                to   -= diff;
+        case .INSERT_STRING;
+            to   := h.range.start;
+            from := h.range.end;
+            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
+                log_error("Unable to revert (undo) the % due to the invalid start and end point of the text. %", h.type, h.*);
+                reset_history(buffer);
+                return;
             }
-            to = max(to, 0);
-
-            assert(from <= buffer.count, "%; %\n", from, buffer.count); // @Debug
 
             shift_left(buffer, to, from);
-            set_cursor_pos(buffer, *_cursor, to, horizontal=true);
-        }
-        case .DELETE_STRING; {
-            assert(false, "TODO: .DELETE_STRING history type\n");
-        }
-    }
 
-    history_enabled = true;
-    history_index   -= 1;
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index -= 1;
+
+        case .DELETE_STRING;
+            to := h.range.start;
+            if to < 0 || to > buffer.count {
+                log_error("Unable to revert (undo) the % due to the invalid insertion point. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            // Use the insert_text_at_cursor()! @Cleanup
+
+            insert_text_at(buffer, to, h.text, history=false);
+            
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index -= 1;
+
+        case .UNDEFINED;
+            assert(false);
+    }
 }
 
-// @Todo: Simplify
-redo_history :: (using buffer: *Buffer) {
-    if !history.count || history_index + 1 >= history.count return;
+redo :: (using buffer: *Buffer) {
+    if !history.count || history_index == history.count-1 return;
 
-    reset_history_temp_text(buffer);
+    h := *history[history_index+1];
 
-    history_enabled = false;
-
-    h := history[history_index+1];
     if h.type == {
-        case .UNDEFINED;
-        case .INSERT_STRING; {
-            assert(!!h.text);
-            insert_text_at(buffer, h.at, h.text);
-            assert(h.at + h.text.count <= buffer.count);
-
-            set_cursor_pos(buffer, *_cursor, h.at + h.text.count, horizontal=true);
-        }
-        case .DELETE_STRING; {
-            assert(false, "TODO: .DELETE_STRING history type\n");
-        }
-    }
-
-    history_enabled = true;
-    history_index   += 1;
-}
-
-reset_history_item :: inline (h: *Buffer_History) {
-    free_history_item(h);
-    zero_memory(h, size_of(Buffer_History));
-}
-
-free_history_item :: inline (using h: *Buffer_History) {
-    if type == {
-        case .UNDEFINED;
         case .INSERT_STRING;
-            if text free(text);
-    };
+            to := h.range.start;
+            if to < 0 || to > buffer.count {
+                log_error("Unable to revert (redo) the % due to the invalid insertion point. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            // Use the insert_text_at_cursor()! @Cleanup
+
+            insert_text_at(buffer, to, h.text, history=false);
+
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index += 1;
+
+        case .DELETE_STRING;
+            to   := h.range.start;
+            from := h.range.end;
+            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
+                log_error("Unable to revert (redo) the % due to the invalid start and end point of the text. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            shift_left(buffer, to, from);
+
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index += 1;
+
+        case .UNDEFINED;
+            assert(false);
+    }
 }
 
-// Reset the buffer history items from the right until the specified index (inclusive).
-trim_history_right :: (b: *Buffer, index: s64) {
-    before_count := b.history.count;
-    before_index := b.history_index;
-    // print("trim_history_right(): count: % -> % ; i: % -> %\n", before_count, b.history.count, before_index, b.history_index);
-
-    assert(index > -1 && index < b.history.count, "Invalid index! max: % ; given: %\n", b.history.count-1, index);
-
-    items := inline array_view(b.history, index);
-    for * items inline reset_history_item(it);
-
-    b.history.count = index+1; // not index+1, because the index is inclusive
-}
-
-// @Todo: Explain it!
-reset_history_temp_text :: (using buffer: *Buffer) {
-    history_temp_text.data  = null;
-    history_temp_text.count = 0;
+reset_history :: (using buffer: *Buffer) {
+    history_index = -1;
+    array_reset_keeping_memory(*history);
 }
 
 BUFFER_PAGE_SIZE :: 4096;
@@ -506,10 +451,8 @@ Buffer :: struct {
     count:     s64;
     allocated: s64;
 
-    history_enabled := true;
     history: [..] Buffer_History;
     history_index: s64 = -1;
-    history_temp_text: string; // @Todo: Explain it!
 
     // cursors: [..] Cursor; // @Todo: Multiple cursor support
     _cursor: Cursor; // This name temporary, because we're gonna use the cursors dynamic array
@@ -532,9 +475,9 @@ Buffer :: struct {
 }
 
 Buffer_History :: struct {
-    text:  string;
-    count: s64;     // to determine how many characters we should delete from RIGHT!!
-    at:    s64;     // byte position
+    range: Range;
+    text: string;
+    cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
 
     Type :: enum u8 {

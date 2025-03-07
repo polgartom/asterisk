@@ -130,9 +130,7 @@ inputs: Table(u64, *List_Input);
 
 List_Input :: struct {
     scroll_value: float;
-    
     entered := false;
-
     selected_index := -1;
     
     Option :: struct {
