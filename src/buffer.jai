@@ -38,8 +38,8 @@ insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
     insert_text_at_cursor(buffer, cursor, text);
 }
 
-insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string) {
-    insert_text_at(buffer, cursor.pos, text);
+insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    insert_text_at(buffer, cursor.pos, text, history);
 
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
@@ -141,8 +141,7 @@ count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
     return count;
 }
 
-find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64)
-{
+find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64) {
     for * editor.buffers {
         if it == buffer return true, it_index;
     }
@@ -150,8 +149,7 @@ find_buffer_index :: (using editor: *Editor, buffer: *Buffer) -> (found: bool, i
     return false, -1;
 }
 
-find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
-{
+find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * editor.buffers {
         if it.initialized return true, it_index;
     }
@@ -159,8 +157,7 @@ find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index:
     return false, -1;
 }
 
-find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64)
-{
+find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * editor.buffers {
         if !it.initialized return true, it_index;
     }
@@ -359,6 +356,12 @@ undo :: (using buffer: *Buffer) {
         case .INSERT_STRING;
             to   := h.range.start;
             from := h.range.end;
+            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
+                log_error("Unable to revert (undo) the % due to the invalid start and end point of the text. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
             shift_left(buffer, to, from);
 
             buffer._cursor = h.cursor;
@@ -368,12 +371,19 @@ undo :: (using buffer: *Buffer) {
             history_index -= 1;
 
         case .DELETE_STRING;
-            buffer._cursor = h.cursor;
-
             to := h.range.start;
-            insert_text_at(buffer, to, h.text, history=false);
+            if to < 0 || to > buffer.count {
+                log_error("Unable to revert (undo) the % due to the invalid insertion point. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
 
-            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true);
+            // Use the insert_text_at_cursor()! @Cleanup
+
+            insert_text_at(buffer, to, h.text, history=false);
+            
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
             Clamp(*buffer._cursor.pos, 0, buffer.count);
 
             history_index -= 1;
@@ -386,36 +396,52 @@ undo :: (using buffer: *Buffer) {
 redo :: (using buffer: *Buffer) {
     if !history.count || history_index == history.count-1 return;
 
-    history_index += 1;
-    h := *history[history_index];
+    h := *history[history_index+1];
 
     if h.type == {
         case .INSERT_STRING;
+            to := h.range.start;
+            if to < 0 || to > buffer.count {
+                log_error("Unable to revert (redo) the % due to the invalid insertion point. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            // Use the insert_text_at_cursor()! @Cleanup
+
+            insert_text_at(buffer, to, h.text, history=false);
+
+            buffer._cursor = h.cursor;
+            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
+            Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index += 1;
+
+        case .DELETE_STRING;
             to   := h.range.start;
             from := h.range.end;
+            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
+                log_error("Unable to revert (redo) the % due to the invalid start and end point of the text. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
             shift_left(buffer, to, from);
 
             buffer._cursor = h.cursor;
             set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
             Clamp(*buffer._cursor.pos, 0, buffer.count);
 
-            history_index -= 1;
-
-        case .DELETE_STRING;
-            buffer._cursor = h.cursor;
-
-            to := h.range.start;
-            insert_text_at(buffer, to, h.text, history=false);
-
-            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true);
-            Clamp(*buffer._cursor.pos, 0, buffer.count);
-
-            history_index -= 1;
+            history_index += 1;
 
         case .UNDEFINED;
             assert(false);
     }
+}
 
+reset_history :: (using buffer: *Buffer) {
+    history_index = -1;
+    array_reset_keeping_memory(*history);
 }
 
 BUFFER_PAGE_SIZE :: 4096;
@@ -425,7 +451,6 @@ Buffer :: struct {
     count:     s64;
     allocated: s64;
 
-    history_enabled := true;
     history: [..] Buffer_History;
     history_index: s64 = -1;
 

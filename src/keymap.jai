@@ -1033,10 +1033,9 @@ Undo :: () {
 }
 
 Redo :: () {
-    print("REDO!\n");
     _, buffer := get_active_editor_and_buffer();
 
-    // redo(buffer);
+    redo(buffer);
 }
 
 ////////////////////////////////////
