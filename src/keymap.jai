@@ -477,7 +477,7 @@ DeleteEverythingFromLeft :: () {
     start     := _cursor.pos;
     end       := row.end;
 
-    shift_left(buffer, start, end);
+    remove_text_from_left(buffer, start, end - start);
 }
 
 DeleteFromRight :: () {
@@ -511,9 +511,7 @@ DeleteFromRight :: () {
     }
 
     if bytes_to_del {
-        at := _cursor.pos - bytes_to_del;
-        set_cursor_pos(buffer, *_cursor, at, horizontal=true);
-        remove_text_from_left(buffer, at, bytes_to_del);
+        remove_text_from_right_at_cursor(buffer, *_cursor, bytes_to_del);
     }
 }
 
@@ -536,27 +534,26 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
 
     byte := text[_cursor.pos];
     if is_whitespace(byte) {
-        for _cursor.pos..text.count-1 {
-            if !is_whitespace(text[it]) {
-                to   := _cursor.pos;
-                from := it;
-                shift_left(buffer, to, from);
+        for point: _cursor.pos..text.count-1 {
+            if !is_whitespace(text[point]) {
+                remove_text_from_left(buffer, _cursor.pos, point - _cursor.pos);
                 return;
             }    
         }
     }
 
-    for _cursor.pos..text.count-1 {
-        if is_separator_char(text[it], subword_mode) {
-            to   := _cursor.pos;
-            from := it;
-            if to == from from = min(from+1, text.count-1); // @Improve: Detect combined separator characters 
-            shift_left(buffer, to, from); 
+    for point: _cursor.pos..text.count-1 {
+        if is_separator_char(text[point], subword_mode) {
+            if _cursor.pos == point {
+                point = min(point+1, text.count-1); // @Improve: Detect combined separator characters 
+            }
+
+            remove_text_from_left(buffer, _cursor.pos, point - _cursor.pos);
             return;
         }
     }
 
-    shift_left(buffer, _cursor.pos, text.count); // We have no separator character at the end
+    remove_text_from_left(buffer, _cursor.pos, text.count); // We have no separator character at the end
 }
 
 DeleteFromLeft :: () {
@@ -576,9 +573,7 @@ DeleteFromLeft :: () {
     bytes_to_del := 1 + trailingBytesForUTF8[byte];
     assert(_cursor.pos + bytes_to_del <= text.count);
 
-    to   := _cursor.pos;
-    from := _cursor.pos + bytes_to_del;
-    shift_left(buffer, to, from);
+    remove_text_from_left(buffer, _cursor.pos, bytes_to_del);
 }
 
 DeleteWordFromRight :: inline () {
@@ -608,11 +603,10 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     #if !subword_mode {
         // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
         if text[start] == #char " " {
-            for #v2 < index: 0..start {
-                if text[index] != #char " " {
-                    index += 1;
-                    shift_left(buffer, index, _cursor.pos);
-                    set_cursor_pos(buffer, *_cursor, index, horizontal=true);
+            for #v2 < point: 0..start {
+                if text[point] != #char " " {
+                    point += 1;
+                    remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
                     return;
                 }
             }
@@ -624,15 +618,13 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
         return;
     }
 
-    for #v2 < index: 0..start {
-        if is_separator_char(text[index], subword_mode) {
-            index += 1;
-            shift_left(buffer, index, _cursor.pos);
-            set_cursor_pos(buffer, *_cursor, index, horizontal=true);
+    for #v2 < point: 0..start {
+        if is_separator_char(text[point], subword_mode) {
+            point += 1;
+            remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
             return;
-        } else if index == 0 {
-            shift_left(buffer, 0, _cursor.pos);
-            set_cursor_pos(buffer, *_cursor, 0, horizontal=true);
+        } else if point == 0 {
+            remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
             return;
         }
     }
@@ -721,20 +713,28 @@ JoinLine :: () {
             s := to_string(buffer);
             assert(s[row.end] == #char "\n");
 
-            deleted := 0;
+            trimmed_whitespaces := 0;
             next_row := find_row(buffer, row.end + 1);
             t1 := slice(buffer, next_row.start, next_row.size);
             if t1 {
                 t2 := trim_left(t1, " ");
-                if t2 then deleted = t2.data - t1.data;
+                if t2 then trimmed_whitespaces = t2.data - t1.data;
             }
 
-            dest := row.end;
-            src  := next_row.start + deleted;
-            shift_left(buffer, dest, src);
+            line := get_row_as_string(buffer, row);
+            line = trim_right(line, " ");
+            trimmed_from_right := (buffer.data + row.end) - (line.data + line.count);
+            new_row_end := row.end - trimmed_from_right;
 
-            set_cursor_pos(buffer, *buffer._cursor, dest, horizontal=true);
-            insert_text_at_cursor(buffer, *buffer._cursor, " ");
+            set_cursor_pos(buffer, *buffer._cursor, new_row_end, horizontal=true);
+            
+            bytes_to_del := (next_row.start + trimmed_whitespaces) - new_row_end;
+            remove_text_from_left_at_cursor(buffer, *buffer._cursor, bytes_to_del);
+
+            if buffer.data[new_row_end] != #char " " {
+                // We don't want to step to the space character which separates the two joined lines.
+                insert_text_at(buffer, buffer._cursor.pos, " ");
+            }
         }
     }
 
@@ -860,6 +860,8 @@ ExpandSelectionViewPortDown :: () {
 }
 
 // @Incomplete: It has some bugs!
+// @Todo: History!
+// @XXX: We will invalidate the history if we do indention because we use shift_left() here which won't save any history 
 IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;

@@ -61,7 +61,7 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
 
     #if history {
         using buffer;
-        if history.count && history_index > -1 && history_index != history.count-1 {
+        if history.count && history_index != history.count-1 {
             // We should truncate the history because... @Todo: Explain it 
             new_size := buffer.history_index+1;
             history.count = new_size;
@@ -77,15 +77,28 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     }
 }
 
+remove_text_from_right_at_cursor :: (buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    remove_text_from_right(buffer, cursor.pos, bytes_to_del, history);
+    set_cursor_pos(buffer, cursor, cursor.pos - bytes_to_del, horizontal=true);
+}
+
+remove_text_from_right :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    remove_text_from_left(buffer, at - bytes_to_del, bytes_to_del, history);
+}
+
+remove_text_from_left_at_cursor :: (buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    remove_text_from_left(buffer, cursor.pos, bytes_to_del, history);
+}
+
 remove_text_from_left :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
     pos1 := clamp(at, 0, buffer.count-1);
-    pos2 := clamp(at + bytes_to_del, 0, buffer.count-1);
+    pos2 := clamp(at + bytes_to_del, 0, buffer.count);
     if pos1 == pos2 return; // @Cleanup: We do the same check in the shift_left() procedure.
     
     #if history {
         using buffer;
 
-        if history.count && history_index > -1 && history_index != history.count-1 {
+        if history.count && history_index != history.count-1 {
             // We should truncate the history because... @Todo: Explain it 
             new_size := buffer.history_index+1;
             history.count = new_size;
