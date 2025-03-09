@@ -1,3 +1,4 @@
+// The r: Rect's h (height) param represents the maximum height of the list.
 list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_Input.Option = .[]) -> *List_Input {
     timer := seconds_since_init();
     defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
@@ -51,12 +52,12 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
     Simp.set_shader_for_color(true);
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x1c1329ff));
+    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x1c2d29ff));
 
     if !options.count {
         left   := r.x + left_pad * 1.5;
-        bottom := t - (r.h*1.5*2.0*0.5) - ch*.3; // center
-        label(xx left, xx bottom, "No items ...", font, .{.5,.5,.5,1.0});
+        bottom := b + ch*.5; // center
+        label(xx left, xx bottom, "No items...", font, .{.5,.5,.5,1.0});
 
         return input;
     }
@@ -87,10 +88,15 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
         Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
 
         if i == selected_index {
-            Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, #run rgba_to_vec4(36, 24, 54));
+            Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, #run hex_to_vec4(0x24_33_33_ff));
+            
+            label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4});
+            label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
+            // #run hex_to_vec4(0x1c2d29ff)
+        } else {
+            label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
         }
 
-        label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
     }
 
     return input;

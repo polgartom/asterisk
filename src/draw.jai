@@ -32,20 +32,23 @@ draw_frame :: (current_time: float64) {
         draw_global_debug_info(active_editor.rect_for_draw);
     }
 
-    {
-        edi, buf := get_active_editor_and_buffer();
-        r := get_rect(window_width/2.0 , window_height-10.0, window_width/2.1, 200.0);
+    // @Todo: Draw this by pressing a hotkey designated for this. We could use Ctrl + F1-F12 or something.
+    // {
+    //     // Draw current editor's history
 
-        options: [..] List_Input.Option;
-        options.allocator = temp;
-        array_reserve(*options, buf.history.count);
-        for h, i: buf.history {
-            o := array_add(*options);
-            o.label = tprint("% % % %", i, h.type, h.text, ifx buf.history_index==i then " <<" else "");
-        }
+    //     edi, buf := get_active_editor_and_buffer();
+    //     r := get_rect(window_width/2.0 , window_height-10.0, window_width/2.1, 200.0);
 
-        list_input(r, xx #location(), primary_font_xs, options);
-    }
+    //     options: [..] List_Input.Option;
+    //     options.allocator = temp;
+    //     array_reserve(*options, buf.history.count);
+    //     for h, i: buf.history {
+    //         o := array_add(*options);
+    //         o.label = tprint("% % % %", i, h.type, h.text, ifx buf.history_index==i then " <<" else "");
+    //     }
+
+    //     list_input(r, xx #location(), primary_font_xs, options);
+    // }
 
 }
 
