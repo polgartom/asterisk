@@ -385,6 +385,8 @@ draw_buffer_browser :: () {
         buffer := selected_option.ref;
         change_active_buffer(active_editor, buffer);
 
+        linp.selected_index = -1;
+
         array_add(*user_events, .{ type = .CLOSE_WIDGET });
     }
 
