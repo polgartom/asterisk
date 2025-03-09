@@ -51,7 +51,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
-    Simp.set_shader_for_color(false);
+    Simp.set_shader_for_color(true);
     Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x1c2d29ff));
 
     if !options.count {
