@@ -33,8 +33,8 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     left_pad := 5.0;
     pad := 0.0;
     ch  := font.character_height;
-    min_bottom   := r.y - pad - r.h*1.5*2.0;
-    t   := r.y - pad;
+    min_bottom := r.y - pad - r.h*1.5*2.0;
+    t := r.y - pad;
 
     x_pad := left_pad;
     y_pad := ch;
@@ -51,7 +51,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
-    Simp.set_shader_for_color(true);
+    Simp.set_shader_for_color(false);
     Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x1c2d29ff));
 
     if !options.count {
@@ -82,7 +82,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
 
     for opt, i: options {
         defer y -= y_off;
-        // if y < b || y >= t continue;
+        // if y < b || y >= t continue; // We should filter out the options that are not visible (overflowed) before we render. @Incomplete
 
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
@@ -90,9 +90,8 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
         if i == selected_index {
             Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, #run hex_to_vec4(0x24_33_33_ff));
             
-            label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4});
+            label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4}); // shadow
             label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
-            // #run hex_to_vec4(0x1c2d29ff)
         } else {
             label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
         }

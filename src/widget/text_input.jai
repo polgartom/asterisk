@@ -48,33 +48,42 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     }
 
     left_pad := 5.0;
-    pad := 0.0;
     ch  := font.character_height;
-    b   := r.y - pad - r.h*1.5;
-    t   := r.y - pad;
+    b   := r.y;
+    t   := r.y + r.h;
 
     Simp.set_shader_for_color(true);
     Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
 
     if text {
         Simp.prepare_text(font, text);
-        center := t - (r.h*1.5*0.5) - ch*.3;
+        // center := b + (t-b)*.5 - ch*.25;
+        center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
         Simp.draw_prepared_text(font, xx (r.x + left_pad), xx center, theme.fg_color);
     } else if placeholder {
         left   := r.x + left_pad * 2;
-        bottom := t - (r.h*1.5*0.5) - ch*.3; // center
-        label(xx left, xx bottom, placeholder, font, theme.placeholder_color);
+        // center := b + (t-b)*.5 - ch*.25;
+        center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
+        label(xx left, xx center, placeholder, font, theme.placeholder_color);
     }
 
     {
+        // Draw cursor
+
+        Simp.set_shader_for_color(true);
+
         left := r.x + 5.0;
         if cursor.pos && text {
             t := text;
             t.count = cursor.pos;
             left += measure_text_width(font, t);
         }
-        rect := get_rect(left, b + ch * .25, em(.25, font), xx ch);
-        draw_cursor(rect, bg_color=theme.cursor_color, fg_color=DEFAULT_COLOR[Color.TEXT_UNDER_CURSOR]);
+        
+        width  := em(.25, font);
+        right  := left + width;
+        bottom := b + (t-b)*.5 - ch*.5;
+        top    := bottom + ch;
+        Simp.immediate_quad(left, bottom, right, top, theme.cursor_color);
     }
 }
 

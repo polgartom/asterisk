@@ -259,16 +259,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
 }
 
-draw_cursor :: (r: Rect, bg_color: Vector4, fg_color: Vector4) {
-    // left := rect.x + rect.w;
-    // cw := em(1.0, primary_font);
-    // ch := primary_font.character_height;
-
-    Simp.set_shader_for_color(true);
-    // Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
-    Simp.immediate_quad(r.x, r.y, r.x + r.w, r.y + r.h, bg_color);
-}
-
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     c  := *buffer._cursor;
 
@@ -384,13 +374,20 @@ draw_widgets :: () {
 
 draw_file_browser :: () {
     font := my_font_small;
-    pad := cast(float32) primary_font.em_width * .5;
+    pad  := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
-    h := cast(float)font.character_height;
-    b := cast(float)window_height;
-    r := get_rect(ed_r.x-pad, b-pad, ed_r.w, h);
+    
+    // @Temporary: We don't want to set those values on every frame, right?
+    theme := Text_Input.DEFAULT_THEME;
+    theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    tinp := text_input(r, xx #location(), font, placeholder=file_browser.current_dir);
+    h := cast(float)font.character_height * 2.0;
+    b := cast(float, window_height);
+    r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    tinp := text_input(r, xx #location(), font, placeholder=file_browser.current_dir, theme=theme);
 
     {
         using file_browser;
@@ -410,7 +407,6 @@ draw_file_browser :: () {
 
         list_rect := r;
         k := ed_r.h * .1;
-        list_rect.y -= list_rect.h * 1.5;
         list_rect.h = 1.5*k;
         linp := list_input(list_rect, xx #location(), font, options);
         
@@ -466,24 +462,26 @@ draw_find_text_dialog :: () {
     ed_r := active_editor.rect_for_draw;
 
     {
-        font := my_font_small;
-        k := ed_r.h * .1;
-        width           := em(15.0, font);
-        height          := em(2.0,  font);
-        right_pad       := 0.1 * k;
+        font   := my_font_small;
+        k      := ed_r.h * .1;
+        height := em(2.0, font);
+        pad    := cast(float32, primary_font.em_width);// * .5;
 
         r := get_rect(
-            ed_r.x + ed_r.w - width * 2 - right_pad,
-            ed_r.h - height,
-            width * 2,
-            xx font.character_height
+            ed_r.x - pad,
+            footer_height,
+            ed_r.w,
+            xx font.character_height * 2.0,
         );
 
+        // @Temporary: We don't want to set those values on every frame, right?
         theme := Text_Input.DEFAULT_THEME;
-        theme.bg_color = map_color_to_vec4(Color.FOOTER_BACKGROUND_DARKEN);
-        theme.fg_color = map_color_to_vec4(Color.FOOTER_TEXT);
+        theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
+        theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+        theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+        theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-        update_text_input(input, r, font, placeholder="Find", theme);
+        update_text_input(input, r, font, placeholder="Find...", theme);
     }
 
     update_find_text_dialog();
