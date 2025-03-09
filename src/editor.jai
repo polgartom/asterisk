@@ -181,6 +181,7 @@ count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
     return count;
 }
 
+// @Cleanup Use -1 if failed
 find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
     for * buffers {
         if it == buffer return true, it_index;
@@ -189,6 +190,15 @@ find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
     return false, -1;
 }
 
+find_buffer_index_by_filepath :: (filepath: string) -> s64 {
+    for * buffers {
+        if it.filepath == filepath return it_index;
+    }
+
+    return -1;
+}
+
+// @Cleanup Use -1 if failed
 find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * buffers {
         if it.initialized return true, it_index;
@@ -197,6 +207,7 @@ find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index:
     return false, -1;
 }
 
+// @Cleanup Use -1 if failed
 find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
     for * buffers {
         if !it.initialized return true, it_index;
@@ -323,10 +334,9 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     free(row_table.data,, row_table.allocator);
 
     if data != null  then c_free(data);
-    if filepath      then free(filepath);
 
     // We don't have to free these string, because we free those and replace with the
-    // new values when we add a new history.
+    // new values when we add a new history. @Cleanup
     for history {
         if it.text     free(it.text);
         if it.old_text free(it.old_text);
@@ -553,7 +563,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
         buffer = create_or_find_empty_buffer(editor);
     }
 
-    buffer.filepath       = copy_string(filepath);
+    modify_string(*buffer.filepath, filepath);
     buffer.exists_on_disk = file_exists(filepath);
     
     if buffer.exists_on_disk {
@@ -569,7 +579,6 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
     }
 
     rescan_line_ends(buffer);
-
     change_active_buffer(editor, buffer);
 }
 
@@ -677,7 +686,7 @@ replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: str
     return result, ocurrences;
 }
 
-active_editor: *Editor = null; // @Temporary
+active_editor: *Editor = null;
 editors: [..] Editor;
 buffers: [..] Buffer;
 
@@ -691,7 +700,7 @@ Editor :: struct {
 
     rect_for_draw: Rect;
     visible := true;
-    should_recalc_editor_offsets := false; // @Temporary
+    should_recalc_editor_offsets := false; // @Todo: REMOVE IT
 }
 
 Buffer :: struct {
