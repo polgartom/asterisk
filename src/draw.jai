@@ -190,21 +190,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             left += width;
         }
 
-        {
-            count := count_buffers(editor, initialized=true);
-            relative_index := 0;
-            for * editor.buffers {
-                if !it.initialized continue;
-
-                relative_index += 1;
-                if it == buffer break;
-            }
-
-            buffer_info := tprint(" | %/%", relative_index, count);
-            width = Simp.prepare_text(font, buffer_info);
-            Simp.draw_prepared_text(font, xx left, xx center, .{.0,.0,.0,1.0});
-        }
-
         row := find_row_index(buffer, buffer._cursor.pos) + 1;
         col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);

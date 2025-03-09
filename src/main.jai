@@ -243,7 +243,8 @@ main :: () {
                 rescan_line_ends(editor.active_buffer);
             }
 
-            assert(editor.active_buffer != null && editor.active_buffer.initialized);
+            assert(editor.active_buffer != null);
+            assert(editor.active_buffer.initialized);
 
             editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
             get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
@@ -924,7 +925,6 @@ Range :: struct {
 #load "editor.jai";
 #load "keymap.jai";
 #load "cursor.jai";
-#load "buffer.jai";
 #load "memory.jai";
 #load "render.jai";
 #load "draw.jai";

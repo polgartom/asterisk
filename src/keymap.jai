@@ -37,13 +37,10 @@ CreateBuffer :: () {
 }
 
 CloseCurrentBuffer :: () {
-    editor, buffer := get_active_editor_and_buffer();
+    _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
-    // @Todo: A confirm popup thing
-    // if buffer.dirty {}
-
-    close_buffer(editor, buffer);
+    close_buffer(buffer);
 }
 
 PrevBuffer :: () {
@@ -53,7 +50,7 @@ PrevBuffer :: () {
     count := count_buffers(editor, initialized=true);
     if count < 2 return;
 
-    found, index := find_buffer_index(editor, buffer);
+    found, index := find_buffer_index(buffer);
     assert(found, "-> %\n", buffer.*);
 
     prev_buffer: *Buffer;
@@ -84,7 +81,7 @@ NextBuffer :: () {
     count := count_buffers(editor, initialized=true);
     if count < 2 return;
 
-    found, index := find_buffer_index(editor, buffer);
+    found, index := find_buffer_index(buffer);
     assert(found, "-> %\n", buffer.*);
 
     next_buffer: *Buffer;
