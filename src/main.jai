@@ -301,6 +301,11 @@ PrintDev :: (fmt: string, args: .. Any) #expand {
     array_add(*debug_infos, s); // can we use temporary allocator for dynamic arrays?
 } @PrintLike
 
+ll :: (fmt: string, args: .. Any) #expand {
+    s := tprint(fmt, ..args);
+    print("[%] %", #procedure_name(), s);
+} @PrintLike
+
 get_char_at_string_index :: (t: string, index: s64) -> string {
     assert(index < t.count);
     c := advance(t, index);
@@ -437,6 +442,7 @@ get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (
 
 get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
     rows: [..] Row_Info;
+    // row.allocator = tmp;
 
     if !has_selection(cursor) return rows;
 
@@ -679,10 +685,14 @@ is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
            ;
 }
 
-count_whitespaces_from_left :: (s: string) -> s64 {
+count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s64 {
     count := 0;
     for c: s {
-        if !is_whitespace(c) break;
+        #if space_character_only {
+            if c != #char " " break;
+        } else {
+            if !is_whitespace(c) break;
+        }
         count += 1;
     }
 
@@ -888,6 +898,14 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
         a / 255.0
     };
 }
+
+bytes_to_string :: inline (bytes: []u8) -> string {
+    return .{
+        data=bytes.data,
+        count=bytes.count
+    };
+}
+
 
 Program_Mode :: enum u8 {
     // CORE;

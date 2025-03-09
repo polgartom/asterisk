@@ -38,6 +38,34 @@ insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
     insert_text_at_cursor(buffer, cursor, text);
 }
 
+// kacsa
+replace_text_at :: (buffer: *Buffer, range: Range, new_text: string, $history := true) {
+    #if history {
+        using buffer;
+        if history.count && history_index != history.count-1 {
+            // We should truncate the history because... @Todo: Explain it 
+            new_size := buffer.history_index+1;
+            history.count = new_size;
+            Clamp(*history_index, -1, history.count-1);
+        }
+
+        h := array_add(*buffer.history);
+
+        old_text := slice(buffer, range.start, range.end - range.start);
+        modify_string(*h.old_text, old_text);
+        modify_string(*h.text, new_text);
+
+        h.range  = range;
+        h.type   = .REPLACE;
+        h.cursor = buffer._cursor;
+
+        buffer.history_index += 1;
+    }
+
+    remove_text_from_left(buffer, range.start, range.end - range.start, history=false);
+    insert_text_at(buffer, range.start, new_text, history=false);
+}
+
 insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
     insert_text_at(buffer, cursor.pos, text, history);
 
@@ -71,7 +99,7 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
         h := array_add(*buffer.history);
         modify_string(*h.text, text);
         h.range = .{at, at + text.count};
-        h.type   = .INSERT_STRING;
+        h.type   = .INSERT;
         h.cursor = buffer._cursor;
         buffer.history_index += 1;
     }
@@ -109,7 +137,7 @@ remove_text_from_left :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history 
         deleted_text := slice(buffer, pos1, pos2 - pos1);
         modify_string(*h.text, deleted_text);
         h.range = .{pos1, pos2};
-        h.type   = .DELETE_STRING;
+        h.type   = .DELETE;
         h.cursor = _cursor;
         history_index += 1;
     }
@@ -365,8 +393,8 @@ undo :: (using buffer: *Buffer) {
     h := *history[history_index];
     print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
 
-    if h.type == {
-        case .INSERT_STRING;
+    if #complete h.type == {
+        case .INSERT;
             to   := h.range.start;
             from := h.range.end;
             if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
@@ -377,13 +405,12 @@ undo :: (using buffer: *Buffer) {
 
             shift_left(buffer, to, from);
 
-            buffer._cursor = h.cursor;
-            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
-            Clamp(*buffer._cursor.pos, 0, buffer.count);
+            _cursor = h.cursor;
+            set_cursor_pos(buffer, *_cursor, to, horizontal=true); 
 
             history_index -= 1;
 
-        case .DELETE_STRING;
+        case .DELETE;
             to := h.range.start;
             if to < 0 || to > buffer.count {
                 log_error("Unable to revert (undo) the % due to the invalid insertion point. %", h.type, h.*);
@@ -395,9 +422,26 @@ undo :: (using buffer: *Buffer) {
 
             insert_text_at(buffer, to, h.text, history=false);
             
-            buffer._cursor = h.cursor;
-            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
-            Clamp(*buffer._cursor.pos, 0, buffer.count);
+            _cursor = h.cursor;
+            set_cursor_pos(buffer, *_cursor, to + h.text.count, horizontal=true);
+
+            history_index -= 1;
+
+        case .REPLACE;
+            start := h.range.start;
+            end   := h.range.start + h.text.count;
+            if start >= end || start < 0 || start > buffer.count-1 || end < 0 || end > buffer.count-1 {
+                log_error("Unable to revert (undo) the % due to the invalid range given for the replacement. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            replace_text_at(buffer, Range.{start, end}, h.old_text, history=false);
+            
+            _cursor = h.cursor;
+            clamp_cursor(buffer, *_cursor);
+            _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
+            request_editor_top_left_offsets_recalc();
 
             history_index -= 1;
 
@@ -412,7 +456,7 @@ redo :: (using buffer: *Buffer) {
     h := *history[history_index+1];
 
     if h.type == {
-        case .INSERT_STRING;
+        case .INSERT;
             to := h.range.start;
             if to < 0 || to > buffer.count {
                 log_error("Unable to revert (redo) the % due to the invalid insertion point. %", h.type, h.*);
@@ -430,7 +474,7 @@ redo :: (using buffer: *Buffer) {
 
             history_index += 1;
 
-        case .DELETE_STRING;
+        case .DELETE;
             to   := h.range.start;
             from := h.range.end;
             if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
@@ -444,6 +488,25 @@ redo :: (using buffer: *Buffer) {
             buffer._cursor = h.cursor;
             set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
             Clamp(*buffer._cursor.pos, 0, buffer.count);
+
+            history_index += 1;
+
+        case .REPLACE;
+            // @INCOMPLETE @XXX
+            start := h.range.start;
+            end   := h.range.start + h.old_text.count;
+            if start >= end || start < 0 || start > buffer.count-1 || end < 0 || end > buffer.count-1 {
+                log_error("Unable to revert (undo) the % due to the invalid range given for the replacement. %", h.type, h.*);
+                reset_history(buffer);
+                return;
+            }
+
+            replace_text_at(buffer, Range.{start, end}, h.text, history=false);
+            
+            _cursor = h.cursor;
+            clamp_cursor(buffer, *_cursor);
+            _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
+            request_editor_top_left_offsets_recalc();
 
             history_index += 1;
 
@@ -488,15 +551,17 @@ Buffer :: struct {
 }
 
 Buffer_History :: struct {
-    range: Range;
     text: string;
+    old_text: string; // FOR .REPLACE!
+    range: Range;
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
 
     Type :: enum u8 {
         UNDEFINED :: 0;
-        INSERT_STRING;
-        DELETE_STRING;
+        INSERT;
+        DELETE;
+        REPLACE;
     }
 }
 

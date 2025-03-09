@@ -859,81 +859,79 @@ ExpandSelectionViewPortDown :: () {
     move_viewport_down(with_selection=false);
 }
 
-// @Incomplete: It has some bugs!
-// @Todo: History!
-// @XXX: We will invalidate the history if we do indention because we use shift_left() here which won't save any history 
+// @Cleanup: Gosh...
 IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if has_selection(_cursor) {
-        save_cursor_col(buffer, *_cursor);
-        defer try_restore_cursor_col(buffer, *_cursor);
+    c := *_cursor;
 
-        cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
+    cpos_after := c.pos;
+    cpos_row_index := find_row_index(buffer, c.pos);
+    csel_after := c.sel;
+    csel_row_index := find_row_index(buffer, c.sel);
 
-        correction := 0; // @Explain!
-        rows := get_selected_rows(buffer, *_cursor);
-        for row: rows {
-            start  := row.start - correction;
-            spaces := 0;
-            t := slice(buffer, start, row.size);
+    block_lines: [..] string;
+    block_lines.allocator = temp;
 
-            while t {
-                if t[0] != #char " " {
-                    if spaces {
-                        del := 0;
-                        if (spaces % TAB_SIZE_IN_SPACES) != 0 {
-                            del = spaces % TAB_SIZE_IN_SPACES;
-                        } else {
-                            del = min(spaces, TAB_SIZE_IN_SPACES);
-                        }
+    rows: [..] Row_Info;
+    rows.allocator = temp;
 
-                        dest := start + spaces - del;
-                        src  := start + spaces;
-                        shift_left(buffer, dest, src);
+    start, end := selected_range(c);
+    at := start;
+    while at <= end {
+        row_index := find_row_index(buffer, at);
+        row       := row_table[row_index];
+        array_add(*rows, row);
 
-                        correction += del;
-                    }
-                    break;
-                }
-                spaces += 1;
-                advance(*t, 1);
-            }
+        s := get_row_as_string(buffer, row);
+        spaces := count_whitespaces_from_left(s, space_character_only=true);
+        del := TAB_SIZE_IN_SPACES;
+        if spaces < TAB_SIZE_IN_SPACES then del = spaces;
+        new_s := advance(s, del);
+        array_add(*block_lines, new_s);
+
+        if row_index <= cpos_row_index {
+            cpos_after -= del;
         }
 
-        rescan_line_ends(buffer);
-
-    } else {
-        row := find_row(buffer, _cursor.pos);
-        t   := slice(buffer, row.start, row.size);
-        spaces := 0;
-        while t {
-            if t[0] != #char " " break;
-            spaces += 1;
-            advance(*t, 1);
+        if row_index <= csel_row_index {
+            csel_after -= del;
         }
 
-        if spaces {
-            del := 0;
-            if (spaces % TAB_SIZE_IN_SPACES) != 0 {
-                del = spaces % TAB_SIZE_IN_SPACES;
-            } else {
-                del = min(spaces, TAB_SIZE_IN_SPACES);
-            }
+        at = row.end + 1;
+    }
 
-            dest := row.start + spaces - del;
-            src  := row.start + spaces;
-            shift_left(buffer, dest, src);
-
-            if _cursor.pos > row.start {
-                pos := _cursor.pos - del;
-                if pos < row.start then pos = row.start;
-                set_cursor_pos(buffer, *_cursor, pos, horizontal=true);
-            }
-
+    new_block: string;
+    for s: block_lines {
+        new_block = tprint("%1%2", new_block, s);
+        if it_index != block_lines.count-1 {
+            new_block = tprint("%1\n", new_block);
         }
     }
+
+    start = rows[0].start;
+    end   = rows[rows.count-1].end;
+    replace_text_at(buffer, Range.{start, end}, new_block);
+
+    rescan_line_ends(buffer);
+
+    // STUPID CORRECTION!
+    if find_row_index(buffer, cpos_after) != cpos_row_index {
+        cpos_after = row_table[cpos_row_index].start;
+    }
+    if find_row_index(buffer, csel_after) != csel_row_index {
+        csel_after = row_table[csel_row_index].start;
+    }
+
+    c.pos = cpos_after;
+    c.sel = csel_after;
+    clamp_cursor(buffer, c);
+
+    c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
+    request_editor_top_left_offsets_recalc();
+
+    // set_cursor_pos(buffer, c, cpos_after, horizontal=true, with_selection=!has_selection(c));
 }
 
 // @Incomplete: It has some bugs!
@@ -941,66 +939,62 @@ IndentRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    CreateSpaces :: (spaces: s64) -> string #expand {
-        builder: String_Builder;
-        builder.allocator = __temporary_allocator;
-        for 0..spaces-1 append(*builder, " ");
-        return builder_to_string(*builder,, allocator = __temporary_allocator);
-    }
+    c := *_cursor;
+    ca, cb := get_cursor_min_max_indecies_as_pointers(c);
+    ca_row_index := find_row_index(buffer, ca.*);
+    cb_row_index := find_row_index(buffer, cb.*);
 
-    if has_selection(_cursor) {
-        save_cursor_col(buffer, *_cursor);
-        defer try_restore_cursor_col(buffer, *_cursor);
+    block_lines: [..] string;
+    block_lines.allocator = temp;
 
-        cursor_min, cursor_max := get_cursor_min_max_indecies_as_pointers(*_cursor);
+    rows: [..] Row_Info;
+    rows.allocator = temp;
 
-        correction := 0; // @Explain!
-        rows := get_selected_rows(buffer, *_cursor);
-        for row: rows {
-            start  := row.start + correction;
-            spaces := 0;
-            t := slice(buffer, start, row.size);
-            while t {
-                if t[0] != #char " " {
-                    r := (spaces % TAB_SIZE_IN_SPACES);
-                    if r == 0 then r = TAB_SIZE_IN_SPACES;
-                    space_string := CreateSpaces(r); // @Cleanup It's stupid but it works now!
-                    insert_text_at(buffer, start, space_string);
-                    correction += space_string.count;
-
-                    break;
-                }
-                spaces += 1;
-                advance(*t, 1);
-            }
-        }
-
-        rescan_line_ends(buffer);
-
-    } else {
-        row := find_row(buffer, _cursor.pos);
+    start, end := selected_range(c);
+    at := start;
+    while at <= end {
+        row_index := find_row_index(buffer, at);
+        row       := row_table[row_index];
+        array_add(*rows, row);
 
         s := get_row_as_string(buffer, row);
-        spaces := count_whitespaces_from_left(s);
-        spaces  = (spaces % TAB_SIZE_IN_SPACES);
-        if spaces == 0 then spaces = TAB_SIZE_IN_SPACES;
-        space_string := CreateSpaces(spaces); // @Cleanup It's stupid but it works now!
+        spaces := count_whitespaces_from_left(s, space_character_only=true);
+        rem := spaces % TAB_SIZE_IN_SPACES;
+        add := TAB_SIZE_IN_SPACES - rem;
 
-        insert_text_at(buffer, row.start, space_string);
+        new_s := alloc_string(s.count + add,, temp);
+        new_s.count = s.count + add;
+        memset(new_s.data, #char " ", spaces + add);
+        memcpy(new_s.data + spaces + add, s.data+spaces, s.count-spaces);
+        array_add(*block_lines, new_s);
 
-        if _cursor.pos >= row.start {
-            set_cursor_pos(buffer, *_cursor, _cursor.pos + space_string.count, horizontal=true);
+        if row_index <= ca_row_index {
+            ca.* += add;
+        }
+        if row_index <= cb_row_index {
+            cb.* += add;
+        }
+
+        at = row.end + 1;
+    }
+
+    new_block: string;
+    for s: block_lines {
+        new_block = tprint("%1%2", new_block, s);
+        if it_index != block_lines.count-1 {
+            new_block = tprint("%1\n", new_block);
         }
     }
+
+    start = rows[0].start;
+    end   = rows[rows.count-1].end;
+    replace_text_at(buffer, Range.{start, end}, new_block);
 
     rescan_line_ends(buffer);
 
-    p1 := min(_cursor.pos, buffer.count);
-    set_cursor_pos(buffer, *_cursor, p1, horizontal=true, with_selection=false);
-
-    p2 := min(_cursor.sel, buffer.count);
-    _cursor.sel = p2;
-
+    clamp_cursor(buffer, c);
+    c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
+    request_editor_top_left_offsets_recalc();
 }
 
 // @Incomplete !!!

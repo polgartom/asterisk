@@ -1,8 +1,7 @@
 // @Cleanup: Rename the $with_selection param because the opposite is happening right now!
-set_cursor_pos :: inline (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
-    
-    if       target_pos < 0             target_pos = 0;
-    else if  target_pos > buffer.count  target_pos = buffer.count;
+set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
+
+    Clamp(*target_pos, 0, buffer.count);
 
     if with_selection {
         cursor.pos = target_pos;
@@ -29,6 +28,11 @@ count_selected_bytes :: inline (using c: *Cursor) -> s64 {
 
 has_selection :: inline (using c: Cursor) -> bool {
     return pos != sel;
+}
+
+clamp_cursor :: (buffer: Buffer, c: *Cursor) {
+    Clamp(*c.pos, 0, buffer.count);
+    Clamp(*c.sel, 0, buffer.count);
 }
 
 count_selected_chars :: inline (buffer: *Buffer, using c: *Cursor) -> s64 {

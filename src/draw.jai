@@ -64,9 +64,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     buffer := editor.active_buffer;
 
-    if should_recalc_editor_offsets {
-        should_recalc_editor_offsets = false;
-
+    // if should_recalc_editor_offsets {
+        // should_recalc_editor_offsets = false;
+    {
         cw := em(1.0, primary_font);
         ch := primary_font.character_height;
 
@@ -91,6 +91,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if editor.top_offset < 0 then editor.top_offset = 0;
         }
     }
+    // }
+
+    draw_selection(editor, buffer, r);
 
     // Draw text
     if buffer.count {
@@ -133,47 +136,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         // PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
-    // if active_editor == editor {
-    //     // @Temporary
-    //     if mode == .WIDGET && find_text_dialog.text {
-    //         Simp.set_shader_for_color(true);
-    //         highlight_color := map_color_to_vec4(.TEXT_HIGHLIGHT);
-
-    //         using editor;
-    //         using buffer;
-
-    //         push_scissor(rect);
-    //         defer pop_scissor();
-
-    //         width := measure_text_width(search_text);
-
-    //         start_row_index := first_visible_row_index(editor, buffer);
-    //         start_row := row_table[start_row_index];
-
-    //         end_row_index := last_visible_row_index(editor, buffer);
-    //         end_row := row_table[end_row_index];
-
-    //         for pos: search_widget.occurences {
-    //             if pos < start_row.start || pos > end_row.end continue;
-
-    //             row_index := find_row_index(buffer, pos);
-    //             row := row_table[row_index];
-
-    //             left   := r.x - left_offset;
-    //             bottom := (rect.h + rect.y) - get_line_height(row_index+1) + editor.top_offset;
-
-    //             if pos != row.start {
-    //                 t := get_row_as_string(buffer, row);
-    //                 t = slice(t, 0, pos - row.start);
-    //                 left += Simp.prepare_text(primary_font, t);
-    //             }
-
-    //             draw_character_height_aware_rect(primary_font, left, cast(float32)width, bottom, highlight_color);
-    //         }
-    //     }
-    // }
-
-    draw_selection(editor, buffer, r);
     draw_cursor(editor, buffer, r);
 
     {
@@ -312,6 +274,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     }
 }
 
+// @Todo: This thing is not doing draws properly. Also we should create an array of selections, because
+// we should draw those after the find text widget.
 draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     c := *buffer._cursor;
     if !has_selection(c) return;
