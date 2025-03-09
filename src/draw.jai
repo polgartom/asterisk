@@ -318,7 +318,76 @@ draw_widgets :: () {
     if active_widget == {
         case Find_Text_Dialog; draw_find_text_dialog();
         case File_Browser;     draw_file_browser();
+        case Buffer_Browser;   draw_buffer_browser();
     }
+}
+
+draw_buffer_browser :: () {
+    font := my_font_small;
+    pad  := cast(float32) primary_font.em_width * .5;
+    ed_r := active_editor.rect_for_draw;
+    
+    // @Temporary: We don't want to set those values on every frame, right?
+    theme := Text_Input.DEFAULT_THEME;
+    theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
+
+    h := cast(float)font.character_height * 2.0;
+    b := cast(float, window_height);
+    r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    tinp := text_input(r, xx #location(), font, placeholder="Switch to buffer", theme=theme);
+
+    options: [..] List_Input.Option(Buffer);
+    options.allocator = temp;
+    array_reserve(*options, buffers.count);
+
+    // @Speed: We are doing this on every frame!!!
+    wd := get_working_directory();
+    path_unify_sepa(wd);
+
+    for *b: buffers {
+        if !b.initialized continue;
+
+        title := "* New *";
+        if b.exists_on_disk {
+            title = b.filepath;
+            // if begins_with(title, wd) {
+            //     skip := wd.count;
+            //     if title[wd.count] == #char "/" skip += 1; 
+            //     advance(*title, skip);
+            // }
+        }
+
+        if tinp.text {
+            found, rem := contains_nocase(title, tinp.text);
+            if !found continue;
+        }
+
+        array_add(*options, .{label=copy_temporary_string(title), ref=b});
+    }
+
+    list_rect := r;
+    k := ed_r.h * .1;
+    list_rect.h = 1.5*k;
+    linp := list_input(list_rect, xx #location(), font, options);
+    
+    if linp.selected_index == -1 then linp.selected_index = 0;
+
+    if linp.entered && options.count {
+        if linp.selected_index >= options.count || linp.selected_index < 0 {
+            assert(false, "Invalid index: % ; options: % ; buffers: %\n", linp.selected_index, options, buffers);
+            return;                
+        }
+        
+        selected_option := options[linp.selected_index];
+        buffer := selected_option.ref;
+        change_active_buffer(active_editor, buffer);
+
+        array_add(*user_events, .{ type = .CLOSE_WIDGET });
+    }
+
 }
 
 draw_file_browser :: () {
@@ -341,7 +410,7 @@ draw_file_browser :: () {
     {
         using file_browser;
 
-        options: [..] List_Input.Option;
+        options: [..] List_Input.Option(void);
         options.allocator = temp;
         array_reserve(*options, items.count);
 

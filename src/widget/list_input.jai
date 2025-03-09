@@ -138,8 +138,9 @@ List_Input :: struct {
     entered := false;
     selected_index := -1;
     
-    Option :: struct {
+    Option :: struct (T: Type) {
         label: string;
+        ref: *T;
     }
 
 }

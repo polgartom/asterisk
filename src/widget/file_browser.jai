@@ -1,4 +1,4 @@
-file_browser_open :: () {
+open_file_browser :: () {
     using file_browser;
 
     switch_editor_mode(.WIDGET);

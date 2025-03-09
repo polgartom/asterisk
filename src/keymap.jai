@@ -1053,7 +1053,8 @@ register_keymap_procedures :: () {
     Add(widget_keymap, CloseCurrentWidget);
     
     Add(editor_keymap, open_find_text_dialog);
-    Add(editor_keymap, file_browser_open);
+    Add(editor_keymap, open_file_browser);
+    Add(editor_keymap, open_buffer_browser);
 
     // Editor
 
@@ -1168,7 +1169,8 @@ C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
 C-f open_find_text_dialog
-C-o file_browser_open
+C-o open_file_browser
+A-x open_buffer_browser
 
 F1 ToggleDevInfo
 

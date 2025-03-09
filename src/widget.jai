@@ -19,3 +19,4 @@ events_to_handle_this_frame_for_widgets: [..] Event;
 
 #load "widget/find_text_dialog.jai";
 #load "widget/file_browser.jai";
+#load "widget/buffer_browser.jai";
