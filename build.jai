@@ -127,3 +127,4 @@ ICON_FILEPATH :: "data/icon/icon.ico";
 #import "Compiler";
 #import "Basic";
 #import "Metaprogram_Plugins";
+// print("comment: |%|", slice(buffer, start, steps));

@@ -1021,13 +1021,11 @@ ExtendSelectionByToken :: () {
 
 Undo :: () {
     _, buffer := get_active_editor_and_buffer();
-
     undo(buffer);
 }
 
 Redo :: () {
     _, buffer := get_active_editor_and_buffer();
-
     redo(buffer);
 }
 

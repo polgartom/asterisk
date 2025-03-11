@@ -791,6 +791,15 @@ seek_left_utf8_until_separator :: (s: string, point: int) -> int {
     return point;
 }
 
+seek_right_utf8_for_separator :: (s: string, point: int) -> int {
+    while point {
+        point = seek_left_one_utf8_character_byte_pos(s, point);
+        if is_separator(s[point]) break;
+    }
+    
+    return point;
+}
+
 find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
     if s.count < substring.count  return -1, false;
 
@@ -933,9 +942,10 @@ Range :: struct {
 #load "color.jai";
 
 #load "widget.jai";
+#load "lang.jai";
+
 
 // Local modules
-#import "Language_Support";
 CodeInspect :: #import,file "code_inspect.jai";
 
 #import "System";

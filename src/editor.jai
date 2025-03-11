@@ -265,6 +265,10 @@ rescan_line_ends :: (using buffer: *Buffer) {
     // create_color_regions(buffer); // @Cleanup: Remove from here
 
     row_table_recalc_time = (seconds_since_init() - timer) * 1000;
+
+    {
+        tokenize(buffer, language = .C_STYLE);
+    }
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
@@ -327,6 +331,23 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
 
         buffer.data      = new_data;
         buffer.allocated = new_size;
+
+        {
+            // Allocates colors
+
+            new_colors_data := cast(*Color)c_malloc(xx new_size);
+            assert(new_colors_data != null);
+            memset(new_colors_data, cast(u8)Color.TEXT_DEFAULT, buffer.allocated);
+
+            if buffer.colors.count {
+                SlowMemcpy(new_colors_data, buffer.colors.data, buffer.colors.count);
+                c_free(buffer.colors.data);
+            }
+
+            buffer.colors.data  = new_colors_data;
+            buffer.colors.count = new_size;
+        }
+
     }
 }
 
@@ -345,29 +366,6 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
 
     new_buffer: Buffer;
     buffer.* = new_buffer;
-}
-
-create_color_regions :: (using buffer: *Buffer) {
-    array_reset_keeping_memory(*color_regions);
-
-    s := to_string(buffer);
-    tokens := tokenize(s, language = .C_STYLE);
-    defer if tokens.count array_free(tokens);
-
-    text_color := map_color_to_vec4(.TEXT_DEFAULT);
-
-    at := 0;
-    for tokens {
-        color := get_token_type_color(it.type);
-        if color != text_color {
-            array_add(*color_regions, .{pos=it.byte_pos, color=color});
-            array_add(*color_regions, .{pos=it.byte_pos + it.count, color=text_color});
-        }
-    }
-
-    // print("[tokens]: % \n\n[regions]: %\n\n", tokens, color_regions);
-
-    // print("color_regions: %\n", color_regions);
 }
 
 find_color_region_index :: inline (regions: [] Color_Region, pos: s64) -> (index: s64) {
@@ -403,7 +401,7 @@ undo :: (using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
     h := *history[history_index];
-    print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
+    // print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
 
     if #complete h.type == {
         case .INSERT;
@@ -638,6 +636,10 @@ get_buffer_index :: (buffer: *Buffer) -> s64 {
     return -1;
 }
 
+buffer_end :: inline (buffer: *Buffer) -> *u8 {
+    return buffer.data + buffer.count;
+}
+
 get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     assert(active_editor != null && active_editor.active_buffer != null);
     
@@ -710,6 +712,8 @@ Buffer :: struct {
 
     history: [..] Buffer_History;
     history_index: s64 = -1;
+
+    colors: [] Color;
 
     // cursors: [..] Cursor; // @Todo: Multiple cursor support
     _cursor: Cursor; // This name temporary, because we're gonna use the cursors dynamic array

@@ -13,11 +13,124 @@ get_token_type_color :: inline (type: Token_Type) -> Vector4 {
     return Vector4.{221/255.0, 221/255.0, 221/255.0, 1.0};
 }
 
-tokenize :: (s: string, $language: Language) -> [] Token {
-    #if language & .C_STYLE return tokenize_c(s);
+tokenize :: (buffer: *Buffer, $language: Language) {
+    // time := seconds_since_init();
+    // defer print("tokenization: %ms\n", (seconds_since_init() - time) * 1000);
+    
+    if (!buffer.count) return;
 
-    return Token.[];
+    colorize(buffer, Color.TEXT_DEFAULT, .{0,  buffer.count});
+
+    at := buffer.data;
+    end := buffer_end(buffer);
+    if at == end return;
+
+    // print("--next--\n");
+    while at < end {
+        if is_alpha(at[0]) {
+            ok := true;
+            if at > buffer.data {
+                prev := at-1;
+                ok = is_separator(prev[0], false);
+            }
+            if ok then parse_ident(buffer, *at);
+        } 
+        if at[0] == #char "/" && at+1<end && at[1] == #char "/" {
+            start := at - buffer.data;
+            steps := find_index_from_left(.{count=end-at,data=at}, #char "\n");
+            if steps == -1 then steps = end - at;
+            colorize(buffer, Color.LANG_COMMENT, .{start, start+steps});
+            at += steps;
+        }
+        if at[0] == #char "\"" {            
+            index := at - buffer.data;
+            buffer.colors[index] = .LANG_STRING_LITERAL;
+
+            eat(*at);
+            while at < end {
+                if at[0] == #char "\"" {
+                    index := at - buffer.data;
+                    buffer.colors[index] = .LANG_STRING_LITERAL;
+                    break;
+                }
+                index := at - buffer.data;
+                buffer.colors[index] = .LANG_STRING_LITERAL;
+
+                eat(*at);
+            }
+        }
+
+        if at < end then eat(*at);
+    }
+
 }
+
+#scope_file
+
+parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
+    at := _at.*;
+    defer _at.* = at;
+    start := at;
+
+    buf_end := buffer_end(buffer);
+
+    while at < buf_end {
+        if is_multibyte_char(at) { // Identifiers cannot be multibyte
+            while at < buf_end {
+                if is_multibyte_char(at) {
+                    at += 1 + trailingBytesForUTF8[at[0]];
+                } else if is_alphanum(at[0]) {
+                    break;
+                }
+
+                eat(*at);
+            }
+            
+            return false;
+        }
+        
+        if !is_alphanum(at[0]) {
+            break;
+        }
+
+        eat(*at);
+    }
+
+    start_index := start - buffer.data;
+    end_index := at - buffer.data;
+    if start_index == end_index return false;
+
+    ident := slice(buffer, start_index, end_index - start_index);
+
+    if ident.data-1 >= buffer.data && (ident.data-1).* == #char "#" {
+        colorize(buffer, .LANG_DIRECTIVE, .{start_index-1, end_index});
+    } else if inline match_with_any_keyword(ident) {
+        colorize(buffer, .LANG_KEYWORD, .{start_index, end_index});
+    } else if end_index < buffer.count && buffer.data[end_index] == #char "(" {
+        colorize(buffer, .LANG_PROCEDURE_CALL, .{start_index, end_index});
+    }
+
+    return true;
+}
+
+colorize :: inline (b: *Buffer, color: Color, range: Range) {
+    memset(b.colors.data + range.start, cast(u8, color), range.end - range.start);
+}
+
+eat :: inline (at: **u8) {
+    at.* += 1 + trailingBytesForUTF8[at.*[0]];
+}
+
+is_multibyte_char :: inline (c: *u8) -> bool {
+    return !!trailingBytesForUTF8[c[0]];
+} 
+#scope_export
+
+// tokenize :: (s: string, $language: Language) -> [] Token {
+//     #if language & .C_STYLE return tokenize_c(s);
+
+//     return Token.[];
+// }
 
 is_separator :: inline (c: u8, $include_underscore := true) -> bool {
     #if include_underscore {
@@ -148,7 +261,7 @@ Language :: enum_flags u64 {
 
 #scope_file
 
-#load "c.jai";
+#load "lang/c.jai";
 
 #import "Basic";
 #import "Math";

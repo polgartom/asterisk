@@ -115,6 +115,11 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             color = map_color_to_vec4(.TEXT_DIMMED);
         }
 
+        left_pad := cast(float32) primary_font.em_width;
+
+        push_scissor(r);
+        defer pop_scissor();
+
         for row_index: start_row..end_row {
             row := row_table[row_index];
             if row.size == 0 continue;
@@ -125,8 +130,13 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
-            Font.prepare_text(primary_font, line_text, start_x = xx left_offset, max_width = cast(s64)(r.w-left_pad));
-            Font.draw_prepared_text(primary_font, xx left, xx bottom, color);
+            #if 1 {
+                // IT IS FASTER!
+                draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
+            } else {
+                Font.prepare_text(primary_font, line_text, start_x = xx left_offset, max_width = cast(s64)(r.w-left_pad));
+                Font.draw_prepared_text(primary_font, xx left, xx bottom, color);
+            }
 
             // avg_row_render_time += (seconds_since_init() * 1000 - time);
             // rendered_rows += 1;
@@ -605,20 +615,18 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
     Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
 }
 
-// draw_highlighted_prepared_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, row: Row_Info, fallback_color := Vector4.{1, 1, 1, 1}) {
-//     Simp.generate_quads_for_prepared_text(font, x, y, 0);
-//     draw_highlighted_generated_quads(font, row, fallback_color);
-// }
+draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
+    font := primary_font;
+    
+    width := Simp.prepare_text(font, text, 0);
+    Simp.generate_quads_for_prepared_text(font, x, y, 0);
+    
+    draw_generated_quads_for_code(buffer, text, font);
 
-// draw_highlighted_text :: (font: *Simp.Dynamic_Font, x: s64, y: s64, text: string, buffer: *Buffer, row_index: s64, fallback_color := Vector4.{1, 1, 1, 1}) -> width: s64 {
-//     width := Simp.prepare_text(font, text, 0);
-//     Simp.generate_quads_for_prepared_text(font, x, y, 0);
-//     draw_highlighted_generated_quads(font, buffer, row_index, fallback_color);
+    return width;
+}
 
-//     return width;
-// }
-
-draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, text: string) {
+draw_generated_quads_for_code :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
     #import "GL";
 
     Simp.CheckInit();
@@ -654,7 +662,9 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, text: string) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     last_texture: s64 = -1;
-    color := map_color_to_vec4(.TEXT_DEFAULT);
+
+    t := text;
+    index := t.data - buffer.data;
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -678,7 +688,12 @@ draw_highlighted_generated_quads :: (font: *Simp.Dynamic_Font, text: string) {
             glUniform1i(loc, 0);
         }
 
+        color := map_color_to_vec4(buffer.colors[index]);
+
         inline draw_letter_quad(font, quad, color);
+
+        t.data += 1 + trailingBytesForUTF8[t[0]];
+        index = t.data - buffer.data;
     }
 
     Simp.immediate_flush();
