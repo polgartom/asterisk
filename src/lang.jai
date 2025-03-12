@@ -49,7 +49,7 @@ tokenize :: (buffer: *Buffer, $language: Language) {
             
             inline parse_numeric_value(buffer, *at);
         } else if at[0] == #char "/" {
-            // if !(at+1<end) break;
+            if !(at+1<end) break;
             if at[1] == #char "/" {
                 start := at - buffer.data;
                 steps := find_index_from_left(.{count=end-at,data=at}, #char "\n");
