@@ -127,16 +127,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             // time := seconds_since_init() * 1000;
 
             bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
-
+            
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
-            #if 1 {
-                // IT IS FASTER!
-                draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
-            } else {
-                Font.prepare_text(primary_font, line_text, start_x = xx left_offset, max_width = cast(s64)(r.w-left_pad));
-                Font.draw_prepared_text(primary_font, xx left, xx bottom, color);
-            }
+            draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
 
             // avg_row_render_time += (seconds_since_init() * 1000 - time);
             // rendered_rows += 1;
@@ -190,7 +184,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             fileinfo := tprint(
                 "%1%2%3",
                 path,
-                ifx !exists_on_disk then " <new>" else "",
+                ifx !exists_on_disk then " <new>"      else "",
                 ifx dirty           then " (unsaved)"  else "",
             );
 
@@ -224,7 +218,12 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     line_text := get_row_as_string(buffer, row);
     line_text  = slice(line_text, 0, c.pos - row.start);
 
-    cx := r.x + Font.prepare_text(primary_font, line_text, start_x = xx editor.left_offset, max_width = xx r.w);
+    //cx := r.x + Font.prepare_text(primary_font, line_text, start_x = xx editor.left_offset, max_width = xx r.w);
+    /*left := r.x;
+    line_text := slice(buffer, row.end - row.size, row.size);
+    draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
+    */
+    cx := r.x + measure_text_width(primary_font, line_text) - editor.left_offset;
     cw := em(1.0, primary_font);
     ch := primary_font.character_height;
 

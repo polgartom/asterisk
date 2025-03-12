@@ -44,10 +44,12 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
             case .NONE;                        Add(0x00000000);
 
             case .LANG_KEYWORD;                Add(0x9c9d29ff);
-            case .LANG_DIRECTIVE;              Add(0x569CD6ff);//Add(0x9c5d29ff); //0xff4a2eff
+            case .LANG_DIRECTIVE;              Add(0x569CD6ff);
             case .LANG_COMMENT;                Add(0x3f_7a_3fff);
             case .LANG_STRING_LITERAL;         Add(0x7a7a5a_ff);
-            case .LANG_PROCEDURE_CALL;          Add(0xacad89ff);
+            case .LANG_NUMERIC_VALUE;          Add(0xff4a2eff);
+            case .LANG_PROCEDURE_CALL;         Add(0xacad89ff);
+            case .LANG_ESCAPED;                Add(0x9c5d29ff);
 
             case .BACKGROUND;                  Add(0x0c1a21ff);
             case .LAYOUT_SEPARATOR;            Add(0xdddddd1B);
@@ -76,7 +78,9 @@ Color :: enum u8 {
     LANG_DIRECTIVE;
     LANG_COMMENT;
     LANG_STRING_LITERAL;
+    LANG_NUMERIC_VALUE;
     LANG_PROCEDURE_CALL;
+    LANG_ESCAPED;
 
     BACKGROUND;
     LAYOUT_SEPARATOR;

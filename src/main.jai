@@ -272,11 +272,7 @@ main :: () {
                     cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
                 );
 
-                #if 0 {
-                    // The utf8_count_chars() is very slow if we have a larger buffer
-                    s := to_string(buffer);
-                    PrintDev("chars: % bytes: %\n", utf8_count_chars(s), s.count);
-                }
+                PrintDev("tokenization: %ms\n", buffer.tokenization_time);
 
                 mx, my, ok := get_mouse_pointer_position(right_handed=false);
                 PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);

@@ -156,11 +156,8 @@ delete_selected_range :: (buffer: *Buffer, cursor: *Cursor) {
     if !has_selection(cursor) return;
 
     start, end := selected_range(cursor);
-    shift_left(buffer, start, end);
-
+    remove_text_from_left(buffer, start, end - start);
     set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
-
-    assert(cursor.pos <= buffer.count, "cursor: % ; buffer.count: %", cursor.pos, buffer.count);
 }
 
 next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
@@ -285,6 +282,18 @@ get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
 slice :: inline (buffer: *Buffer, start: s64, count: s64) -> string {
     s := to_string(buffer);
     return slice(s, start, count);
+}
+
+slice :: inline (buffer: *Buffer, start_ptr: *u8, end_ptr: *u8) -> string {
+    end := buffer.data + buffer.count - 1;
+    if start_ptr >= buffer.data + buffer.count then start_ptr = end;
+    if end_ptr >= buffer.data + buffer.count   then end_ptr   = end;
+
+    s: string;
+    s.data  = start_ptr;
+    s.count = end_ptr - start_ptr;
+
+    return s;
 }
 
 to_string :: inline (buffer: *Buffer) -> string {
@@ -722,11 +731,10 @@ Buffer :: struct {
     rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
 
-    color_regions: [..] Color_Region;
-    // rebuild_color_regions := false;
-
     filepath: string;
     exists_on_disk: bool;
+
+    tokenization_time: float64 = 0.0;
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     language: Language = .PLAIN_TEXT;
