@@ -166,11 +166,8 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
 
         if is_multibyte_char(at) { // Identifiers cannot be multibyte
             while at < buf_end {
-                if is_multibyte_char(at) {
-                    at += 1 + trailingBytesForUTF8[at[0]];
-                } else if is_alphanum(at[0]) {
-                    break;
-                }
+                if !is_multibyte_char(at) && is_separator(at.*, false) break;
+                eat(*at);
             }
             
             return false;
