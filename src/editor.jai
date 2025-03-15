@@ -65,7 +65,19 @@ replace_text_at :: (buffer: *Buffer, range: Range, new_text: string, $history :=
     insert_text_at(buffer, range.start, new_text, history=false);
 }
 
+replace_selection :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    start, end := selected_range(cursor);
+    replace_text_at(buffer, Range.{start, end}, text, history);
+    
+    set_cursor_pos(buffer, cursor, start + text.count, horizontal=true);
+}
+
 insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    if has_selection(cursor) {
+        replace_selection(buffer, cursor, text, history);
+        return;
+    }
+    
     insert_text_at(buffer, cursor.pos, text, history);
 
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);

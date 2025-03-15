@@ -89,7 +89,7 @@ layout_separator:           dddddd1b
 text_default:               d0d0d0ff
 text_dimmed:                bbbbbbff
 text_selection:             ffffff20
-text_highlight:             73ffff73
+text_highlight:             e3_31_9f_6a
 text_under_cursor:          0c1021ff
 text_under_inactive_cursor: fbde2da0
 cursor:                     fbde2dc0

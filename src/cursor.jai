@@ -30,6 +30,12 @@ has_selection :: inline (using c: Cursor) -> bool {
     return pos != sel;
 }
 
+set_selection_unsafe :: inline (c: *Cursor, range: Range) {
+    a, b := get_cursor_min_max_indecies_as_pointers(c);
+    a.* = range.start;
+    b.* = range.end;
+}
+
 clamp_cursor :: (buffer: Buffer, c: *Cursor) {
     Clamp(*c.pos, 0, buffer.count);
     Clamp(*c.sel, 0, buffer.count);
