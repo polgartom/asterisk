@@ -53,6 +53,10 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     t   := r.y + r.h;
 
     Simp.set_shader_for_color(true);
+    
+    weight :: 2;
+    Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color); // border
+    
     Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
 
     if text {
@@ -199,6 +203,7 @@ Text_Input :: struct {
         bg_color          = #run hex_to_vec4(0xa397a3ff),
         placeholder_color = Vector4.{0,0,0,.5},
         cursor_color      = #run hex_to_vec4(0x47253aff),
+        border_color      = #run hex_to_vec4(0x101953_ff),
     };
     
     Theme :: struct {
@@ -206,5 +211,6 @@ Text_Input :: struct {
         bg_color:          Vector4;
         placeholder_color: Vector4;
         cursor_color:      Vector4;
+        border_color:      Vector4;
     }
 }

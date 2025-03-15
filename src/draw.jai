@@ -408,15 +408,24 @@ draw_file_browser :: () {
     
     // @Temporary: We don't want to set those values on every frame, right?
     theme := Text_Input.DEFAULT_THEME;
-    theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
-    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
+    theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    h := cast(float)font.character_height * 2.0;
-    b := cast(float, window_height);
+    w := 400.0; // @Tempoary
+    k := window_height * .1;
+
+    h := cast(float, font.character_height * 2.0);
+    b := cast(float, window_height - k*.1);
     r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
-    tinp := text_input(r, xx #location(), font, placeholder=file_browser.current_dir, theme=theme);
+    r.x = window_width*.5 - w;
+    r.w = w * 2.0;
+    r.y += 5.0; 
+    
+    tinp := text_input(r, xx #location(), primary_font_xs, placeholder=file_browser.current_dir, theme=theme);
+    r.y -= 5.0; 
 
     {
         using file_browser;
@@ -435,9 +444,9 @@ draw_file_browser :: () {
         }
 
         list_rect := r;
-        k := ed_r.h * .1;
+        list_rect.w = w*2.0;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), font, options);
+        linp := list_input(list_rect, xx #location(), primary_font_xs, options);
         
         if linp.selected_index == -1 then linp.selected_index = 0;
 
@@ -498,7 +507,7 @@ draw_find_text_dialog :: () {
     ed_r := active_editor.rect_for_draw;
 
     {
-        font   := my_font_small;
+        font   := primary_font_xs;
         k      := ed_r.h * .1;
         height := em(2.0, font);
         pad    := cast(float32, primary_font.em_width);// * .5;
@@ -506,14 +515,21 @@ draw_find_text_dialog :: () {
         r := get_rect(
             ed_r.x - pad,
             footer_height,
-            ed_r.w,
+            ed_r.w + pad,
             xx font.character_height * 2.0,
         );
 
         // @Temporary: We don't want to set those values on every frame, right?
         theme := Text_Input.DEFAULT_THEME;
+        /*
         theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
         theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+        theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+        theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
+*/
+        theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
+        theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
+        theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
         theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 

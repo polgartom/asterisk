@@ -1,7 +1,7 @@
 // The r: Rect's h (height) param represents the maximum height of the list.
-list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_Input.Option = .[]) -> *List_Input {
-    timer := seconds_since_init();
-    defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
+list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_Input.Option = .[], theme := List_Input.DEFAULT_THEME) -> *List_Input {
+//    timer := seconds_since_init();
+//    defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
     input, found := table_find(*inputs, ui_id);
     if !found {
@@ -51,13 +51,18 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
+    // Draw the container box
     Simp.set_shader_for_color(true);
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, #run hex_to_vec4(0x1c2d29ff));
-
+    
+    weight :: 2.0;
+    Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t + weight, theme.border_color); // border
+    
+    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
+    
     if !options.count {
         left   := r.x + left_pad * 1.5;
         bottom := b + ch*.5; // center
-        label(xx left, xx bottom, "No items...", font, .{.5,.5,.5,1.0});
+        label(xx left, xx bottom, "No items...", font, theme.placeholder_color);
 
         return input;
     }
@@ -85,17 +90,18 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
         // if y < b || y >= t continue; // We should filter out the options that are not visible (overflowed) before we render. @Incomplete
 
         Simp.set_shader_for_color(true);
-        Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07});
+        // Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
 
+        color := theme.fg_color;
+        
         if i == selected_index {
-            Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, #run hex_to_vec4(0x24_33_33_ff));
+            Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, theme.current_item_bg_color);
+            //label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4}); // shadow
             
-            label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4}); // shadow
-            label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
-        } else {
-            label(xx x, xx (y+ch*.25), opt.label, font, .{1.0,1.0,1.0,.5});
+            color = theme.current_item_fg_color;
         }
-
+        
+        label(xx x, xx (y+ch*.25), opt.label, font, color);
     }
 
     return input;
@@ -141,6 +147,28 @@ List_Input :: struct {
     Option :: struct (T: Type) {
         label: string;
         ref: *T;
+    }
+
+    DEFAULT_THEME :: Theme.{
+        fg_color              = .{1.0,1.0,1.0,.5},
+        bg_color              = #run hex_to_vec4(0x101520_ff),
+        
+        border_color          = #run hex_to_vec4(0x00_00_00_00),
+        current_item_bg_color = #run hex_to_vec4(0x10_25_5a_ff),
+        current_item_fg_color = .{1.0,1.0,1.0,.7},
+        
+        placeholder_color     = .{1.0,1.0,1.0,.5},
+    };
+
+    Theme :: struct {
+        fg_color:          Vector4;
+        bg_color:          Vector4;
+        placeholder_color: Vector4;
+        
+        border_color:      Vector4;
+        
+        current_item_bg_color: Vector4;
+        current_item_fg_color: Vector4;
     }
 
 }
