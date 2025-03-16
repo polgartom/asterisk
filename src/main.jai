@@ -205,6 +205,8 @@ main :: () {
                 }
             }
 
+            // This prevents some crazy situations like those in Adobe Premiere Pro. For example,
+            // when we try to paste a text, it triggers the Paste() action while also inserting a "v" character.
             if wait_for_this_key_to_release {
                 key_code := wait_for_this_key_to_release.*;
                 if key_code == cast,no_check(u32)event.key_code && event.key_pressed == 0 {

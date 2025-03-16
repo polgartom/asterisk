@@ -271,13 +271,9 @@ rescan_line_ends :: (using buffer: *Buffer) {
         pos += 1; // because of the line end
     }
 
-    // create_color_regions(buffer); // @Cleanup: Remove from here
-
     row_table_recalc_time = (seconds_since_init() - timer) * 1000;
 
-    {
-        tokenize(buffer, language = .C_STYLE);
-    }
+    tokenize(buffer, language = .C_STYLE); // @Todo: Multiple language support
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
@@ -376,6 +372,7 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     free(row_table.data,, row_table.allocator);
 
     if data != null  then c_free(data);
+    if filepath      then free(filepath);
 
     // We don't have to free these string, because we free those and replace with the
     // new values when we add a new history. @Cleanup
@@ -387,35 +384,6 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
 
     new_buffer: Buffer;
     buffer.* = new_buffer;
-}
-
-find_color_region_index :: inline (regions: [] Color_Region, pos: s64) -> (index: s64) {
-    for regions {
-        if pos <= it.pos {
-            return it_index;
-        }
-    }
-
-    return -1;
-}
-
-get_color_regions_range :: inline (regions: [] Color_Region, start_pos: s64, end_pos: s64) -> (color_regions: [] Color_Region) {
-    assert(regions.count > 0);
-
-    start_index := find_color_region_index(regions, start_pos);
-    if start_index == -1 {
-        start_index = 0;
-    }
-
-    end_index := find_color_region_index(regions, end_pos);
-    if end_index == -1 {
-        end_index = regions.count - 1;
-    }
-
-    count := end_index - start_index;
-    if count == 0 then count = 1;
-
-    return array_view(regions, start_index, count);
 }
 
 undo :: (using buffer: *Buffer) {
@@ -776,8 +744,3 @@ Row_Info :: struct {
     end:   s64;
     size:  s64;
 }
-
-Color_Region :: struct {
-    pos: s64;
-    color: Vector4;
-};
