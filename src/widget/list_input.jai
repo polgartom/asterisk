@@ -153,7 +153,7 @@ List_Input :: struct {
         fg_color              = .{1.0,1.0,1.0,.5},
         bg_color              = #run hex_to_vec4(0x101520_ff),
         
-        border_color          = #run hex_to_vec4(0x00_00_00_00),
+        border_color          = #run hex_to_vec4(0x10_25_5a_ff),
         current_item_bg_color = #run hex_to_vec4(0x10_25_5a_ff),
         current_item_fg_color = .{1.0,1.0,1.0,.7},
         
