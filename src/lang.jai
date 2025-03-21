@@ -181,8 +181,13 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
     if c0 == c1 return false;
 
     ident := slice(buffer, c0, c1);
-    if c0-1 >= buffer.data && (c0-1).* == #char "#" {
-        colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1);
+    if c0-1 >= buffer.data {
+        prev_char := (c0-1).*;
+        if prev_char == { // @Cleanup: These are language specific things
+            case #char "#"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1);
+            case #char "@"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1);
+        }
+        
     } else if match_with_any_keyword(ident) {
         colorize(buffer, .LANG_TOKEN_KEYWORD, c0, c1);
     } else if c1 < buf_end && c1.* == #char "(" {
