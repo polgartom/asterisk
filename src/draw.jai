@@ -153,6 +153,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         font := primary_font_xs;
 
+        fg_color := map_color_to_vec4(.FOOTER_TEXT);
         bg_color := map_color_to_vec4(.FOOTER_BACKGROUND);
         if active_editor != editor {
             bg_color = map_color_to_vec4(.FOOTER_BACKGROUND_DARKEN);
@@ -189,7 +190,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             );
 
             width = Simp.prepare_text(font, fileinfo);
-            Simp.draw_prepared_text(font, xx left, xx center, .{.0,.0,.0,1.0});
+            Simp.draw_prepared_text(font, xx left, xx center, fg_color);
 
             left += width;
         }
@@ -205,7 +206,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         RIGHT_PAD :: 1.1;
         width = Simp.prepare_text(font, row_col_info);
-        Simp.draw_prepared_text(font, xx (footer.x + footer.w - width * RIGHT_PAD), xx center, .{.0,.0,.0,1.0});
+        Simp.draw_prepared_text(font, xx (footer.x + footer.w - width * RIGHT_PAD), xx center, fg_color);
     }
 
 }
