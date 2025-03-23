@@ -472,12 +472,12 @@ draw_file_browser :: () {
                 assert(ok);
                 file_browser_scan();
 
-                // clear_text(tinp);
+                clear_text(tinp);
 
                 linp.scroll_value = 0.0;
                 linp.selected_index = 0;
             } else {
-                // clear_text(tinp);
+                clear_text(tinp);
                 linp.scroll_value = 0.0;
                 linp.selected_index = 0;
 
