@@ -181,6 +181,7 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
     if c0 == c1 return false;
 
     ident := slice(buffer, c0, c1);
+
     prev_char := peak_prev_char(c0);
     if prev_char == { // @Cleanup: These are language specific things
         case #char "#"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1); return true;
@@ -192,6 +193,7 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
         return true;
     }
 
+    c1 = skip_whitespaces(c1);
     if c1 < buf_end && c1.* == #char "(" {
         colorize(buffer, .LANG_TOKEN_PROCEDURE_CALL, c0, c1);
         return true;
@@ -220,14 +222,33 @@ peak :: () -> u8 #expand {
     return `at[0];
 }
 
-peak_prev_char :: (at: *u8) -> u8 #expand {
-    if at-1 <= `buffer.data return (at-1).*;
-    return at.*;
+skip_whitespaces :: () #expand {
+    while is_whitespace(`at[0]) {
+        `at += 1;
+    }
+}
+
+skip_whitespaces :: inline (point: *u8) -> *u8 {
+    while is_whitespace(point[0]) point += 1;
+    return point;
+}
+
+peak_next_char :: (point: *u8) -> u8 #expand {
+    end := (`buffer.data + `buffer.count);
+    assert(point <= end);
+    if point == end return 0;
+    if point+1 < end return (point+1).*;
+    return point[0];
+}
+
+peak_prev_char :: (point: *u8) -> u8 #expand {
+    if point-1 >= `buffer.data return (point-1).*;
+    return point[0];
 }
 
 is_multibyte_char :: inline (c: *u8) -> bool {
     return !!trailingBytesForUTF8[c[0]];
-} 
+}
 
 #scope_export
 

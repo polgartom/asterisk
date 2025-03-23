@@ -424,7 +424,7 @@ draw_file_browser :: () {
     r.w = w * 2.0;
     r.y += 5.0; 
     
-    tinp := text_input(r, xx #location(), primary_font_xs, placeholder=file_browser.current_dir, theme=theme);
+    update_text_input(file_browser.fb_text_input, r, primary_font_xs, theme=theme);
     r.y -= 5.0; 
 
     {
@@ -436,8 +436,8 @@ draw_file_browser :: () {
 
         // @Speed: We are doing this on every frame!!!
         for items {
-            if tinp.text {
-                found, rem := contains_nocase(it.short_name, tinp.text);
+            if fb_text_input.text {
+                found, rem := contains_nocase(it.short_name, fb_text_input.text);
                 if !found continue;
             }
             array_add(*options, .{label=copy_temporary_string(it.short_name)});
@@ -472,12 +472,12 @@ draw_file_browser :: () {
                 assert(ok);
                 file_browser_scan();
 
-                clear_text(tinp);
+                // clear_text(tinp);
 
                 linp.scroll_value = 0.0;
                 linp.selected_index = 0;
             } else {
-                clear_text(tinp);
+                // clear_text(tinp);
                 linp.scroll_value = 0.0;
                 linp.selected_index = 0;
 
@@ -494,7 +494,7 @@ draw_file_browser :: () {
 
         }
 
-        if tinp.typed && items.count {
+        if fb_text_input.typed && items.count {
             linp.selected_index = 0;
         }
     }

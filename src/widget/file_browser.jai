@@ -1,6 +1,10 @@
 open_file_browser :: () {
     using file_browser;
 
+    if !fb_text_input {
+        fb_text_input = create_text_input(cast(u64)#location());
+    }
+
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
 
@@ -17,9 +21,12 @@ file_browser_change_dir :: (path: string) -> (success: bool) {
     modify_string(*current_dir, path);
     path_unify_sepa(current_dir);
 
+    modify_string(*search_text, current_dir);
+
     return true;
 }
 
+// @Cleanup: Remove it!
 file_browser_change_dir :: (info: File_Visit_Info) -> (success: bool) {
     using file_browser;
 
@@ -43,13 +50,12 @@ file_browser_scan :: () {
 
     {
         parent_dir := array_add(*items);
-
         parent_dir.short_name = "..";
         modify_string(*parent_dir.full_name, current_dir);
         t := path_strip_filename(parent_dir.full_name);
-        if t parent_dir.full_name = t;
+        if t then parent_dir.full_name = t;
 
-        if ends_with(parent_dir.full_name, "/") parent_dir.full_name.count -= 1;
+        if ends_with(parent_dir.full_name, "/") then parent_dir.full_name.count -= 1;
         
         is, success := is_directory(parent_dir.full_name);
         assert(success, "Failed to % check if it's a directory or not.", parent_dir.full_name);
@@ -81,6 +87,8 @@ file_browser_scan :: () {
 file_browser: File_Browser;
 
 File_Browser :: struct {
+    fb_text_input: *Text_Input;
+ 
     search_text: string;
     current_dir: string;
 
