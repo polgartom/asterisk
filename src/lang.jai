@@ -181,17 +181,20 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
     if c0 == c1 return false;
 
     ident := slice(buffer, c0, c1);
-    if c0-1 >= buffer.data {
-        prev_char := (c0-1).*;
-        if prev_char == { // @Cleanup: These are language specific things
-            case #char "#"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1);
-            case #char "@"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1);
-        }
-        
-    } else if match_with_any_keyword(ident) {
+    prev_char := peak_prev_char(c0);
+    if prev_char == { // @Cleanup: These are language specific things
+        case #char "#"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1); return true;
+        case #char "@"; colorize(buffer, .LANG_TOKEN_DIRECTIVE, c0-1, c1); return true;
+    }
+    
+    if match_with_any_keyword(ident) {
         colorize(buffer, .LANG_TOKEN_KEYWORD, c0, c1);
-    } else if c1 < buf_end && c1.* == #char "(" {
+        return true;
+    }
+
+    if c1 < buf_end && c1.* == #char "(" {
         colorize(buffer, .LANG_TOKEN_PROCEDURE_CALL, c0, c1);
+        return true;
     }
 
     return true;
@@ -215,6 +218,11 @@ eat :: () #expand {
 peak :: () -> u8 #expand {
     if `at < `buffer.data + `buffer.count return `at[1];
     return `at[0];
+}
+
+peak_prev_char :: (at: *u8) -> u8 #expand {
+    if at-1 <= `buffer.data return (at-1).*;
+    return at.*;
 }
 
 is_multibyte_char :: inline (c: *u8) -> bool {
