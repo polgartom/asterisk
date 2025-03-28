@@ -30,7 +30,6 @@ cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
 }
 
 insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
-
     // @Incomplete: Validate if the input data is valid utf8!
     text := Clipboard.os_clipboard_get_text();
     defer free(text);
@@ -642,7 +641,6 @@ create_editor :: () -> *Editor {
 change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     editor.active_buffer = buffer;
     
-    editor.should_recalc_editor_offsets = true;
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
 }
@@ -679,7 +677,6 @@ Editor :: struct {
 
     rect_for_draw: Rect;
     visible := true;
-    should_recalc_editor_offsets := false; // @Todo: REMOVE IT
 }
 
 Buffer :: struct {
