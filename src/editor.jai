@@ -440,7 +440,6 @@ undo :: (using buffer: *Buffer) {
             _cursor = h.cursor;
             clamp_cursor(buffer, *_cursor);
             _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
-            request_editor_top_left_offsets_recalc();
 
             history_index -= 1;
 
@@ -505,7 +504,6 @@ redo :: (using buffer: *Buffer) {
             _cursor = h.cursor;
             clamp_cursor(buffer, *_cursor);
             _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
-            request_editor_top_left_offsets_recalc();
 
             history_index += 1;
 
@@ -649,16 +647,6 @@ change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     editor.top_offset  = 0.0;
 }
 
-request_editor_top_left_offsets_recalc :: () {
-    for *editor: editors {
-        request_editor_top_left_offsets_recalc(editor);
-    }
-}
-
-request_editor_top_left_offsets_recalc :: (editor: *Editor) {
-    editor.should_recalc_editor_offsets = true;
-}
-
 replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
     #if autofree {
         defer free(input);
@@ -695,6 +683,8 @@ Editor :: struct {
 }
 
 Buffer :: struct {
+    id: s32;
+
     data:      *u8;
     count:     s64;
     allocated: s64;

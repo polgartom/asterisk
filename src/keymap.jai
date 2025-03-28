@@ -926,7 +926,6 @@ IndentLeft :: () {
     clamp_cursor(buffer, c);
 
     c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
-    request_editor_top_left_offsets_recalc();
 
     // set_cursor_pos(buffer, c, cpos_after, horizontal=true, with_selection=!has_selection(c));
 }
@@ -991,7 +990,6 @@ IndentRight :: () {
 
     clamp_cursor(buffer, c);
     c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
-    request_editor_top_left_offsets_recalc();
 }
 
 // @Incomplete !!!

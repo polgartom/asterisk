@@ -14,8 +14,6 @@ set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal
     if horizontal {
         cursor.col = byte_pos_to_col_pos_hacky(buffer, target_pos);
     }
-
-    request_editor_top_left_offsets_recalc();
 }
 
 selected_range :: inline (using c: *Cursor) -> (start: s64, end: s64) {

@@ -64,8 +64,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     buffer := editor.active_buffer;
 
-    // if should_recalc_editor_offsets {
-        // should_recalc_editor_offsets = false;
     {
         cw := em(1.0, primary_font);
         ch := primary_font.character_height;
@@ -91,7 +89,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if editor.top_offset < 0 then editor.top_offset = 0;
         }
     }
-    // }
 
     draw_selection(editor, buffer, r);
 

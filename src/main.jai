@@ -171,7 +171,6 @@ main :: () {
 
                 if should_reinit {
                     my_init_fonts();
-                    request_editor_top_left_offsets_recalc();
                 }
             }
         }
@@ -962,6 +961,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 File      :: #import "File";
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";
+Hash      :: #import "Hash";
 
 #if OS == .WINDOWS {
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
