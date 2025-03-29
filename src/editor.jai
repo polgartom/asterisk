@@ -358,6 +358,15 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
     h := *history[history_index];
     // print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
 
+    is_similar_undo :: (prev: *Buffer_History) -> bool #expand {
+        if prev.type != `h.type return false;
+        
+        issepa      := is_separator(`h.text[0], include_underscore=false);
+        next_issepa := is_separator(prev.text[0], include_underscore=false);
+        
+        return !(issepa ^ next_issepa); // return true if both true or both false
+    }
+
     if #complete h.type == {
         case .INSERT;
             to   := h.range.start;
@@ -374,6 +383,10 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
             set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
 
             history_index -= 1;
+
+            if history_index > -1 && is_similar_undo(*history[history_index]) {
+                undo(editor, buffer);
+            }
 
         case .DELETE;
             to := h.range.start;
@@ -392,6 +405,10 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
 
             history_index -= 1;
 
+            if history_index > -1 && is_similar_undo(*history[history_index]) {
+                undo(editor, buffer);
+            }
+
         case .REPLACE;
             start := h.range.start;
             end   := h.range.start + h.text.count;
@@ -409,6 +426,8 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
 
             history_index -= 1;
 
+            // We don't want to change these type of undos
+
         case .UNDEFINED;
             assert(false);
     }
@@ -418,6 +437,15 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == history.count-1 return;
 
     h := *history[history_index+1];
+
+    is_similar_redo :: (next: *Buffer_History) -> bool #expand {
+        if next.type != `h.type return false;
+        
+        issepa      := is_separator(`h.text[0], include_underscore=false);
+        next_issepa := is_separator(next.text[0], include_underscore=false);
+        
+        return !(issepa ^ next_issepa); // return true if both true or both false
+    }
 
     if h.type == {
         case .INSERT;
@@ -438,6 +466,10 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
 
             history_index += 1;
 
+            if history_index < history.count && is_similar_redo(*history[history_index]) {
+                redo(editor, buffer);
+            }
+
         case .DELETE;
             to   := h.range.start;
             from := h.range.end;
@@ -454,6 +486,10 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
             Clamp(*editor.cursor.pos, 0, buffer.count);
 
             history_index += 1;
+
+            if history_index < history.count && is_similar_redo(*history[history_index]) {
+                redo(editor, buffer);
+            }
 
         case .REPLACE;
             // @INCOMPLETE @XXX
@@ -472,6 +508,8 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
             editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
 
             history_index += 1;
+
+            // We don't want to change these type of redos
 
         case .UNDEFINED;
             assert(false);
