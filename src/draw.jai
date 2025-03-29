@@ -71,7 +71,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         x_pad := left_pad   * 2.0;
         y_pad := footer_r.h * 2.0;
 
-        mx    := get_cursor_x(buffer, *buffer._cursor);
+        mx    := get_cursor_x(buffer, *editor.cursor);
         relmx := mx - editor.left_offset - r.w;
         if relmx + x_pad + cw > 0 {
             editor.left_offset += abs(relmx + x_pad + cw);
@@ -80,7 +80,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if editor.left_offset < 0 then editor.left_offset = 0;
         }
 
-        my    := get_line_height(find_row_index(buffer, buffer._cursor.pos));
+        my    := get_line_height(find_row_index(buffer, editor.cursor.pos));
         relmy := r.h - my + editor.top_offset;
         if relmy - y_pad < 0 {
             editor.top_offset += abs(relmy - y_pad);
@@ -192,13 +192,13 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             left += width;
         }
 
-        row := find_row_index(buffer, buffer._cursor.pos) + 1;
-        col := byte_pos_to_col_pos(buffer, buffer._cursor.pos) + 1;
+        row := find_row_index(buffer, editor.cursor.pos) + 1;
+        col := byte_pos_to_col_pos(buffer, editor.cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
 
         row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
         if show_debug_info {
-            row_col_info = tprint("% Pos %", row_col_info, buffer._cursor.pos);
+            row_col_info = tprint("% Pos %", row_col_info, editor.cursor.pos);
         }
 
         RIGHT_PAD :: 1.1;
@@ -209,7 +209,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 }
 
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
-    c  := *buffer._cursor;
+    c  := *editor.cursor;
 
     row_index := find_row_index(buffer, c.pos);
     row := buffer.row_table[row_index];
@@ -269,7 +269,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 // @Todo: This thing is not doing draws properly. Also we should create an array of selections, because
 // we should draw those after the find text widget.
 draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
-    c := *buffer._cursor;
+    c := *editor.cursor;
     if !has_selection(c) return;
 
     Simp.set_shader_for_color(true);
@@ -484,7 +484,8 @@ draw_file_browser :: () {
                     buffer := *buffers[index];
                     change_active_buffer(active_editor, buffer); 
                 } else {
-                    open_file_or_create_empty_buffer(active_editor, item.full_name);
+                    buffer := open_file_or_create_empty_buffer(active_editor, item.full_name);
+                    change_active_buffer(active_editor, buffer);
                 }
 
                 array_add(*user_events, .{ type = .CLOSE_WIDGET });
@@ -610,8 +611,6 @@ draw_global_debug_info :: (r: Rect) {
 
         if ln then row += 1;
     }
-
-    array_reset(*debug_infos);
 }
 
 /////////////////////

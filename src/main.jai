@@ -33,9 +33,6 @@ draw_special_chars := false;
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
-show_debug_info := DEBUG;
-debug_infos: [..] string;
-
 fps: float64;
 frametime: float64;
 
@@ -124,22 +121,22 @@ main :: () {
         active_editor.active_buffer = create_or_find_empty_buffer(active_editor);
     }
 
-    // @Temporary
-    editor2 := create_editor();
-    editor2.visible = false;
-    if !editor2.active_buffer {
-        editor2.active_buffer = create_or_find_empty_buffer(editor2);
-    }
-
     if files_from_cmdline.count == 2 {
         // @Temporary
-        open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
-        open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
+        // open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
+        // open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
 
     } else {
         for filepath: files_from_cmdline {
             open_file_or_create_empty_buffer(active_editor, filepath);
         }
+    }
+
+    // @Temporary
+    editor2 := create_editor();
+    editor2.visible = false;
+    if !editor2.active_buffer {
+        editor2.active_buffer = active_editor.active_buffer;
     }
 
     while !should_quit {
@@ -233,39 +230,39 @@ main :: () {
                     zero_memory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                    _, buffer := get_active_editor_and_buffer(); // @Temporary
-                    insert_text_at_cursor(buffer, *buffer._cursor, string_for_utf32_to_utf8);
+                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                    insert_text_at_cursor(editor, buffer, *editor.cursor, string_for_utf32_to_utf8);
                 }
             }
         }
 
-        for *editor: editors {
-            if editor.active_buffer.rebuild_row_table {
-                rescan_line_ends(editor.active_buffer);
-            }
+        for * buffers {
+            commit_buffer_changes(it);
+        }
 
+        for *editor: editors {
             assert(editor.active_buffer != null);
             assert(editor.active_buffer.initialized);
 
-            editor.active_buffer._cursor.x_cache = -1; // Because the prepare text is very slow
-            get_cursor_x(editor.active_buffer, *editor.active_buffer._cursor);     // @temporary
+            editor.cursor.x_cache = -1; // Because the prepare text is very slow
+            get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
         }
 
-        if show_debug_info {
-            debug_time := seconds_since_init();
+        #if DEBUG {
+            if show_debug_info {
+                debug_time := seconds_since_init();
 
-            active_editor, buffer := get_active_editor_and_buffer();
-            using active_editor;
+                active_editor, buffer := get_active_editor_and_buffer();
+                using active_editor;
 
-            #if 1 {
                 PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
+    
+                row := find_row_index(buffer, active_editor.cursor.pos);
+                col := byte_pos_to_col_pos(buffer, active_editor.cursor.pos);
+                cx  := get_cursor_x(buffer, *active_editor.cursor);
+                cy  := get_cursor_y(buffer, *active_editor.cursor);
 
-                row := find_row_index(buffer, buffer._cursor.pos);
-                col := byte_pos_to_col_pos(buffer, buffer._cursor.pos);
-                cx  := get_cursor_x(buffer, *buffer._cursor);
-                cy  := get_cursor_y(buffer, *buffer._cursor);
-
-                PrintDev("p: % r: % col: % cx: % cy: %\n", buffer._cursor.pos, row, col, cx, cy);
+                PrintDev("p: % r: % col: % cx: % cy: %\n", active_editor.cursor.pos, row, col, cx, cy);
 
                 PrintDev("rows: % ; gentime: %ms ; row_table size: %\n",
                     active_buffer.row_table.count,
@@ -275,34 +272,28 @@ main :: () {
 
                 PrintDev("tokenization: %ms\n", buffer.tokenization_time);
 
+                PrintDev("last_copy_buffer_time: %ms\n", last_copy_buffer_time);
+
                 mx, my, ok := get_mouse_pointer_position(right_handed=false);
                 PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
 
                 debug_time = (seconds_since_init() - debug_time) * 1000;
                 PrintDev("[DEBUG TIME] %ms\n", formatFloat(debug_time, trailing_width=4));
-            }
 
-            last_simulation_time = (seconds_since_init()-last_time)*1000;
+                last_simulation_time = (seconds_since_init()-last_time)*1000;
+            }
         }
 
         draw_frame(last_time);
         swap_buffers(my_window);
+
+        #if DEBUG array_reset(*debug_infos);
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
     }
 
 }
-
-PrintDev :: (fmt: string, args: .. Any) #expand {
-    s := tprint(fmt, ..args);
-    array_add(*debug_infos, s); // can we use temporary allocator for dynamic arrays?
-} @PrintLike
-
-ll :: (fmt: string, args: .. Any) #expand {
-    s := tprint(fmt, ..args);
-    print("[%] %", #procedure_name(), s);
-} @PrintLike
 
 get_char_at_string_index :: (t: string, index: s64) -> string {
     assert(index < t.count);
@@ -784,7 +775,7 @@ seek_left_utf8_until_separator :: (s: string, point: int) -> int {
         point = seek_left_one_utf8_character_byte_pos(s, point);
         if !is_separator(s[point]) break;
     }
-    
+
     return point;
 }
 
@@ -793,7 +784,7 @@ seek_right_utf8_for_separator :: (s: string, point: int) -> int {
         point = seek_left_one_utf8_character_byte_pos(s, point);
         if is_separator(s[point]) break;
     }
-    
+
     return point;
 }
 
@@ -889,7 +880,7 @@ rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
         g / 255.0,
         b / 255.0,
         a
-    };    
+    };
 }
 
 hex_to_vec4 :: (hex: u32) -> Vector4 {
@@ -937,9 +928,9 @@ Range :: struct {
 #load "event.jai";
 #load "config.jai";
 #load "color.jai";
-
 #load "widget.jai";
 #load "lang.jai";
+#load "debug.jai";
 
 
 // Local modules
@@ -957,6 +948,7 @@ CodeInspect :: #import,file "code_inspect.jai";
 #import "Command_Line";
 #import "Hash_Table";
 #import "Sort";
+#import "Random";
 
 File      :: #import "File";
 Simp      :: #import "Simp";

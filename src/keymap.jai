@@ -131,12 +131,12 @@ move_up_by_one_row :: ($with_selection := true) {
     using buffer;
 
     for row, row_index: row_table {
-        if _cursor.pos <= row.end {
+        if editor.cursor.pos <= row.end {
             if row_index == 0 break; // no more row above
 
             prev_row      := row_table[row_index-1];
             prev_row_cols := num_of_chars_in_row(buffer, prev_row);
-            steps         := min(prev_row_cols, _cursor.col);
+            steps         := min(prev_row_cols, editor.cursor.col);
             pos           := prev_row.start;
 
             while steps {
@@ -146,7 +146,7 @@ move_up_by_one_row :: ($with_selection := true) {
                 steps -= 1;
             }
 
-            set_cursor_pos(buffer, *_cursor, pos, with_selection=with_selection);
+            set_cursor_pos(buffer, *editor.cursor, pos, with_selection=with_selection);
             break;
         }
     }
@@ -161,12 +161,12 @@ move_down_by_one_row :: ($with_selection := true) {
     using buffer;
 
     for row, row_index: row_table {
-        if _cursor.pos <= row.end {
+        if editor.cursor.pos <= row.end {
             if row_index == row_table.count-1 break; // no more row below
 
             next_row      := row_table[row_index+1];
             next_row_cols := num_of_chars_in_row(buffer, next_row);
-            steps         := min(next_row_cols, _cursor.col);
+            steps         := min(next_row_cols, editor.cursor.col);
             pos           := next_row.start;
 
             while steps {
@@ -176,7 +176,7 @@ move_down_by_one_row :: ($with_selection := true) {
                 steps -= 1;
             }
 
-            set_cursor_pos(buffer, *_cursor, pos, with_selection=with_selection);
+            set_cursor_pos(buffer, *editor.cursor, pos, with_selection=with_selection);
             break;
         }
     }
@@ -189,11 +189,11 @@ MoveDown :: () {
 move_left_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     
-    if buffer._cursor.pos == 0 return;
+    if editor.cursor.pos == 0 return;
 
-    offset := prev_char_byte_offset(buffer, buffer._cursor.pos);
+    offset := prev_char_byte_offset(buffer, editor.cursor.pos);
     
-    set_cursor_pos(buffer, *buffer._cursor, offset, horizontal=true, with_selection=with_selection);
+    set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true, with_selection=with_selection);
 }
 
 MoveLeft :: () {
@@ -203,12 +203,12 @@ MoveLeft :: () {
 move_right_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     
-    if !(buffer._cursor.pos < buffer.count) return;
+    if !(editor.cursor.pos < buffer.count) return;
 
-    byte := buffer.data[buffer._cursor.pos];
+    byte := buffer.data[editor.cursor.pos];
     steps := 1 + trailingBytesForUTF8[byte];
     
-    set_cursor_pos(buffer, *buffer._cursor, buffer._cursor.pos + steps, horizontal=true, with_selection=with_selection);
+    set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + steps, horizontal=true, with_selection=with_selection);
 }
 
 MoveRight :: () {
@@ -219,18 +219,18 @@ move_left_word :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
     
-    if _cursor.pos == 0 return;
+    if editor.cursor.pos == 0 return;
 
-    if _cursor.pos == buffer.count {
-        offset := prev_char_byte_offset(buffer, _cursor.pos);
-        set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
+    if editor.cursor.pos == buffer.count {
+        offset := prev_char_byte_offset(buffer, editor.cursor.pos);
+        set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true);
     }
 
-    row_index := find_row_index(buffer, _cursor.pos);    
+    row_index := find_row_index(buffer, editor.cursor.pos);    
     row := row_table[row_index];
 
     offset := row.start;
-    if offset == _cursor.pos {
+    if offset == editor.cursor.pos {
         if row_index == 0 return; // no more row above
 
         row = row_table[row_index-1];
@@ -240,28 +240,28 @@ move_left_word :: ($subword_mode: bool) {
     text := to_string(buffer);
 
     start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
-    end := prev_char_byte_offset(buffer, _cursor.pos);
+    end := prev_char_byte_offset(buffer, editor.cursor.pos);
     assert(end > -1);
     assert(end < text.count);
 
     // @Cleanup
-    whitespace := is_whitespace(text[_cursor.pos]) && is_whitespace(text[end]);
+    whitespace := is_whitespace(text[editor.cursor.pos]) && is_whitespace(text[end]);
     if whitespace {
-        last_non_whitespace_offset := _cursor.pos;
+        last_non_whitespace_offset := editor.cursor.pos;
         for start..end {
             if !is_whitespace(text[it]) {
                 last_non_whitespace_offset = it;
             }
         }
         new_pos := last_non_whitespace_offset+1;
-        if new_pos > _cursor.pos new_pos = last_non_whitespace_offset;
-        if new_pos == _cursor.pos new_pos = max(0, _cursor.pos-1);
-        set_cursor_pos(buffer, *_cursor, new_pos, horizontal=true);
+        if new_pos > editor.cursor.pos new_pos = last_non_whitespace_offset;
+        if new_pos == editor.cursor.pos new_pos = max(0, editor.cursor.pos-1);
+        set_cursor_pos(buffer, *editor.cursor, new_pos, horizontal=true);
         return;
     }
 
     // @Cleanup
-    if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[_cursor.pos], subword_mode) {
+    if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[editor.cursor.pos], subword_mode) {
         for start..end {
             separator := is_separator_char(text[it], subword_mode);
             if separator {
@@ -269,7 +269,7 @@ move_left_word :: ($subword_mode: bool) {
             }
         }
     } else {
-        not_combined := is_separator_char(text[_cursor.pos], subword_mode) && !is_separator_char(text[end], subword_mode);
+        not_combined := is_separator_char(text[editor.cursor.pos], subword_mode) && !is_separator_char(text[end], subword_mode);
         for start..end {
             separator := is_separator_char(text[it], subword_mode);
             if not_combined {
@@ -288,47 +288,47 @@ move_left_word :: ($subword_mode: bool) {
         offset = next_char_byte_offset(text, offset);
     }
 
-    set_cursor_pos(buffer, *_cursor, offset, horizontal=true);
+    set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true);
 }
 
 move_right_word :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if _cursor.pos == buffer.count return;
+    if editor.cursor.pos == buffer.count return;
 
     text  := to_string(buffer);
-    start := next_char_byte_offset(text, _cursor.pos);
+    start := next_char_byte_offset(text, editor.cursor.pos);
 
     // It's a better solution than the current IDE's behavior
-    whitespace := is_whitespace(text[_cursor.pos]);
+    whitespace := is_whitespace(text[editor.cursor.pos]);
     if whitespace {
-        last_whitespace_offset := _cursor.pos;
+        last_whitespace_offset := editor.cursor.pos;
         for start..text.count-1 {
             last_whitespace_offset = it;
             if !is_whitespace(text[it]) break;
         }
-        set_cursor_pos(buffer, *_cursor, last_whitespace_offset, horizontal=true);
+        set_cursor_pos(buffer, *editor.cursor, last_whitespace_offset, horizontal=true);
         return;
     }
 
-    combined := is_separator_char(text[_cursor.pos]);
+    combined := is_separator_char(text[editor.cursor.pos]);
     for start..text.count-1 {
         separator := is_separator_char(text[it], subword_mode);
         if combined {
             if !separator {
-                set_cursor_pos(buffer, *_cursor, it, horizontal=true);
+                set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
                 return;
             }
         } else {
             if separator {
-                set_cursor_pos(buffer, *_cursor, it, horizontal=true);
+                set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
                 return;
             }
         }
     }
 
-    set_cursor_pos(buffer, *_cursor, text.count, horizontal=true); // no more word so we should jump to the last byte of the row
+    set_cursor_pos(buffer, *editor.cursor, text.count, horizontal=true); // no more word so we should jump to the last byte of the row
 }
 
 MoveLeftWord :: inline () {
@@ -355,14 +355,14 @@ move_viewport_up :: ($with_selection := true) {
     end := last_visible_row_index(editor, buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
     
-    current_row_index := find_row_index(buffer, _cursor.pos);
+    current_row_index := find_row_index(buffer, editor.cursor.pos);
     if current_row_index == 0 return;
 
     dest_row_index := clamp(current_row_index - max_row, 0, row_table.count-1);
     dest_row    := row_table[dest_row_index];
     dest_pos    := dest_row.start;
     dest_col    := 0;
-    current_col := _cursor.col;
+    current_col := editor.cursor.col;
     
     s := get_row_as_string(buffer, dest_row);
     while s.count {
@@ -375,7 +375,7 @@ move_viewport_up :: ($with_selection := true) {
         dest_col += 1;
     }
 
-    set_cursor_pos(buffer, *_cursor, dest_pos, horizontal=false, with_selection=with_selection);
+    set_cursor_pos(buffer, *editor.cursor, dest_pos, horizontal=false, with_selection=with_selection);
 }
 
 ScrollViewPortUp :: () {
@@ -390,14 +390,14 @@ move_viewport_down :: ($with_selection := true) {
     end := last_visible_row_index(editor, buffer);
     max_row := clamp(end-start, 0, row_table.count-1);
 
-    current_row_index := find_row_index(buffer, _cursor.pos);
+    current_row_index := find_row_index(buffer, editor.cursor.pos);
     if current_row_index == row_table.count-1 return;
 
     dest_row_index := clamp(current_row_index + max_row, 0, row_table.count-1);
     dest_row    := row_table[dest_row_index];
     dest_pos    := dest_row.start;
     dest_col    := 0;
-    current_col := _cursor.col;
+    current_col := editor.cursor.col;
 
     s := get_row_as_string(buffer, dest_row);
     while s.count {
@@ -410,7 +410,7 @@ move_viewport_down :: ($with_selection := true) {
         dest_col += 1;
     }
 
-    set_cursor_pos(buffer, *_cursor, dest_pos, horizontal=false, with_selection=with_selection);
+    set_cursor_pos(buffer, *editor.cursor, dest_pos, horizontal=false, with_selection=with_selection);
 }
 
 ScrollViewPortDown :: () {
@@ -423,12 +423,12 @@ Copy :: () {
 
     // Should we move this whole logic into the copy_selection_to_os_clipboard() procedure?
 
-    if has_selection(_cursor) {
-        copy_selection_to_os_clipboard(buffer, *_cursor);
+    if has_selection(editor.cursor) {
+        copy_selection_to_os_clipboard(buffer, *editor.cursor);
         return;
     }
 
-    row := find_row(buffer, _cursor.pos);
+    row := find_row(buffer, editor.cursor.pos);
     if row.size {
         s := get_row_as_string(buffer, row);
         Clipboard.os_clipboard_set_text(s);    
@@ -439,62 +439,62 @@ Copy :: () {
 }
 
 Paste :: () {
-    _, buffer := get_active_editor_and_buffer();
-    insert_os_clipboard_text_at_cursor(buffer, *buffer._cursor);
+    editor, buffer := get_active_editor_and_buffer();
+    insert_os_clipboard_text_at_cursor(editor, buffer, *editor.cursor);
 }
 
 Cut :: () {
     editor, buffer := get_active_editor_and_buffer();
     using,except(rebuild_row_table) buffer;
 
-    if has_selection(buffer._cursor) {
-        cut_selection_and_copy_to_os_clipboard(buffer, *_cursor);
+    if has_selection(editor.cursor) {
+        cut_selection_and_copy_to_os_clipboard(editor, buffer, *editor.cursor);
         return;
     }
 
     // Cut the whole line
-    row_index := find_row_index(buffer, _cursor.pos);
+    row_index := find_row_index(buffer, editor.cursor.pos);
     row       := row_table[row_index];
     
-    _cursor.pos = row.start;
-    _cursor.sel = next_character_pos(buffer, row.end);
+    editor.cursor.pos = row.start;
+    editor.cursor.sel = next_character_pos(buffer, row.end);
 
-    cut_selection_and_copy_to_os_clipboard(buffer, *_cursor);
+    cut_selection_and_copy_to_os_clipboard(editor, buffer, *editor.cursor);
 }
 
 DeleteEverythingFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    range_deleted := delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
     if range_deleted return;
 
-    row_index := find_row_index(buffer, _cursor.pos);
+    row_index := find_row_index(buffer, editor.cursor.pos);
     row       := row_table[row_index];
-    start     := _cursor.pos;
+    start     := editor.cursor.pos;
     end       := row.end;
 
-    remove_text_from_left(buffer, start, end - start);
+    remove_text_from_left(editor, buffer, start, end - start);
 }
 
 DeleteFromRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    range_deleted := delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
     if range_deleted return;
 
-    if _cursor.pos == 0 return;
+    if editor.cursor.pos == 0 return;
 
     text := to_string(buffer);
-    bytes_to_del := _cursor.pos - prev_char_byte_offset(buffer, _cursor.pos);
+    bytes_to_del := editor.cursor.pos - prev_char_byte_offset(buffer, editor.cursor.pos);
 
     // Check if we should delete a "tab"
-    ch := text.data[_cursor.pos-1];
+    ch := text.data[editor.cursor.pos-1];
     if ch == #char " " {
         i := 0;
         spaces := 1;
-        for #v2 < 0.._cursor.pos-1 {
+        for #v2 < 0..editor.cursor.pos-1 {
             if text.data[it] == #char " " {
                 spaces += 1;
                 if spaces == TAB_SIZE_IN_SPACES {
@@ -508,7 +508,7 @@ DeleteFromRight :: () {
     }
 
     if bytes_to_del {
-        remove_text_from_right_at_cursor(buffer, *_cursor, bytes_to_del);
+        remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, bytes_to_del);
     }
 }
 
@@ -524,53 +524,52 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    delete_selected_range_if_has_any(buffer, *buffer._cursor);
+    delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
 
     text := to_string(buffer);
-    if text.count == 0 || _cursor.pos == text.count return;
+    if text.count == 0 || editor.cursor.pos == text.count return;
 
-    byte := text[_cursor.pos];
+    byte := text[editor.cursor.pos];
     if is_whitespace(byte) {
-        for point: _cursor.pos..text.count-1 {
+        for point: editor.cursor.pos..text.count-1 {
             if !is_whitespace(text[point]) {
-                remove_text_from_left(buffer, _cursor.pos, point - _cursor.pos);
+                remove_text_from_left(editor, buffer, editor.cursor.pos, point - editor.cursor.pos);
                 return;
             }    
         }
     }
 
-    for point: _cursor.pos..text.count-1 {
+    for point: editor.cursor.pos..text.count-1 {
         if is_separator_char(text[point], subword_mode) {
-            if _cursor.pos == point {
+            if editor.cursor.pos == point {
                 point = min(point+1, text.count-1); // @Improve: Detect combined separator characters 
             }
 
-            remove_text_from_left(buffer, _cursor.pos, point - _cursor.pos);
+            remove_text_from_left(editor, buffer, editor.cursor.pos, point - editor.cursor.pos);
             return;
         }
     }
 
-    remove_text_from_left(buffer, _cursor.pos, text.count); // We have no separator character at the end
+    remove_text_from_left(editor, buffer, editor.cursor.pos, text.count); // We have no separator character at the end
 }
 
 DeleteFromLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    range_deleted := delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
     if range_deleted return;
 
-    assert(_cursor.pos <= buffer.count);
-    if _cursor.pos == buffer.count return;
+    assert(editor.cursor.pos <= buffer.count);
+    if editor.cursor.pos == buffer.count return;
 
     text := to_string(buffer);
-    buffer.rebuild_row_table = true;
 
-    byte := text[_cursor.pos];
+    byte := text[editor.cursor.pos];
     bytes_to_del := 1 + trailingBytesForUTF8[byte];
-    assert(_cursor.pos + bytes_to_del <= text.count);
+    assert(editor.cursor.pos + bytes_to_del <= text.count);
 
-    remove_text_from_left(buffer, _cursor.pos, bytes_to_del);
+    remove_text_from_left(editor, buffer, editor.cursor.pos, bytes_to_del);
 }
 
 DeleteWordFromRight :: inline () {
@@ -586,16 +585,15 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     using editor;
     using buffer;
 
-    range_deleted := delete_selected_range_if_has_any(buffer, *_cursor);
+    range_deleted := delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
     if range_deleted return;
 
-    if _cursor.pos == 0 return;
+    if editor.cursor.pos == 0 return;
 
     text := to_string(buffer);
-    rebuild_row_table = true;
 
     assert(text.count > 0); // it should never happen, 'cause we already checked the cursor poistion above
-    start := _cursor.pos-1;
+    start := editor.cursor.pos-1;
 
     #if !subword_mode {
         // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
@@ -603,14 +601,14 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
             for #v2 < point: 0..start {
                 if text[point] != #char " " {
                     point += 1;
-                    remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
+                    remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
                     return;
                 }
             }
         }
     }
 
-    if is_separator_char(text[_cursor.pos-1], subword_mode) {
+    if is_separator_char(text[editor.cursor.pos-1], subword_mode) {
         DeleteFromRight();
         return;
     }
@@ -618,10 +616,10 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     for #v2 < point: 0..start {
         if is_separator_char(text[point], subword_mode) {
             point += 1;
-            remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
+            remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
             return;
         } else if point == 0 {
-            remove_text_from_right_at_cursor(buffer, *_cursor, _cursor.pos - point);
+            remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
             return;
         }
     }
@@ -632,42 +630,41 @@ InsertLine :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    delete_selected_range_if_has_any(buffer, *_cursor);
+    delete_selected_range_if_has_any(editor, buffer, *editor.cursor);
 
     text := to_string(buffer);
-    rebuild_row_table = true;
 
-    if _cursor.pos == 0 {
-        insert_text_at_cursor(buffer, *buffer._cursor, "\n");
+    if editor.cursor.pos == 0 {
+        insert_text_at_cursor(editor, buffer, *editor.cursor, "\n");
         return;
     }
 
     // :SmartIndentFeature @Cleanup
     // A basic smart indent count characters in the current row until the first non-space character.
 
-    current_row_index := find_row_index(buffer, _cursor.pos);
+    current_row_index := find_row_index(buffer, editor.cursor.pos);
     row := row_table[current_row_index];
     start := row.start;
     end := find_index_from_left_until_not(text, #char " ", start);
 
     if end == -1 {
         // In this case we only have one row with only whitespace characters
-        insert_text_at_cursor(buffer, *buffer._cursor, "\n");
+        insert_text_at_cursor(editor, buffer, *editor.cursor, "\n");
         return;
     }
 
-    if _cursor.pos >= start && _cursor.pos < end {
+    if editor.cursor.pos >= start && editor.cursor.pos < end {
         // We're in the range of the first n empty spaces, so we just jump to the first non-whitespace
         // occurrence to prevent the weird effect of splitting whitespace characters
-        set_cursor_pos(buffer, *_cursor, end);
+        set_cursor_pos(buffer, *editor.cursor, end);
     }
 
-    insert_text_at_cursor(buffer, *buffer._cursor, "\n");
+    insert_text_at_cursor(editor, buffer, *editor.cursor, "\n");
 
     spaces := end - start;
     assert(spaces > -1);
     while spaces != 0 {
-        insert_text_at_cursor(buffer, *buffer._cursor, " ");
+        insert_text_at_cursor(editor, buffer, *editor.cursor, " ");
         spaces -= 1;
     }
 }
@@ -677,12 +674,11 @@ InsertLineBelow :: () {
     using buffer;
     
     text := to_string(buffer);
-    rebuild_row_table = true;
 
-    current_row_index := find_row_index(buffer, _cursor.pos);
+    current_row_index := find_row_index(buffer, editor.cursor.pos);
     row := row_table[current_row_index];
-    set_cursor_pos(buffer, *_cursor, row.end);    // set cursor to the last character of the current row
-    insert_text_at_cursor(buffer, *buffer._cursor, "\n");          // also increment the cursor by a character in this procedure
+    set_cursor_pos(buffer, *editor.cursor, row.end);    // set cursor to the last character of the current row
+    insert_text_at_cursor(editor, buffer, *editor.cursor, "\n");          // also increment the cursor by a character in this procedure
 
     // :SmartIndentFeature @Cleanup
     // A basic smart indent count characters in the current row until the first non-space character.
@@ -692,7 +688,7 @@ InsertLineBelow :: () {
         spaces := first_non_whitespace_byte_index - row_first_byte_index;
         assert(spaces > -1);
         while spaces != 0 {
-            insert_text_at_cursor(buffer, *buffer._cursor, " ");
+            insert_text_at_cursor(editor, buffer, *editor.cursor, " ");
             spaces -= 1;
         }
     }
@@ -701,11 +697,11 @@ InsertLineBelow :: () {
 JoinLine :: () {
     editor, buffer := get_active_editor_and_buffer();
 
-    if has_selection(buffer._cursor) {
+    if has_selection(editor.cursor) {
         // @Todo: Handle selection, join rows within the selected range
 
     } else {
-        row := find_row(buffer, buffer._cursor.pos);
+        row := find_row(buffer, editor.cursor.pos);
         if row.end + 1 < buffer.count {
             s := to_string(buffer);
             assert(s[row.end] == #char "\n");
@@ -723,14 +719,14 @@ JoinLine :: () {
             trimmed_from_right := (buffer.data + row.end) - (line.data + line.count);
             new_row_end := row.end - trimmed_from_right;
 
-            set_cursor_pos(buffer, *buffer._cursor, new_row_end, horizontal=true);
+            set_cursor_pos(buffer, *editor.cursor, new_row_end, horizontal=true);
             
             bytes_to_del := (next_row.start + trimmed_whitespaces) - new_row_end;
-            remove_text_from_left_at_cursor(buffer, *buffer._cursor, bytes_to_del);
+            remove_text_from_left_at_cursor(editor, buffer, *editor.cursor, bytes_to_del);
 
             if buffer.data[new_row_end] != #char " " {
                 // We don't want to step to the space character which separates the two joined lines.
-                insert_text_at(buffer, buffer._cursor.pos, " ");
+                insert_text_at(editor, buffer, editor.cursor.pos, " ");
             }
         }
     }
@@ -751,18 +747,18 @@ InsertTab :: () {
 
     editor, buffer := get_active_editor_and_buffer();
 
-    insert_text_at_cursor(buffer, *buffer._cursor, TAB_SPACE_CHARS);
+    insert_text_at_cursor(editor, buffer, *editor.cursor, TAB_SPACE_CHARS);
 }
 
 GotoFirstCharOfCurrentRow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    row := find_row(buffer, _cursor.pos);
+    row := find_row(buffer, editor.cursor.pos);
     for at: row.start..row.end {
         if buffer.data[at] != #char " " { // skip the indentation
-            if at == _cursor.pos then at = row.start;
-            set_cursor_pos(buffer, *_cursor, at, horizontal=true, with_selection=!ShiftHeld());
+            if at == editor.cursor.pos then at = row.start;
+            set_cursor_pos(buffer, *editor.cursor, at, horizontal=true, with_selection=!ShiftHeld());
             return;
         }
     }
@@ -772,30 +768,30 @@ GotoLastCharOfCurrentRow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    row := find_row(buffer, _cursor.pos);
+    row := find_row(buffer, editor.cursor.pos);
 
     // @Cleanup Confusing the with_selection thing, 'cause it means that we also move the selection cursor with the primary cursor!!
-    set_cursor_pos(buffer, *_cursor, row.end, horizontal=true, with_selection=!ShiftHeld());
+    set_cursor_pos(buffer, *editor.cursor, row.end, horizontal=true, with_selection=!ShiftHeld());
 }
 
 ExpandSelectionByLine :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if has_selection(_cursor) {
-        row_index := find_row_index(buffer, _cursor.pos);
+    if has_selection(editor.cursor) {
+        row_index := find_row_index(buffer, editor.cursor.pos);
         dest_cursor_pos := row_table[row_index].end;
         if row_index + 1 < row_table.count {
             dest_cursor_pos = row_table[row_index + 1].start;
         }
 
-        set_cursor_pos(buffer, *_cursor, dest_cursor_pos, horizontal=true, with_selection=false);
+        set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=true, with_selection=false);
 
-        row_index   = find_row_index(buffer, _cursor.sel);
-        _cursor.sel = row_table[row_index].start;
+        row_index   = find_row_index(buffer, editor.cursor.sel);
+        editor.cursor.sel = row_table[row_index].start;
 
     } else {
-        row_index := find_row_index(buffer, _cursor.pos);
+        row_index := find_row_index(buffer, editor.cursor.pos);
 
         dest_cursor_sel := row_table[row_index].start;
         dest_cursor_pos := row_table[row_index].end;
@@ -804,8 +800,8 @@ ExpandSelectionByLine :: () {
             dest_cursor_pos = row_table[row_index + 1].start;
         }
 
-        set_cursor_pos(buffer, *_cursor, dest_cursor_pos, horizontal=true, with_selection=false);
-        _cursor.sel = dest_cursor_sel;
+        set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=true, with_selection=false);
+        editor.cursor.sel = dest_cursor_sel;
     }
 
 }
@@ -831,8 +827,8 @@ ExpandSelectionLeftByWord :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    tmp := _cursor.sel;
-    defer _cursor.sel = tmp;
+    tmp := editor.cursor.sel;
+    defer editor.cursor.sel = tmp;
 
     move_left_word(subword_mode=false);
 }
@@ -842,8 +838,8 @@ ExpandSelectionRightbyWord :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    tmp := _cursor.sel;
-    defer _cursor.sel = tmp;
+    tmp := editor.cursor.sel;
+    defer editor.cursor.sel = tmp;
 
     move_right_word(subword_mode=false);
 }
@@ -861,7 +857,7 @@ IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    c := *_cursor;
+    c := *editor.cursor;
 
     cpos_after := c.pos;
     cpos_row_index := find_row_index(buffer, c.pos);
@@ -909,9 +905,9 @@ IndentLeft :: () {
 
     start = rows[0].start;
     end   = rows[rows.count-1].end;
-    replace_text_at(buffer, Range.{start, end}, new_block);
+    replace_text_at(editor, buffer, Range.{start, end}, new_block);
 
-    rescan_line_ends(buffer);
+    commit_buffer_changes(buffer);
 
     // STUPID CORRECTION!
     if find_row_index(buffer, cpos_after) != cpos_row_index {
@@ -935,7 +931,7 @@ IndentRight :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    c := *_cursor;
+    c := *editor.cursor;
     ca, cb := get_cursor_min_max_indecies_as_pointers(c);
     ca_row_index := find_row_index(buffer, ca.*);
     cb_row_index := find_row_index(buffer, cb.*);
@@ -984,9 +980,9 @@ IndentRight :: () {
 
     start = rows[0].start;
     end   = rows[rows.count-1].end;
-    replace_text_at(buffer, Range.{start, end}, new_block);
+    replace_text_at(editor, buffer, Range.{start, end}, new_block);
 
-    rescan_line_ends(buffer);
+    commit_buffer_changes(buffer);
 
     clamp_cursor(buffer, c);
     c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
@@ -998,7 +994,7 @@ ExtendSelectionByToken :: () {
     using buffer;
 
     s := to_string(buffer);
-    advance(*s, _cursor.pos);
+    advance(*s, editor.cursor.pos);
 
     if !s return;
     if !is_alphanum(s[0]) return;
@@ -1006,8 +1002,8 @@ ExtendSelectionByToken :: () {
     t := s;
     while t {
         if is_separator(t[0], include_underscore=false) {
-            ident := slice(buffer, _cursor.pos, t.data - s.data);
-            set_cursor_pos(buffer, *_cursor, _cursor.pos + ident.count, horizontal=true, with_selection=false);
+            ident := slice(buffer, editor.cursor.pos, t.data - s.data);
+            set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + ident.count, horizontal=true, with_selection=false);
             break;
         }
 
@@ -1018,13 +1014,13 @@ ExtendSelectionByToken :: () {
 }
 
 Undo :: () {
-    _, buffer := get_active_editor_and_buffer();
-    undo(buffer);
+    editor, buffer := get_active_editor_and_buffer();
+    undo(editor, buffer);
 }
 
 Redo :: () {
-    _, buffer := get_active_editor_and_buffer();
-    redo(buffer);
+    editor, buffer := get_active_editor_and_buffer();
+    redo(editor, buffer);
 }
 
 ////////////////////////////////////

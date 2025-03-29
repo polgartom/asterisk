@@ -23,7 +23,7 @@ find_occurences :: (_text: string) {
 next_occurance :: () {
     using find_text_dialog;
 
-    _, buffer := get_active_editor_and_buffer();
+    editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
     if occurences.count == 0 return;
@@ -33,7 +33,7 @@ next_occurance :: () {
         if current_occurance == occurences.count then current_occurance = 0;        
     } else {
         for occurences {
-            if _cursor.pos <= it {
+            if editor.cursor.pos <= it {
                 current_occurance = it_index;
                 break;
             }
@@ -48,7 +48,7 @@ next_occurance :: () {
 
     assert(pos != -1, "occurences: % ; current: %\n", occurences, current_occurance);
 
-    set_cursor_pos(buffer, *buffer._cursor, pos, horizontal=true, with_selection=true);
+    set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
 }
 
 open_find_text_dialog :: () {

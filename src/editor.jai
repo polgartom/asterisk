@@ -20,69 +20,51 @@ copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
     Clipboard.os_clipboard_set_text(text);
 }
 
-cut_selection_and_copy_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
+cut_selection_and_copy_to_os_clipboard :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
     if !has_selection(cursor) return;
 
     text := get_selection_as_string(buffer, cursor);
     Clipboard.os_clipboard_set_text(text);
 
-    delete_selected_range(buffer, cursor);
+    delete_selected_range(editor, buffer, cursor);
 }
 
-insert_os_clipboard_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor) {
+insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
     // @Incomplete: Validate if the input data is valid utf8!
     text := Clipboard.os_clipboard_get_text();
     defer free(text);
 
-    insert_text_at_cursor(buffer, cursor, text);
+    insert_text_at_cursor(editor, buffer, cursor, text);
 }
 
-replace_text_at :: (buffer: *Buffer, range: Range, new_text: string, $history := true) {
+replace_text_at :: (editor: *Editor, buffer: *Buffer, range: Range, new_text: string, $history := true) {
     #if history {
-        using buffer;
-        if history.count && history_index != history.count-1 {
-            // We should truncate the history because... @Todo: Explain it 
-            new_size := buffer.history_index+1;
-            history.count = new_size;
-            Clamp(*history_index, -1, history.count-1);
-        }
-
-        h := array_add(*buffer.history);
-
-        old_text := slice(buffer, range.start, range.end - range.start);
-        modify_string(*h.old_text, old_text);
-        modify_string(*h.text, new_text);
-
-        h.range  = range;
-        h.type   = .REPLACE;
-        h.cursor = buffer._cursor;
-
-        buffer.history_index += 1;
+        add_history(editor, buffer, .REPLACE, new_text, range);
     }
 
-    remove_text_from_left(buffer, range.start, range.end - range.start, history=false);
-    insert_text_at(buffer, range.start, new_text, history=false);
+    remove_text_from_left(editor, buffer, range.start, range.end - range.start, history=false);
+    insert_text_at(editor, buffer, range.start, new_text, history=false);
 }
 
-replace_selection :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+replace_selection :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
     start, end := selected_range(cursor);
-    replace_text_at(buffer, Range.{start, end}, text, history);
+    replace_text_at(editor, buffer, Range.{start, end}, text, history);
     
     set_cursor_pos(buffer, cursor, start + text.count, horizontal=true);
 }
 
-insert_text_at_cursor :: (buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+insert_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
     if has_selection(cursor) {
-        replace_selection(buffer, cursor, text, history);
+        replace_selection(editor, buffer, cursor, text, history);
         return;
     }
     
-    insert_text_at(buffer, cursor.pos, text, history);
+    insert_text_at(editor, buffer, cursor.pos, text, history);
 
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
-insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
+insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
     maybe_grow(buffer, text.count);
 
     insert_at      := buffer.data  + at;
@@ -94,80 +76,53 @@ insert_text_at :: (buffer: *Buffer, at: s64, text: string, $history := true) {
     SlowMemcpy(insert_at, text.data, text.count);
 
     buffer.count += text.count;
-    buffer.rebuild_row_table = true;
     buffer.dirty = true;
 
     #if history {
-        using buffer;
-        if history.count && history_index != history.count-1 {
-            // We should truncate the history because... @Todo: Explain it 
-            new_size := buffer.history_index+1;
-            history.count = new_size;
-            Clamp(*history_index, -1, history.count-1);
-        }
-
-        h := array_add(*buffer.history);
-        modify_string(*h.text, text);
-        h.range = .{at, at + text.count};
-        h.type   = .INSERT;
-        h.cursor = buffer._cursor;
-        buffer.history_index += 1;
+        add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
     }
 }
 
-remove_text_from_right_at_cursor :: (buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
-    remove_text_from_right(buffer, cursor.pos, bytes_to_del, history);
+remove_text_from_right_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    remove_text_from_right(editor, buffer, cursor.pos, bytes_to_del, history);
+    
     set_cursor_pos(buffer, cursor, cursor.pos - bytes_to_del, horizontal=true);
 }
 
-remove_text_from_right :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
-    remove_text_from_left(buffer, at - bytes_to_del, bytes_to_del, history);
+remove_text_from_right :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    remove_text_from_left(editor, buffer, at - bytes_to_del, bytes_to_del, history);
 }
 
-remove_text_from_left_at_cursor :: (buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
-    remove_text_from_left(buffer, cursor.pos, bytes_to_del, history);
+remove_text_from_left_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    remove_text_from_left(editor, buffer, cursor.pos, bytes_to_del, history);
 }
 
-remove_text_from_left :: (buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+remove_text_from_left :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
     pos1 := clamp(at, 0, buffer.count-1);
     pos2 := clamp(at + bytes_to_del, 0, buffer.count);
     if pos1 == pos2 return; // @Cleanup: We do the same check in the shift_left() procedure.
     
     #if history {
-        using buffer;
-
-        if history.count && history_index != history.count-1 {
-            // We should truncate the history because... @Todo: Explain it 
-            new_size := buffer.history_index+1;
-            history.count = new_size;
-            Clamp(*history_index, -1, history.count-1);
-        }
-
-        h := array_add(*buffer.history);
         deleted_text := slice(buffer, pos1, pos2 - pos1);
-        modify_string(*h.text, deleted_text);
-        h.range = .{pos1, pos2};
-        h.type   = .DELETE;
-        h.cursor = _cursor;
-        history_index += 1;
+        add_history(editor, buffer, .DELETE, deleted_text, Range.{pos1, pos2});
     }
 
     shift_left(buffer, pos1, pos2);
 }
 
-delete_selected_range_if_has_any :: inline (buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
-    if has_selection(buffer._cursor) {
-        delete_selected_range(buffer, *buffer._cursor);
+delete_selected_range_if_has_any :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
+    if has_selection(editor.cursor) {
+        delete_selected_range(editor, buffer, *editor.cursor);
         return true;
     }
     return false;
 }
 
-delete_selected_range :: (buffer: *Buffer, cursor: *Cursor) {
+delete_selected_range :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
     if !has_selection(cursor) return;
 
     start, end := selected_range(cursor);
-    remove_text_from_left(buffer, start, end - start);
+    remove_text_from_left(editor, buffer, start, end - start);
     set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
 }
 
@@ -232,21 +187,37 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
         assert(index > -1);
         buffer = *buffers[index];
     } else {
-        buffer = array_add(*buffers);
+        buffer = create_buffer();
     }
 
     maybe_grow(buffer, BUFFER_PAGE_SIZE);
-    rescan_line_ends(buffer);
 
     buffer.initialized = true;
+
+    commit_buffer_changes(buffer);
 
     return buffer;
 }
 
-// @Speed: We could implement something like a Quadtree. For example we might create a chunk after every 1000 rows (line ends)
-rescan_line_ends :: (using buffer: *Buffer) {
-    rebuild_row_table = false;
+commit_buffer_changes :: (buffer: *Buffer, $force := false) {
+    #if !force {
+        if !buffer.dirty return;
+    }
 
+    defer buffer.dirty = false;
+
+    rescan_line_ends(buffer);
+    tokenize(buffer, language = .C_STYLE); // @Todo: Multiple language support
+
+    for *e: editors {
+        if e.active_buffer == buffer {
+            Clamp(*e.cursor.pos, 0, buffer.count);
+            Clamp(*e.cursor.sel, 0, buffer.count);
+        }
+    }
+}
+
+rescan_line_ends :: (using buffer: *Buffer) {
     timer := seconds_since_init();
 
     array_reset_keeping_memory(*row_table);
@@ -271,8 +242,6 @@ rescan_line_ends :: (using buffer: *Buffer) {
     }
 
     row_table_recalc_time = (seconds_since_init() - timer) * 1000;
-
-    tokenize(buffer, language = .C_STYLE); // @Todo: Multiple language support
 }
 
 get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
@@ -322,7 +291,6 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
     c_memmove(dest, source, xx size);
     count -= (from - to);
 
-    rebuild_row_table = true;
     dirty = true;
 }
 
@@ -385,7 +353,7 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     buffer.* = new_buffer;
 }
 
-undo :: (using buffer: *Buffer) {
+undo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
     h := *history[history_index];
@@ -403,8 +371,8 @@ undo :: (using buffer: *Buffer) {
 
             shift_left(buffer, to, from);
 
-            _cursor = h.cursor;
-            set_cursor_pos(buffer, *_cursor, to, horizontal=true); 
+            editor.cursor = h.cursor;
+            set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
 
             history_index -= 1;
 
@@ -418,10 +386,10 @@ undo :: (using buffer: *Buffer) {
 
             // Use the insert_text_at_cursor()! @Cleanup
 
-            insert_text_at(buffer, to, h.text, history=false);
+            insert_text_at(editor, buffer, to, h.text, history=false);
             
-            _cursor = h.cursor;
-            set_cursor_pos(buffer, *_cursor, to + h.text.count, horizontal=true);
+            editor.cursor = h.cursor;
+            set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
 
             history_index -= 1;
 
@@ -434,11 +402,11 @@ undo :: (using buffer: *Buffer) {
                 return;
             }
 
-            replace_text_at(buffer, Range.{start, end}, h.old_text, history=false);
+            replace_text_at(editor, buffer, Range.{start, end}, h.old_text, history=false);
             
-            _cursor = h.cursor;
-            clamp_cursor(buffer, *_cursor);
-            _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
+            editor.cursor = h.cursor;
+            clamp_cursor(buffer, *editor.cursor);
+            editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
 
             history_index -= 1;
 
@@ -447,7 +415,7 @@ undo :: (using buffer: *Buffer) {
     }
 }
 
-redo :: (using buffer: *Buffer) {
+redo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == history.count-1 return;
 
     h := *history[history_index+1];
@@ -463,11 +431,11 @@ redo :: (using buffer: *Buffer) {
 
             // Use the insert_text_at_cursor()! @Cleanup
 
-            insert_text_at(buffer, to, h.text, history=false);
+            insert_text_at(editor, buffer, to, h.text, history=false);
 
-            buffer._cursor = h.cursor;
-            set_cursor_pos(buffer, *buffer._cursor, to + h.text.count, horizontal=true);
-            Clamp(*buffer._cursor.pos, 0, buffer.count);
+            editor.cursor = h.cursor;
+            set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
+            Clamp(*editor.cursor.pos, 0, buffer.count);
 
             history_index += 1;
 
@@ -482,9 +450,9 @@ redo :: (using buffer: *Buffer) {
 
             shift_left(buffer, to, from);
 
-            buffer._cursor = h.cursor;
-            set_cursor_pos(buffer, *buffer._cursor, to, horizontal=true); 
-            Clamp(*buffer._cursor.pos, 0, buffer.count);
+            editor.cursor = h.cursor;
+            set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
+            Clamp(*editor.cursor.pos, 0, buffer.count);
 
             history_index += 1;
 
@@ -498,17 +466,40 @@ redo :: (using buffer: *Buffer) {
                 return;
             }
 
-            replace_text_at(buffer, Range.{start, end}, h.text, history=false);
+            replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
             
-            _cursor = h.cursor;
-            clamp_cursor(buffer, *_cursor);
-            _cursor.col = byte_pos_to_col_pos_hacky(buffer, _cursor.pos);
+            editor.cursor = h.cursor;
+            clamp_cursor(buffer, *editor.cursor);
+            editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
 
             history_index += 1;
 
         case .UNDEFINED;
             assert(false);
     }
+}
+
+add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Type, text: string, range: Range) {
+    if history.count && history_index != history.count-1 {
+        // We should truncate the history because... @Todo: Explain it 
+        new_size := buffer.history_index+1;
+        history.count = new_size;
+        Clamp(*history_index, -1, history.count-1);
+    }
+
+    h := array_add(*history);
+    h.type   = type;
+    h.range  = range;
+    h.cursor = editor.cursor;
+
+    modify_string(*h.text, text);
+
+    #if type == .REPLACE {
+        old_text := slice(buffer, range.start, range.end - range.start);
+        modify_string(*h.old_text, old_text);
+    }
+
+    history_index += 1;
 }
 
 reset_history :: (using buffer: *Buffer) {
@@ -527,12 +518,12 @@ switch_editor_mode :: (switch_to: Program_Mode) {
     }
 }
 
-open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
+open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buffer {
     filepath := File.get_absolute_path(_filepath);
     path_overwrite_separators(filepath, #char "/");
 
-    for buffers {
-        if it.filepath == filepath return;
+    for * buffers {
+        if it.filepath == filepath return it;
     }
 
     buffer: *Buffer;
@@ -562,8 +553,9 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) {
         }
     }
 
-    rescan_line_ends(buffer);
-    change_active_buffer(editor, buffer);
+    commit_buffer_changes(buffer, force=true);
+
+    return buffer;
 }
 
 sanitize_and_free_input_data :: (data: string) -> string {
@@ -605,7 +597,10 @@ close_buffer :: (buffer: *Buffer) {
 
     for *e: editors {
         if e.active_buffer == buffer {
-            e.active_buffer = FindNewBuffer(e);
+            b := FindNewBuffer(e);
+            commit_buffer_changes(b, force=true);
+            
+            change_active_buffer(e, b);
         }
     }
 
@@ -638,9 +633,17 @@ create_editor :: () -> *Editor {
     return editor;
 }
 
+create_buffer :: () -> *Buffer {
+    buffer := array_add(*buffers);
+    buffer.id = random_get();
+
+    return buffer;
+}
+
 change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     editor.active_buffer = buffer;
     
+    // @Todo: Restore the viewport and the cursors
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
 }
@@ -675,12 +678,14 @@ Editor :: struct {
     top_offset  := 0.0;
     left_offset := 0.0;
 
+    cursor: Cursor;
+
     rect_for_draw: Rect;
     visible := true;
 }
 
 Buffer :: struct {
-    id: s32;
+    id: u64;
 
     data:      *u8;
     count:     s64;
@@ -691,11 +696,9 @@ Buffer :: struct {
 
     colors: [] Color;
 
-    // cursors: [..] Cursor; // @Todo: Multiple cursor support
-    _cursor: Cursor; // This name temporary, because we're gonna use the cursors dynamic array
+    dirty := false;
 
     row_table: [..] Row_Info;
-    rebuild_row_table := false;
     row_table_recalc_time: float64 = 0.0;
 
     filepath: string;
@@ -706,7 +709,6 @@ Buffer :: struct {
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     language: Language = .PLAIN_TEXT;
     read_only := false;
-    dirty := false;
     initialized := false;
 }
 
