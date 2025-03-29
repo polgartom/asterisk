@@ -1,5 +1,3 @@
-last_copy_buffer_time: float64;
-
 show_debug_info := DEBUG;
 debug_infos: [..] string;
 

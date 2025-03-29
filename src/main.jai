@@ -249,8 +249,6 @@ main :: () {
 
                 PrintDev("tokenization: %ms\n", buffer.tokenization_time);
 
-                PrintDev("last_copy_buffer_time: %ms\n", last_copy_buffer_time);
-
                 mx, my, ok := get_mouse_pointer_position(right_handed=false);
                 PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
 
@@ -259,12 +257,12 @@ main :: () {
 
                 last_simulation_time = (seconds_since_init()-last_time)*1000;
             }
+
+            defer array_reset(*debug_infos);
         }
 
         draw_frame(last_time);
         swap_buffers(my_window);
-
-        #if DEBUG array_reset(*debug_infos);
 
         // sleep_milliseconds(20); // @Temporary
         reset_temporary_storage();
@@ -592,7 +590,21 @@ Range :: struct {
     end:   s64;
 }
 
-#load "workspace.jai";
+Code_get_identifier_name :: (name: Code) -> string {
+    #import "Compiler";
+
+    // This is just to help with the Add macro above.
+
+    node := compiler_get_nodes(name);
+    if node.kind != .IDENT {
+        compiler_report("Not an identifier.", make_location(node));
+        return "";
+    }
+
+    ident := cast(*Code_Ident) node;
+    return ident.name;
+}
+
 #load "editor.jai";
 #load "keymap.jai";
 #load "cursor.jai";
@@ -603,10 +615,6 @@ Range :: struct {
 #load "widget.jai";
 #load "lang.jai";
 #load "debug.jai";
-
-
-// Local modules
-CodeInspect :: #import,file "code_inspect.jai";
 
 #import "System";
 #import "Basic";

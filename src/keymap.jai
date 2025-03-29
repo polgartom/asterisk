@@ -1019,7 +1019,7 @@ register_keymap_procedures :: () {
     editor_keymap = add_keymap(*keymap_set, "Editor");
 
     Add :: (k: *Keymap, ident: Code) #expand {
-        add_proc(k, #run CodeInspect.get_identifier_name(ident), #insert ident);
+        add_proc(k, #run Code_get_identifier_name(ident), #insert ident);
     }
 
     // Core
