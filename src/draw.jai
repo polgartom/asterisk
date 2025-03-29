@@ -193,7 +193,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         }
 
         row := find_row_index(buffer, editor.cursor.pos) + 1;
-        col := byte_pos_to_col_pos(buffer, editor.cursor.pos) + 1;
+        col := byte_pos_to_row_col_index(buffer, editor.cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
 
         row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
@@ -330,7 +330,7 @@ draw_widgets :: () {
 }
 
 draw_buffer_browser :: () {
-    font := my_font_small;
+    font := primary_font_xs;
     pad  := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -400,7 +400,7 @@ draw_buffer_browser :: () {
 }
 
 draw_file_browser :: () {
-    font := my_font_small;
+    font := primary_font_xs;
     pad  := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -605,9 +605,9 @@ draw_global_debug_info :: (r: Rect) {
 
         rmargin := 10;
 
-        w := Simp.prepare_text(my_font, s);
+        w := Simp.prepare_text(primary_font, s);
         bottom += line_height;
-        Simp.draw_prepared_text(my_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
+        Simp.draw_prepared_text(primary_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
 
         if ln then row += 1;
     }
@@ -616,8 +616,8 @@ draw_global_debug_info :: (r: Rect) {
 /////////////////////
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
-    w := Simp.prepare_text(my_font, s);
-    Simp.draw_prepared_text(my_font, left, bottom, color);
+    w := Simp.prepare_text(primary_font, s);
+    Simp.draw_prepared_text(primary_font, left, bottom, color);
     return w;
 }
 
@@ -721,9 +721,9 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
         row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
         if row_index != -1 {
             row_str := get_row_as_string(buffer, row_index);
-            width := measure_text_width(row_str);
+            width := measure_text_width(primary_font, row_str);
             bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-            ch      := my_font.character_height;
+            ch      := primary_font.character_height;
             Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
         }
 
@@ -735,15 +735,15 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
             if i == approx_row {
                 s := get_row_as_string(buffer, i);
 
-                ch      := my_font.character_height;
+                ch      := primary_font.character_height;
                 bottom  := (r.h+r.y) - get_line_height(approx_row+1) + editor.top_offset;
-                // width   := Simp.prepare_text(my_font, s);
+                // width   := Simp.prepare_text(primary_font, s);
                 // Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
 
                 cw := 0;
                 left := 0.0;
                 while s.count {
-                    cw = Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
+                    cw = Simp.get_character_width_in_pixels(primary_font, s.data, .LEFT_JUSTIFIED);
                     if cast(float)mx <= left break;
 
                     left += cw;
@@ -753,7 +753,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
                 }
 
                 if cw == 0 {
-                    cw = my_font.em_width;
+                    cw = primary_font.em_width;
                     Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), cast(float)cw, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
                 } else {
                     Simp.immediate_quad(left-cw, bottom + (ch-ch*0.1), left, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});

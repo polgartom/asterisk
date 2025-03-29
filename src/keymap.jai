@@ -251,17 +251,17 @@ move_left_word :: ($subword_mode: bool) {
     }
 
     // @Cleanup
-    if !is_separator_char(text[end], subword_mode) && !is_separator_char(text[editor.cursor.pos], subword_mode) {
+    if !is_separator(text[end], subword_mode) && !is_separator(text[editor.cursor.pos], subword_mode) {
         for start..end {
-            separator := is_separator_char(text[it], subword_mode);
+            separator := is_separator(text[it], subword_mode);
             if separator {
                 offset = it;
             }
         }
     } else {
-        not_combined := is_separator_char(text[editor.cursor.pos], subword_mode) && !is_separator_char(text[end], subword_mode);
+        not_combined := is_separator(text[editor.cursor.pos], subword_mode) && !is_separator(text[end], subword_mode);
         for start..end {
-            separator := is_separator_char(text[it], subword_mode);
+            separator := is_separator(text[it], subword_mode);
             if not_combined {
                 if separator {
                     offset = it;
@@ -275,7 +275,7 @@ move_left_word :: ($subword_mode: bool) {
     }
     
     if offset != start {
-        offset = next_char_byte_offset(text, offset);
+        offset += 1 + trailingBytesForUTF8[text[offset]];
     }
 
     set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true);
@@ -288,7 +288,7 @@ move_right_word :: ($subword_mode: bool) {
     if editor.cursor.pos == buffer.count return;
 
     text  := to_string(buffer);
-    start := next_char_byte_offset(text, editor.cursor.pos);
+    start := editor.cursor.pos + 1 + trailingBytesForUTF8[text[editor.cursor.pos]];
 
     // It's a better solution than the current IDE's behavior
     whitespace := is_whitespace(text[editor.cursor.pos]);
@@ -302,9 +302,9 @@ move_right_word :: ($subword_mode: bool) {
         return;
     }
 
-    combined := is_separator_char(text[editor.cursor.pos]);
+    combined := is_separator(text[editor.cursor.pos]);
     for start..text.count-1 {
-        separator := is_separator_char(text[it], subword_mode);
+        separator := is_separator(text[it], subword_mode);
         if combined {
             if !separator {
                 set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
@@ -530,7 +530,7 @@ delete_word_or_subword_from_left :: ($subword_mode: bool) {
     }
 
     for point: editor.cursor.pos..text.count-1 {
-        if is_separator_char(text[point], subword_mode) {
+        if is_separator(text[point], subword_mode) {
             if editor.cursor.pos == point {
                 point = min(point+1, text.count-1); // @Improve: Detect combined separator characters 
             }
@@ -598,13 +598,13 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
         }
     }
 
-    if is_separator_char(text[editor.cursor.pos-1], subword_mode) {
+    if is_separator(text[editor.cursor.pos-1], subword_mode) {
         DeleteFromRight();
         return;
     }
 
     for #v2 < point: 0..start {
-        if is_separator_char(text[point], subword_mode) {
+        if is_separator(text[point], subword_mode) {
             point += 1;
             remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
             return;

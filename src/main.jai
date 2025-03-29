@@ -10,9 +10,6 @@ last_rendering_time  : float64;
 
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
-my_font: *Simp.Dynamic_Font;
-my_font_small: *Simp.Dynamic_Font;
-
 font_width: s64;
 line_height :: 0.0;
 font_size       :: 15;
@@ -108,7 +105,7 @@ main :: () {
     my_init_fonts();
     ui_init(); // GetRect
 
-    footer_height = my_font.character_height*1.5;
+    footer_height = primary_font.character_height*1.5;
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -257,13 +254,6 @@ main :: () {
 
                 PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
     
-                row := find_row_index(buffer, active_editor.cursor.pos);
-                col := byte_pos_to_col_pos(buffer, active_editor.cursor.pos);
-                cx  := get_cursor_x(buffer, *active_editor.cursor);
-                cy  := get_cursor_y(buffer, *active_editor.cursor);
-
-                PrintDev("p: % r: % col: % cx: % cy: %\n", active_editor.cursor.pos, row, col, cx, cy);
-
                 PrintDev("rows: % ; gentime: %ms ; row_table size: %\n",
                     active_buffer.row_table.count,
                     formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
@@ -295,13 +285,6 @@ main :: () {
 
 }
 
-get_char_at_string_index :: (t: string, index: s64) -> string {
-    assert(index < t.count);
-    c := advance(t, index);
-    c.count = 1;
-    return c;
-}
-
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     assert(buffer.initialized, "buffer: %\n", buffer.*);
 
@@ -322,43 +305,6 @@ find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
     }
 
     return row_table.count-1;
-}
-
-find_next_row_index :: (using buffer: *Buffer, offset: s64) -> (success: bool, index: s64) {
-    index := find_row_index(buffer, offset);
-    if !(index+1 < row_table.count) return false, -1;
-    return true, index+1;
-}
-
-get_cursor_row :: (using buffer: *Buffer, cursor: *Cursor) -> s64 {
-    if cursor.pos == 0 return 1;
-    assert(row_table.count != 0);
-
-    for row, row_index: row_table {
-        if cursor.pos <= row.end {
-            return row_index + 1;
-        }
-    }
-
-    return row_table.count;
-}
-
-// Return the relative column index
-byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
-    assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
-
-    col := 0;
-    row := find_row(buffer, byte_pos);
-    at  := row.start;
-    while at < byte_pos {
-        byte := buffer.data[at];
-        at += 1 + trailingBytesForUTF8[byte];
-        col += 1;
-    }
-
-    assert(at == byte_pos);
-
-    return col;
 }
 
 byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
@@ -389,62 +335,8 @@ get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64
     return approx_index;
 }
 
-get_row_col_from_x_px :: (row_index: s64, x: float, x_is_relative := false) -> (col: s64, bytes_from_left: s64) {
-    editor, buffer := get_active_editor_and_buffer();
-
-    if x_is_relative {
-        x += editor.left_offset;
-    }
-
-    s := get_row_as_string(buffer, row_index);
-
-    bytes_from_left := 0;
-    col             := 0;
-    left            := 0.0;
-    while s.count {
-        cw := Simp.get_character_width_in_pixels(my_font, s.data, .LEFT_JUSTIFIED);
-        if cast(float)x <= left break;
-
-        byte_step := 1 + trailingBytesForUTF8[s[0]];
-        s = advance(s, byte_step);
-
-        left += cw;
-        col += 1;
-        bytes_from_left += byte_step;
-    }
-
-    return col, bytes_from_left;
-}
-
-get_selected_rows :: (buffer: *Buffer, cursor: *Cursor) -> [..] Row_Info {
-    rows: [..] Row_Info;
-    // row.allocator = tmp;
-
-    if !has_selection(cursor) return rows;
-
-    start, end := selected_range(cursor);
-    at := start;
-    while at <= end {
-        row := find_row(buffer, at);
-        array_add(*rows, row);
-        at = row.end + 1;
-    }
-
-    return rows;
-}
-
-measure_text_width :: inline (text: string) -> s64 {
-    return Simp.prepare_text(my_font, text);
-}
-
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
     return Simp.prepare_text(font, text);
-}
-
-char_byte_offset :: inline (s: string, start: s64) -> s64 {
-    assert(start < s.count); // Do we want to assert this?
-    byte := s[start];
-    return start + 1 + trailingBytesForUTF8[byte];
 }
 
 // @Cleanup: naming
@@ -454,6 +346,7 @@ next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
     return start + 1 + trailingBytesForUTF8[byte];
 }
 
+// @Cleanup: Remove it, because we have the seek_previous_utf8_char or something like that.
 prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     if start == 0 return 0;
 
@@ -480,49 +373,6 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     return ptr - buffer.data;
 }
 
-num_of_chars_in_row :: (buffer: *Buffer, row: Row_Info) -> s64 {
-    assert(row.end <= buffer.count, "% %", row.end, buffer.count);
-
-    chars := 0;
-
-    at := row.start;
-    while at < row.end {
-        byte  := buffer.data[at];
-        at    += 1 + trailingBytesForUTF8[byte];
-        chars += 1;
-    }
-
-    assert(at == row.end);
-
-    return chars;
-}
-
-// byte_offset_to_col_index :: (buffer: *Buffer, offset: s64) -> s64 {
-//     index := find_row_index(buffer, offset);
-//     row := buffer.row_table[index];
-//     start := row.start;
-
-//     t := slice(buffer, start, offset-start);
-//     return utf8_count_chars(t);
-// }
-
-get_cursor_rel_x :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
-    x := get_cursor_x(buffer, cursor);
-    return xx (x - editor.left_offset + my_font.em_width);
-}
-
-get_cursor_rel_y :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> s64 {
-    row_index   := find_row_index(buffer, cursor.pos);
-    line_height := get_line_height(row_index + 1);
-    return xx (window_height - line_height + editor.top_offset);
-}
-
-get_cursor_y :: inline (buffer: *Buffer, cursor: *Cursor) -> s64 {
-    if cursor.pos == 0 return window_height;
-    row_index := find_row_index(buffer, cursor.pos);
-    return window_height - xx get_line_height(row_index + 1);
-}
-
 get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Font = null) -> s64 {
     if cursor.pos == 0 return 0;
     if cursor.x_cache != -1 return cursor.x_cache;
@@ -538,7 +388,7 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Fo
     s := get_row_as_string(buffer, row);
     s = slice(s, 0, cursor.pos - row.start);
 
-    if !font font = my_font;
+    if !font then font = primary_font;
     cx = measure_text_width(font, s);
 
     return cx;
@@ -584,35 +434,19 @@ my_init_fonts :: () {
             return result;
         }
 
-        my_font = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
-        my_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
-
         primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
-        primary_font_small = Simp.get_font_at_size(_BAKED_FONT_DATA, font_size_small);
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, xx font_xs_size);
     } else {
-        my_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-        my_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
-
         primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-        primary_font_small = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", font_size_small);
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, font_xs_size);
     }
 
-    // print("[font]: %\n\n", my_font.*);
-
-    assert(my_font != null);
+    assert(primary_font != null && primary_font_xs != null);
 }
 
 primary_font: *Simp.Dynamic_Font;
-primary_font_small: *Simp.Dynamic_Font;
 primary_font_xs: *Simp.Dynamic_Font;
 font_xs_size := 15 * .9;
-
-em :: (x: float = 1.0) -> float {
-    assert(my_font != null);
-    return my_font.em_width * x;
-}
 
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     line_height := get_line_height();
@@ -632,33 +466,10 @@ last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64
     return end_row;
 }
 
-get_line_height :: inline (row: s64 = 1) -> float32 {
-    return row * (my_font.default_line_spacing + line_height);
-}
-
-is_separator_char :: inline (c: s64, $include_underscore := false) -> bool {
-    #if include_underscore {
-        if c == #char "_" return true;
-    }
-
-    return c == #char " " || c == #char "\n" ||
-           c == #char "{" || c == #char "}"  ||
-           c == #char "." || c == #char ";"  ||
-           c == #char ">" || c == #char "<"  ||
-           c == #char "=" || c == #char "!"  ||
-           c == #char "[" || c == #char "]"  ||
-           c == #char "(" || c == #char ")"  ||
-           c == #char "#" || c == #char "?"  ||
-           c == #char "/" || c == #char "*"  ||
-           c == #char "-" || c == #char "+"  ||
-           c == #char "&" || c == #char "@"  ||
-           c == #char "$" || c == #char ","  ||
-           c == #char ":" || c == #char "|"  ||
-           c == #char "^" || c == #char "%"  ||
-           c == #char "~" || c == #char "\\" ||
-           c == #char "\"" || c == #char "'" ||
-           c == #char "`"
-           ;
+get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
+    if !font then font = primary_font;
+    
+    return row * (font.default_line_spacing + line_height);
 }
 
 count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s64 {
@@ -678,30 +489,6 @@ count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s6
 #if OS == .WINDOWS {
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
-}
-
-// @Temporary
-load_file_from_command_line :: (editor: *Editor) {
-    return;
-    // Args :: struct {
-    //     file: string;
-    // };
-
-    // args_success, args, is_set, free_args := parse_arguments(Args);
-    // // print("% % % %\n", args_success, args, is_set, free_args);
-    // if !args_success {
-    //     exit(1);
-    // }
-
-    // for free_args {
-    //     open_file(editor, it);
-    // }
-
-    // if is_set.file {
-    //     open_file(editor, args.file);
-    // }
-
-    // assert(free_args.count > 1);
 }
 
 utf8_count_chars :: inline (s: string) -> s64 {
@@ -786,46 +573,6 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1, false;
 }
 
-scan_dir :: (_path: string, recursive := false, follow_directory_symlinks := true, $files_only := true) -> [] string #must {
-    path := _path;
-
-    if path.count > 1 && ends_with(path, "/") then path.count -= 1;
-
-    // assert(is_directory(path)); // Error hint for the user @Todo
-
-    items : [..] string; // IS IT USING THE TEMP ALLOCATOR???
-
-    visitor :: (info: *File_Visit_Info, user_data: *[..] string) {
-        #if files_only {
-            if !info.is_directory && !info.is_symlink {
-                array_add(user_data, copy_string(info.full_name));
-            }
-        } else {
-            array_add(user_data, copy_string(info.full_name));
-        }
-    }
-
-    visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
-
-    return items;
-}
-
-scan_dir2 :: (path: string, recursive := false, follow_directory_symlinks := true, $files_only := true) -> [] File_Visit_Info #must {
-    if path.count > 1 && ends_with(path, "/") then path.count -= 1;
-
-    items : [..] File_Visit_Info;
-    items.allocator = temp;
-
-    visitor :: (info: *File_Visit_Info, user_data: *[..] File_Visit_Info) {
-        _info := array_add(user_data);
-        _info.* = info.*;
-    }
-
-    visit_files(path, recursive, *items, visitor, visit_directories=true, follow_directory_symlinks=follow_directory_symlinks);
-
-    return items;
-}
-
 path_unify_sepa :: inline (path: string) {
     for 0..path.count-1 {
         if path[it] == #char "\\" {
@@ -839,19 +586,6 @@ modify_string :: (target: *string, new_value: string) {
     // print("modify_string: '%' -> '%'\n", target.*, new_value);
     if target.count free(target.*);
     target.* = copy_string(new_value);
-}
-
-parent_dir :: (path: string) -> string {
-    t := path;
-
-    index := find_index_of_any_from_right(t, "\\/");
-    if index == -1 || index == 0 && t.count <= 2 return t;
-    t.count -= 1;
-
-    index = find_index_of_any_from_right(t, "\\/");
-    if index == -1 return t;
-
-    return slice(t, 0, index+1); // +1 because we want to keep the last "/" character
 }
 
 advance :: (arr: *[]$T, steps := 1) {
@@ -883,14 +617,6 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
         a / 255.0
     };
 }
-
-bytes_to_string :: inline (bytes: []u8) -> string {
-    return .{
-        data=bytes.data,
-        count=bytes.count
-    };
-}
-
 
 Program_Mode :: enum u8 {
     // CORE;

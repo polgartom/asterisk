@@ -68,8 +68,8 @@ save_cursor_col :: (b: *Buffer, c: *Cursor) {
 
     active = true;
     
-    pos_col = byte_pos_to_col_pos(b, c.pos);
-    sel_col = byte_pos_to_col_pos(b, c.sel);
+    pos_col = byte_pos_to_row_col_index(b, c.pos);
+    sel_col = byte_pos_to_row_col_index(b, c.sel);
     
     pos_row_index = find_row_index(b, c.pos);
     sel_row_index = find_row_index(b, c.sel);
