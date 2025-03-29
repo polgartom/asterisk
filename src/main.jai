@@ -123,8 +123,8 @@ main :: () {
 
     if files_from_cmdline.count == 2 {
         // @Temporary
-        // open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
-        // open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
+        open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
+        open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
 
     } else {
         for filepath: files_from_cmdline {

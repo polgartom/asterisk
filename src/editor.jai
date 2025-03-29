@@ -194,7 +194,7 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
 
     buffer.initialized = true;
 
-    commit_buffer_changes(buffer);
+    commit_buffer_changes(buffer, true);
 
     return buffer;
 }
@@ -551,9 +551,9 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
                 buffer.count = input.count;
             }
         }
-    }
 
-    commit_buffer_changes(buffer, force=true);
+        commit_buffer_changes(buffer, force=true);
+    }
 
     return buffer;
 }
@@ -599,7 +599,7 @@ close_buffer :: (buffer: *Buffer) {
         if e.active_buffer == buffer {
             b := FindNewBuffer(e);
             commit_buffer_changes(b, force=true);
-            
+
             change_active_buffer(e, b);
         }
     }
