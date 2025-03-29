@@ -1,19 +1,5 @@
-// Remove this @Cleanup
-SlowMemcpy :: (destination: *void, source: *void, count: s64) {
-    d := cast(*u8) destination;  s := cast(*u8) source;
-
-    #if 1 {
-        c_memmove(destination, source, xx count);
-    } else {
-        overlapping := destination > source && destination < source + count;
-        if !overlapping {
-            for 0 .. count - 1
-                d[it] = s[it];
-        } else {
-            for #v2 < count - 1 .. 0
-                d[it] = s[it];
-        }
-    }
+memmove :: inline (destination: *void, source: *void, count: s64) {
+    c_memmove(destination, source, xx count);
 }
 
 zero_memory :: inline (ptr: *void, size: s64) {

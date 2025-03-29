@@ -73,7 +73,7 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     right_rem_size  = max(0, right_rem_size);
 
     if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
-    SlowMemcpy(insert_at, text.data, text.count);
+    memmove(insert_at, text.data, text.count);
 
     buffer.count += text.count;
     buffer.dirty = true;
@@ -308,7 +308,7 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
         zero_memory(new_data, new_size);
 
         if buffer.data {
-            SlowMemcpy(new_data, buffer.data, buffer.allocated);
+            memmove(new_data, buffer.data, buffer.allocated);
             c_free(buffer.data);
         }
 
@@ -323,7 +323,7 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
             memset(new_colors_data, cast(u8)Color.TEXT_DEFAULT, buffer.allocated);
 
             if buffer.colors.count {
-                SlowMemcpy(new_colors_data, buffer.colors.data, buffer.colors.count);
+                memmove(new_colors_data, buffer.colors.data, buffer.colors.count);
                 c_free(buffer.colors.data);
             }
 
@@ -547,9 +547,7 @@ reset_history :: (using buffer: *Buffer) {
 switch_editor_mode :: (switch_to: Program_Mode) {
     if switch_to == {
         case .EDITOR;
-            active_widget_deactivate_all();
-            
-            mode = .EDITOR;                
+            mode = .EDITOR;
         case .WIDGET;
             mode = .WIDGET;
     }
@@ -584,7 +582,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             input = sanitize_and_free_input_data(input);
             if input.count {
                 maybe_grow(buffer, input.count);
-                SlowMemcpy(buffer.data, input.data, input.count);
+                memmove(buffer.data, input.data, input.count);
                 buffer.count = input.count;
             }
         }

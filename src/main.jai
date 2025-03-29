@@ -25,21 +25,11 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
-draw_special_chars := false;
-
 x_cursor_scroll_treshold := 30;
 y_cursor_scroll_treshold := 30;
 
 fps: float64;
 frametime: float64;
-
-editor_in_focus := true;
-
-// GETRECT - START
-// current_theme: s32 = xx Default_Themes.Default;
-current_theme: s32 = xx Default_Themes.Bentonite;
-my_theme: Overall_Theme;  // This gets filled out by calling the Theme_Proc for current_theme.
-// GETRECT - END
 
 my_window: Window_Type;
 
@@ -98,11 +88,12 @@ main :: () {
 
     load_global_config();
     init_keymaps();
+    
+    init_fonts();
 
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
     Simp.set_render_target(my_window);
 
-    my_init_fonts();
     ui_init(); // GetRect
 
     footer_height = primary_font.character_height*1.5;
@@ -164,7 +155,7 @@ main :: () {
                 window_height = it.height;
 
                 if should_reinit {
-                    my_init_fonts();
+                    init_fonts();
                 }
             }
         }
@@ -173,8 +164,6 @@ main :: () {
             c := map_color_to_vec4(.BACKGROUND);
             Simp.clear_render_target(c.x, c.y, c.z, c.w);
         }
-
-        handle_user_events();
 
         {
             enable(*keymap_set, editor_keymap, mode == .EDITOR);
@@ -189,8 +178,6 @@ main :: () {
                 should_quit = true;
                 break;
             }
-
-            getrect_handle_event(event);
 
             #if DEBUG {
                 if mode == .EDITOR && event.key_code == .ESCAPE {
@@ -420,7 +407,7 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
     return -1;
 }
 
-my_init_fonts :: () {
+init_fonts :: () {
     pixel_height := font_size;
 
     #if USE_BAKED_FONT {
@@ -468,7 +455,7 @@ last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64
 
 get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
     if !font then font = primary_font;
-    
+
     return row * (font.default_line_spacing + line_height);
 }
 
@@ -489,32 +476,6 @@ count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s6
 #if OS == .WINDOWS {
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
-}
-
-utf8_count_chars :: inline (s: string) -> s64 {
-    count := 0;
-    while s {
-        advance(*s, 1 + trailingBytesForUTF8[s[0]]);
-        count += 1;
-    }
-
-    return count;
-}
-
-utf8_advance_one_character :: (s: string) -> string {
-    assert(s.count > 0);
-
-    size := 1 + trailingBytesForUTF8[s[0]];
-    t := advance(s, size);
-
-    return t;
-}
-
-utf8_advance_one_character :: (s: *string) {
-    assert(s.count > 0);
-
-    size := 1 + trailingBytesForUTF8[s.data[0]];
-    advance(s, size);
 }
 
 seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
@@ -636,9 +597,7 @@ Range :: struct {
 #load "keymap.jai";
 #load "cursor.jai";
 #load "memory.jai";
-#load "render.jai";
 #load "draw.jai";
-#load "event.jai";
 #load "config.jai";
 #load "color.jai";
 #load "widget.jai";

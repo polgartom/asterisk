@@ -122,10 +122,6 @@ ToggleDevInfo :: () {
     show_debug_info = !show_debug_info;
 }
 
-DrawSpecialChars :: () {
-    draw_special_chars = !draw_special_chars;
-}
-
 move_up_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -997,7 +993,7 @@ ExtendSelectionByToken :: () {
             break;
         }
 
-        utf8_advance_one_character(*t);
+        advance(*t, 1 + trailingBytesForUTF8[t[0]]);
     }
 
     // @Incomplete: Currently, we are working with one cursor instance per buffer
@@ -1044,7 +1040,6 @@ register_keymap_procedures :: () {
     Add(editor_keymap, HideSecondEditorPanel);
 
     Add(editor_keymap, ToggleDevInfo);
-    Add(editor_keymap, DrawSpecialChars);
 
     Add(editor_keymap, CreateBuffer);
     Add(editor_keymap, CloseCurrentBuffer);

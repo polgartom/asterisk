@@ -13,7 +13,6 @@ ESC CloseCurrentWidget
 C-f OpenSearchWidget
 
 F1 ToggleDevInfo
-# F2 DrawSpecialChars
 
 C-s Save
 C-w CloseCurrentBuffer

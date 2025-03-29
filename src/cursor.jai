@@ -39,17 +39,6 @@ clamp_cursor :: (c: *Cursor, max: s64) {
     Clamp(*c.sel, 0, max);
 }
 
-count_selected_chars :: inline (buffer: *Buffer, using c: *Cursor) -> s64 {
-    start, end := selected_range(c);
-    if end - start == 0 return 0;
-
-    s: string = ---;
-    s.data = buffer.data + cast(s64)start;
-    s.count = end - start;
-
-    return utf8_count_chars(s);
-}
-
 get_cursor_min_max_indecies_as_pointers :: (cursor: *Cursor) -> (cursor_min_position: *s64, cursor_max_position: *s64) {
     c1 := *cursor.pos;
     c2 := *cursor.sel;
@@ -98,7 +87,7 @@ try_restore_cursor_col :: (b: *Buffer, c: *Cursor) {
         while s {
             if _col == col break;
             
-            utf8_advance_one_character(*s);
+            advance(*s, 1 + trailingBytesForUTF8[s[0]]);
             
             _col += 1;
         }
@@ -108,8 +97,6 @@ try_restore_cursor_col :: (b: *Buffer, c: *Cursor) {
 
     restored_c_pos := GetBytePos(pos_row_index, pos_col);
     restored_c_sel := GetBytePos(sel_row_index, sel_col);
-
-    // print("try_restore_cursor_col() -> pos: % -> % ; sel: % -> %\n", c.pos, restored_c_pos, c.sel, restored_c_sel);
 
     c.pos = restored_c_pos;
     c.sel = restored_c_sel;

@@ -2,7 +2,7 @@ draw_frame :: (current_time: float64) {
     Simp.set_shader_for_color(true);
 
     x, y, width, height := get_dimensions(my_window, true);
-    ui_per_frame_update(my_window, width, height, current_time);
+    ui_per_frame_update(my_window, width, height, current_time); // GetRect
 
     rect := get_rect(0.0, 0.0, xx width, xx height);
 
@@ -19,9 +19,7 @@ draw_frame :: (current_time: float64) {
         draw_editor(*editors[0], rect);
     }
 
-    // if editor_in_focus {
-    //     draw_debug_mouse_character_selection();
-    // }
+    // draw_debug_mouse_character_selection();
 
     // Widgets
     if mode == .WIDGET {
@@ -318,10 +316,6 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 }
 
 draw_widgets :: () {
-    proc := default_theme_procs[current_theme];
-    my_theme = proc();
-    set_default_theme(my_theme);
-
     if active_widget == {
         case Find_Text_Dialog; draw_find_text_dialog();
         case File_Browser;     draw_file_browser();
@@ -394,7 +388,7 @@ draw_buffer_browser :: () {
 
         linp.selected_index = -1;
 
-        array_add(*user_events, .{ type = .CLOSE_WIDGET });
+        close_current_widget();
     }
 
 }
@@ -488,7 +482,7 @@ draw_file_browser :: () {
                     change_active_buffer(active_editor, buffer);
                 }
 
-                array_add(*user_events, .{ type = .CLOSE_WIDGET });
+                close_current_widget();
             }
 
         }
@@ -764,6 +758,27 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
         }
     }
 }
+
+swap_buffers :: inline (window: Window_Type) {
+    Simp.swap_buffers(my_window, vsync=false);
+
+    // {
+    //     // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
+    //     BOOST_THE_FPS_MAGICALLY :: true;
+    //     #if BOOST_THE_FPS_MAGICALLY {
+    //         glFinish :: () #foreign;
+    //         glFinish();
+    //     }
+    // }
+}
+
+should_redraw :: inline () -> bool {
+    #if DEBUG return true;
+
+    return redraw_requested && mode == .WIDGET;
+}
+
+redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
 
 // DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
 // PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
