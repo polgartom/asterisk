@@ -1,4 +1,4 @@
-text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) -> *Text_Input {
+text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") -> *Text_Input {
     timer := seconds_since_init();
     defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
@@ -7,7 +7,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
         input = create_text_input(ui_id);
     }
 
-    update_text_input(input, r, font, placeholder, theme);
+    update_text_input(input, r, font, placeholder, theme, prefix);
 
     return input;
 }
@@ -20,7 +20,7 @@ create_text_input :: (ui_id: u64) -> *Text_Input {
     return input;
 }
 
-update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME) {
+update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") {
     typed = false;
 
     for event: events_to_handle_this_frame_for_widgets {
@@ -39,6 +39,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
             using Key_Code;
             if event.key_pressed {
                 if key == {
+                    case 65 /* a */;   if (event.ctrl_pressed) select_all(input);
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
                     case BACKSPACE;    { backspace_from_cursor(input, event.ctrl_pressed); typed = true; };
@@ -56,18 +57,35 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     
     weight :: 2;
     Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color); // border
+    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color); // input background
+
+    left := r.x + left_pad;
+    center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
+    // center := b + (t-b)*.5 - ch*.25;
     
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
+    // @Incomplete: Icon as prefix
+    if prefix {
+        left += label(xx left, xx center, prefix, font, theme.fg_color);
+    }
 
     if text {
-        Simp.prepare_text(font, text);
-        // center := b + (t-b)*.5 - ch*.25;
-        center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
-        Simp.draw_prepared_text(font, xx (r.x + left_pad), xx center, theme.fg_color);
+        label(xx left, xx center, text, font, theme.fg_color);
+
+        if has_selection(cursor) {
+            start, end := selected_range(*cursor);
+            
+            s := slice(text, 0, start);
+            x := left + measure_text_width(font, s);
+            
+            s = advance(text, start);
+            s.count = end - start;
+            w := measure_text_width(font, s);
+
+            Simp.set_shader_for_color(true);
+            Simp.immediate_quad(x, b + (t-b)*.5 - ch*.7, x + w, t - (t-b)*.5 + ch*.7, theme.selection_color);
+        }
+
     } else if placeholder {
-        left   := r.x + left_pad * 2;
-        // center := b + (t-b)*.5 - ch*.25;
-        center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
         label(xx left, xx center, placeholder, font, theme.placeholder_color);
     }
 
@@ -76,7 +94,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
 
         Simp.set_shader_for_color(true);
 
-        left := r.x + 5.0;
+        left = left - left_pad + 5.0;
         if cursor.pos && text {
             t := text;
             t.count = cursor.pos;
@@ -106,6 +124,7 @@ insert_text :: (using input: *Text_Input, s: string) -> bool {
 
     text.count += s.count;
     cursor.pos += s.count;
+    cursor.sel += s.count;
 
     return true;
 }
@@ -144,6 +163,9 @@ move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed 
     }
 
     cursor.pos = at;
+    if !shift_pressed {
+        cursor.sel = at;
+    }
 }
 
 move_cursor_right :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
@@ -165,17 +187,27 @@ move_cursor_right :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed
     }
 
     cursor.pos = at;
+    if !shift_pressed {
+        cursor.sel = at;
+    }
 }
 
 backspace_from_cursor :: (using i: *Text_Input, ctrl_pressed := false) {
-    if !text || !cursor.pos return;
+    if !text return;
 
-    from := cursor.pos;
-    move_cursor_left(i, ctrl_pressed=ctrl_pressed);
-    to := cursor.pos;
+    if !has_selection(cursor) {
+        // Do a selection "virtually"
+        move_cursor_left(i, shift_pressed=true, ctrl_pressed=ctrl_pressed);
+    }
+
+    to, from := selected_range(*cursor);
     if from == to return;
-
     assert(to < from);
+
+    defer {
+        cursor.pos = to;
+        cursor.sel = to;
+    }
 
     dest   := text.data  + to;
     source := text.data  + from;
@@ -183,6 +215,11 @@ backspace_from_cursor :: (using i: *Text_Input, ctrl_pressed := false) {
 
     c_memmove(dest, source, xx size);
     text.count -= (from - to);
+}
+
+select_all :: (using i: *Text_Input) {
+    cursor.pos = i.text.count;
+    cursor.sel = 0;
 }
 
 inputs: Table(u64, *Text_Input);
@@ -203,6 +240,7 @@ Text_Input :: struct {
         bg_color          = #run hex_to_vec4(0xa397a3ff),
         placeholder_color = Vector4.{0,0,0,.5},
         cursor_color      = #run hex_to_vec4(0x47253aff),
+        selection_color   = #run map_color_to_vec4(.TEXT_SELECTION),
         border_color      = #run hex_to_vec4(0x101953_ff),
     };
     
@@ -211,6 +249,7 @@ Text_Input :: struct {
         bg_color:          Vector4;
         placeholder_color: Vector4;
         cursor_color:      Vector4;
+        selection_color:   Vector4;
         border_color:      Vector4;
     }
 }

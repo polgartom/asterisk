@@ -20,33 +20,36 @@ find_occurences :: (_text: string) {
     }
 }
 
-next_occurance :: () {
+next_occurance :: ($roundtrip: bool) {
     using find_text_dialog;
 
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
     if occurences.count == 0 return;
-
-    if current_occurance != -1 {
-        current_occurance += 1;
-        if current_occurance == occurences.count then current_occurance = 0;        
-    } else {
-        for occurences {
-            if editor.cursor.pos <= it {
-                current_occurance = it_index;
-                break;
-            }
-        }
-
-        if current_occurance == -1 {
-            current_occurance = 0;
-        }
+    #if !roundtrip {
+        if current_occurance == occurences.count-1 return;
     }
+
+    Clamp(*current_occurance, 0, occurences.count-1);
+    current_occurance = (current_occurance + 1) % occurences.count;
 
     pos := occurences[current_occurance];
 
-    assert(pos != -1, "occurences: % ; current: %\n", occurences, current_occurance);
+    set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
+}
+
+previous_occurance :: () {
+    using find_text_dialog;
+
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    if occurences.count == 0 || current_occurance <= 0 return;
+
+    current_occurance -= 1;
+
+    pos := occurences[current_occurance];
 
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
 }
@@ -67,8 +70,12 @@ open_find_text_dialog :: () {
 update_find_text_dialog :: () {
     using find_text_dialog;
 
-    if input.typed && input.text {
-        find_occurences(input.text);
+    if input.typed {
+        if input.text {
+            find_occurences(input.text);
+        } else {
+            array_reset_keeping_memory(*occurences);
+        }
     }
 
     for event: events_to_handle_this_frame_for_widgets {
@@ -77,7 +84,9 @@ update_find_text_dialog :: () {
             using Key_Code;
             if event.key_pressed {
                 if key == {
-                    case ENTER; next_occurance();
+                    case ARROW_UP;   previous_occurance();
+                    case ARROW_DOWN; next_occurance(roundtrip=false);
+                    case ENTER;      next_occurance(roundtrip=true);
                 }
             }
         }

@@ -507,26 +507,27 @@ draw_find_text_dialog :: () {
 
         r := get_rect(
             ed_r.x - pad,
-            footer_height,
+            footer_height + 3.0,
             ed_r.w + pad,
             xx font.character_height * 2.0,
         );
 
         // @Temporary: We don't want to set those values on every frame, right?
         theme := Text_Input.DEFAULT_THEME;
-        /*
-        theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
-        theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
-        theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
-        theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
-*/
         theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-        theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
+        theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
         theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
         theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-        update_text_input(input, r, font, placeholder="Find...", theme);
+        if occurences {
+            theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
+        } else if input.text {
+            theme.border_color = #run hex_to_vec4(0xa9_22_22_ff);
+        }
+
+        prefix := tprint("%/% | ", current_occurance+1, occurences.count); // UGLY!
+        update_text_input(input, r, font, placeholder="Find...", theme, prefix);
     }
 
     update_find_text_dialog();
