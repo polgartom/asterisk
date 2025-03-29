@@ -261,8 +261,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     // Change character's color under the cursor
     if buffer.count {
         character := get_character_as_string_at(buffer, xx c.pos);
-        Font.prepare_text(primary_font, character);
-        Font.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
+        Simp.prepare_text(primary_font, character);
+        Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
     }
 }
 
@@ -768,7 +768,3 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
 // DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
 // PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
 // FOOTER_COLOR :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};
-
-#scope_file
-
-Font :: #import, file "font.jai";
