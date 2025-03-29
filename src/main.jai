@@ -361,30 +361,17 @@ byte_pos_to_col_pos :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     return col;
 }
 
-byte_pos_to_col_pos_hacky :: (buffer: *Buffer, byte_pos: s64) -> s64 {
+byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
-    // @HACKY!!
-    // If we are on the first byte of the row, that may indicate that it is the last column of the
-    // previous row — if the current row is not the first row — because we use the '\n' character to
-    // represent the line end. This means it serves as both the first character of the next row and the
-    // last character of the previous row at the same time.
-
     row := find_row(buffer, byte_pos);
-    if row.start != 0 && row.start == byte_pos {
-       byte_pos -= 1;
-       row = find_row(buffer, byte_pos);
-    }
 
     col := 0;
-    at  := row.start;
-    while at < byte_pos {
-        byte := buffer.data[at];
-        at += 1 + trailingBytesForUTF8[byte];
+    pos := row.start;
+    while pos < byte_pos {
         col += 1;
+        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
     }
-
-    // assert(at == byte_pos);
 
     return col;
 }

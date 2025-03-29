@@ -130,26 +130,21 @@ move_up_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    for row, row_index: row_table {
-        if editor.cursor.pos <= row.end {
-            if row_index == 0 break; // no more row above
+    c := *editor.cursor;
 
-            prev_row      := row_table[row_index-1];
-            prev_row_cols := num_of_chars_in_row(buffer, prev_row);
-            steps         := min(prev_row_cols, editor.cursor.col);
-            pos           := prev_row.start;
+    ri := find_row_index(buffer, c.pos);
+    if ri-1 < 0 return;
 
-            while steps {
-                byte := buffer.data[pos];
-                bytes := 1 + trailingBytesForUTF8[byte];
-                pos += bytes;
-                steps -= 1;
-            }
-
-            set_cursor_pos(buffer, *editor.cursor, pos, with_selection=with_selection);
-            break;
-        }
+    prev_row := row_table[ri-1];
+    col := 0;
+    pos := prev_row.start;
+    while pos < prev_row.end {
+        if col == c.col break;
+        col += 1;
+        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
     }
+
+    set_cursor_pos(buffer, c, pos, with_selection=with_selection);
 }
 
 MoveUp :: () {
@@ -160,26 +155,21 @@ move_down_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    for row, row_index: row_table {
-        if editor.cursor.pos <= row.end {
-            if row_index == row_table.count-1 break; // no more row below
+    c := *editor.cursor;
 
-            next_row      := row_table[row_index+1];
-            next_row_cols := num_of_chars_in_row(buffer, next_row);
-            steps         := min(next_row_cols, editor.cursor.col);
-            pos           := next_row.start;
+    ri := find_row_index(buffer, c.pos);
+    if ri+1 == row_table.count return;
 
-            while steps {
-                byte := buffer.data[pos];
-                bytes := 1 + trailingBytesForUTF8[byte];
-                pos += bytes;
-                steps -= 1;
-            }
-
-            set_cursor_pos(buffer, *editor.cursor, pos, with_selection=with_selection);
-            break;
-        }
+    next_row := row_table[ri+1];
+    col := 0;
+    pos := next_row.start;
+    while pos < next_row.end {
+        if col == c.col break;
+        col += 1;
+        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
     }
+
+    set_cursor_pos(buffer, c, pos, with_selection=with_selection);
 }
 
 MoveDown :: () {
@@ -921,7 +911,7 @@ IndentLeft :: () {
     c.sel = csel_after;
     clamp_cursor(c, buffer.count);
 
-    c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
+    c.col = byte_pos_to_row_col_index(buffer, c.pos);
 
     // set_cursor_pos(buffer, c, cpos_after, horizontal=true, with_selection=!has_selection(c));
 }
@@ -985,7 +975,7 @@ IndentRight :: () {
     commit_buffer_changes(buffer);
 
     clamp_cursor(c, buffer.count);
-    c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
+    c.col = byte_pos_to_row_col_index(buffer, c.pos);
 }
 
 // @Incomplete !!!

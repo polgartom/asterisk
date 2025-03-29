@@ -422,7 +422,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
             
             editor.cursor = h.cursor;
             clamp_cursor(*editor.cursor, buffer.count);
-            editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
+            editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 
             history_index -= 1;
 
@@ -505,7 +505,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
             
             editor.cursor = h.cursor;
             clamp_cursor(*editor.cursor, buffer.count);
-            editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
+            editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 
             history_index += 1;
 

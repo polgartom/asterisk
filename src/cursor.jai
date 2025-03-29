@@ -12,7 +12,7 @@ set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal
 
     // Explain!
     if horizontal {
-        cursor.col = byte_pos_to_col_pos_hacky(buffer, target_pos);
+        cursor.col = byte_pos_to_row_col_index(buffer, target_pos);
     }
 }
 
