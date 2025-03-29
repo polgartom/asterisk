@@ -34,9 +34,9 @@ set_selection_unsafe :: inline (c: *Cursor, range: Range) {
     b.* = range.end;
 }
 
-clamp_cursor :: (buffer: Buffer, c: *Cursor) {
-    Clamp(*c.pos, 0, buffer.count);
-    Clamp(*c.sel, 0, buffer.count);
+clamp_cursor :: (c: *Cursor, max: s64) {
+    Clamp(*c.pos, 0, max);
+    Clamp(*c.sel, 0, max);
 }
 
 count_selected_chars :: inline (buffer: *Buffer, using c: *Cursor) -> s64 {

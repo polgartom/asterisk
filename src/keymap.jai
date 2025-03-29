@@ -919,7 +919,7 @@ IndentLeft :: () {
 
     c.pos = cpos_after;
     c.sel = csel_after;
-    clamp_cursor(buffer, c);
+    clamp_cursor(c, buffer.count);
 
     c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
 
@@ -984,7 +984,7 @@ IndentRight :: () {
 
     commit_buffer_changes(buffer);
 
-    clamp_cursor(buffer, c);
+    clamp_cursor(c, buffer.count);
     c.col = byte_pos_to_col_pos_hacky(buffer, c.pos);
 }
 

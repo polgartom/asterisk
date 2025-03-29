@@ -211,8 +211,7 @@ commit_buffer_changes :: (buffer: *Buffer, $force := false) {
 
     for *e: editors {
         if e.active_buffer == buffer {
-            Clamp(*e.cursor.pos, 0, buffer.count);
-            Clamp(*e.cursor.sel, 0, buffer.count);
+            clamp_cursor(*e.cursor, buffer.count);
         }
     }
 }
@@ -405,7 +404,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
             replace_text_at(editor, buffer, Range.{start, end}, h.old_text, history=false);
             
             editor.cursor = h.cursor;
-            clamp_cursor(buffer, *editor.cursor);
+            clamp_cursor(*editor.cursor, buffer.count);
             editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
 
             history_index -= 1;
@@ -469,7 +468,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
             replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
             
             editor.cursor = h.cursor;
-            clamp_cursor(buffer, *editor.cursor);
+            clamp_cursor(*editor.cursor, buffer.count);
             editor.cursor.col = byte_pos_to_col_pos_hacky(buffer, editor.cursor.pos);
 
             history_index += 1;
