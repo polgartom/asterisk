@@ -12,8 +12,8 @@ DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 font_width: s64;
 line_height :: 0.0;
-font_size       :: 15;
-font_size_small :: 14; // @Incomplete: scale this by the window's ratio
+font_size       :: 14;
+font_size_small :: 13; // @Incomplete: scale this by the window's ratio
 
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
@@ -431,7 +431,7 @@ init_fonts :: () {
 
 primary_font: *Simp.Dynamic_Font;
 primary_font_xs: *Simp.Dynamic_Font;
-font_xs_size := 15 * .9;
+font_xs_size := 13;
 
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     line_height := get_line_height();

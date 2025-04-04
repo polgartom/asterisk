@@ -347,7 +347,9 @@ KEYWORDS :: string.[
     "if", "else", "elseif", "return", "for", "while", "true", "false", "null", "string", "struct", "class", "enum", "union", "const", "yield", "static", "inline",
     "continue", "break", "default", "exit", "assert", "use", "namespace",
     "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "float32", "float64", "size_t", "char", "short", "unsigned", "long", "int", "bool", "boolean", "double",
-    "public", "private", "protected", "defer", "cast", "case"
+    "public", "private", "protected", "defer", "cast", "case", "void",
+    
+    "using" // @XXX: Jai
 ];
 
 #import "Basic";
