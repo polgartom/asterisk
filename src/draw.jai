@@ -402,7 +402,7 @@ draw_file_browser :: () {
     theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
     theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
-    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_5f);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
     w := 400.0; // @Tempoary
@@ -414,8 +414,8 @@ draw_file_browser :: () {
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
-    
-    update_text_input(file_browser.fb_text_input, r, primary_font_xs, theme=theme);
+
+    update_text_input(file_browser.fb_text_input, r, primary_font_xs, placeholder="Search files by name", theme=theme);
     r.y -= 5.0; 
 
     {
