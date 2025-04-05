@@ -38,6 +38,8 @@ file_browser_change_dir :: (info: File_Visit_Info) -> (success: bool) {
 }
 
 file_browser_scan :: () {
+    MeasureProc();
+
     using file_browser;
 
     array_reset_keeping_memory(*items);
@@ -64,11 +66,15 @@ file_browser_scan :: () {
         parent_dir.is_directory = true;
     }
 
-    visitor :: (info: *File_Visit_Info, items: *[..] File_Visit_Info) {
-        new_item := array_add(items);        
+    visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
+        new_item := array_add(*browser.items);
 
         // Replace the temporary allocated strings
-        modify_string(*new_item.short_name, info.short_name);
+        _short_name := advance(info.full_name, file_browser.current_dir.count);
+        assert(!!_short_name);
+        if _short_name[0] == #char "/" then advance(*_short_name, 1);
+
+        modify_string(*new_item.short_name, _short_name);
         modify_string(*new_item.full_name, info.full_name);
         path_unify_sepa(new_item.short_name);
         path_unify_sepa(new_item.full_name);
@@ -79,9 +85,13 @@ file_browser_scan :: () {
         is_symlink             = info.is_symlink;
         is_directory           = info.is_directory;
         descend_into_directory = info.descend_into_directory;
+        
+        // @Temporary!
+        // if (info.short_name == ".git" || info.short_name == ".vs" || info.short_name == ".vscode") info.descend_into_directory = false;
+        // ll("> %\n", new_item.*);
     }
 
-    visit_files(current_dir, recursive=false, *items, visitor, visit_directories=true, follow_directory_symlinks=false);
+    visit_files(current_dir, recursive=true, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
 }
 
 file_browser: File_Browser;

@@ -13,6 +13,22 @@ clear_widget_events :: () {
 active_widget: Type;
 events_to_handle_this_frame_for_widgets: [..] Event;
 
+move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing := -1.0) -> float {
+    if a > b {
+        if amount_decreasing == -1  amount_decreasing = amount_increasing;
+
+        a -= amount_decreasing;
+
+        if a < b  a = b;
+    } else {
+        a += amount_increasing;
+        if a > b  a = b;
+    }
+
+    return a;
+}
+
+
 #load "widget/label.jai";
 #load "widget/text_input.jai";
 #load "widget/list_input.jai";

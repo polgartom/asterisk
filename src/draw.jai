@@ -440,6 +440,8 @@ draw_file_browser :: () {
         list_rect.h = 1.5*k;
         linp := list_input(list_rect, xx #location(), primary_font_xs, options);
         
+        if fb_text_input.typed then linp.scroll_value = 0.0;
+
         if linp.selected_index == -1 then linp.selected_index = 0;
 
         if linp.entered && options.count {

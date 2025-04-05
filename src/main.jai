@@ -3,7 +3,10 @@ window_height := 1200;
 
 should_quit := false;
 
-last_time : float64;
+current_time: float64 = 0.0;
+last_time: float64 = 0.0;
+current_dt: float64 = 0.0;
+
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
@@ -36,7 +39,6 @@ my_window: Window_Type;
 footer_height: float;
 
 frame := 0;
-current_frame := 0;
 second_elapsed := false;
 
 Args :: struct {
@@ -132,9 +134,8 @@ main :: () {
             #if OS == .WINDOWS WaitMessage();
         }
 
-        current_frame = frame;
-        defer frame += 1;
-
+        current_time = seconds_since_init();
+        current_dt = current_time - last_time;
         last_time = seconds_since_init();
 
         second_elapsed = false;
@@ -606,7 +607,7 @@ Code_get_identifier_name :: (name: Code) -> string {
 }
 
 #load "editor.jai";
-#load "keymap.jai";
+#load "editor_control.jai";
 #load "cursor.jai";
 #load "memory.jai";
 #load "draw.jai";

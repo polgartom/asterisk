@@ -15,6 +15,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     //     replace_options(input, new_options);
     // }
 
+    moved := false;
     entered = false;
     for event: events_to_handle_this_frame_for_widgets {
         if event.type == .KEYBOARD {
@@ -22,8 +23,8 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
             using Key_Code;
             if event.key_pressed {
                 if key == {
-                    case ARROW_UP;   move_to_prev_option(input, options);
-                    case ARROW_DOWN; move_to_next_option(input, options);
+                    case ARROW_UP;   move_to_prev_option(input, options); moved = true;
+                    case ARROW_DOWN; move_to_next_option(input, options); moved = true;
                     case ENTER;      entered = true;
                 }
             }
@@ -39,7 +40,7 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     x_pad := left_pad;
     y_pad := ch;
     x := r.x + x_pad;
-    y := t - y_pad-ch*.75;
+    y := t - y_pad - ch*.55;
     y_off := ch * 2.0;
 
     expected_bottom_with_options := t - (options.count+1) * y_off; // +1 because we keep a little bit padding on bottom
@@ -73,31 +74,54 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
 
     y += scroll_value;
 
+    max_scroll_value := options.count*y_off;
+
     if selected_index != -1 {
         i := selected_index;
-        vy := y - (i*y_off);
-        if vy < b + ch {
-            scroll_value += y_off;
-        } else if vy >= t {
-            scroll_value -= y_off;
+        target := y - (i*y_off);
+        bottom_threshold := b + ch*3.0;
+
+        if moved {
+            if target < bottom_threshold {
+                _anim.active = true;
+                _anim.start  = scroll_value;
+                _anim.target = scroll_value + (bottom_threshold - target);
+                _anim.duration = 0.05;
+                _anim.elapsed = 0.0;
+            } else if target >= t {
+                _anim.active = true;
+                _anim.start  = scroll_value;
+                _anim.target = scroll_value - (target + y_off - t);
+                _anim.duration = 0.05;
+                _anim.elapsed = 0.0;
+            }
+        }
+
+        if _anim.active {
+            _anim.elapsed += xx current_dt;
+            d := clamp(_anim.elapsed / _anim.duration, 0.0, 1.0);
+            if d == 1.0 then _anim.active = false;
+
+            val := lerp(_anim.start, _anim.target, d);
+            // ll("> % / % ; elapsed: % ; d: %\n", val, _anim.target, _anim.elapsed, d);
+
+            scroll_value = val;
         }
         
-        Clamp(*scroll_value, 0.0, options.count*y_off);
+        Clamp(*scroll_value, 0.0, max_scroll_value);
     }
 
     for opt, i: options {
         defer y -= y_off;
-        // if y < b || y >= t continue; // We should filter out the options that are not visible (overflowed) before we render. @Incomplete
+        
+        outside := y < b || y >= t;
+        if outside continue;
 
         Simp.set_shader_for_color(true);
         // Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
-
         color := theme.fg_color;
-        
         if i == selected_index {
             Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, theme.current_item_bg_color);
-            //label(xx (x+2), xx ((y+ch*.25)-2.5), opt.label, font, .{0.0,0.0,0.0,.4}); // shadow
-            
             color = theme.current_item_fg_color;
         }
         
@@ -108,6 +132,23 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
 }
 
 #scope_file
+
+_current: float64 = 0.0;
+_target: float64 = 1131.150024;
+_dt: float64 = 0.0;
+_time: float64 = 0.0;
+
+_anim: Anim;
+
+Anim :: struct {
+    active: bool;
+
+    start: float;
+    target: float;
+
+    duration: float;
+    elapsed: float;
+}
 
 move_to_next_option :: (using i: *List_Input, options: [] List_Input.Option) {
     if !options.count return;
@@ -143,7 +184,9 @@ List_Input :: struct {
     scroll_value: float;
     entered := false;
     selected_index := -1;
-    
+
+    active_t: float;
+
     Option :: struct (T: Type) {
         label: string;
         ref: *T;
