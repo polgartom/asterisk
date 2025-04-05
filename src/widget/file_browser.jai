@@ -37,6 +37,7 @@ file_browser_change_dir :: (info: File_Visit_Info) -> (success: bool) {
     return file_browser_change_dir(info.full_name);
 }
 
+// @Speed: We don't want to run this on every file browser dialog open!
 file_browser_scan :: () {
     MeasureProc();
 
@@ -67,7 +68,14 @@ file_browser_scan :: () {
     // }
 
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
-        if info.is_directory return;
+        if info.is_directory {
+            // @Temporary @Todo Put this to a project config file
+            if (info.short_name == ".git" || info.short_name == ".vs" || info.short_name == ".vscode" || info.short_name == ".build") {
+                info.descend_into_directory = false;
+            }
+            
+            return;
+        }
 
         new_item := array_add(*browser.items);
 
@@ -86,11 +94,7 @@ file_browser_scan :: () {
         had_error              = info.had_error;
         is_symlink             = info.is_symlink;
         is_directory           = info.is_directory;
-        descend_into_directory = info.descend_into_directory;
-        
-        // @Temporary!
-        // if (info.short_name == ".git" || info.short_name == ".vs" || info.short_name == ".vscode") info.descend_into_directory = false;
-        // ll("> %\n", new_item.*);
+        descend_into_directory = info.descend_into_directory;        
     }
 
     // @Todo: We need to make a recursive version of this file browser, like the "Search files by name" dialog in vscode
