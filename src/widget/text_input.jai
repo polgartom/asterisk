@@ -1,3 +1,7 @@
+//
+// @Todo: Handle overflowing text by scrolling when moving the cursor left or right
+//
+
 text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") -> *Text_Input {
     timer := seconds_since_init();
     defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
@@ -45,6 +49,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
                     case 65 /* a */;   if (event.ctrl_pressed) select_all(input);
                     case 67 /* c */;   if (event.ctrl_pressed) copy_to_os_clipboard(input);
                     case 86 /* v */;   if (event.ctrl_pressed) insert_os_clipboard_text(input);
+
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
                     case BACKSPACE;    { backspace_from_cursor(input, event.ctrl_pressed); typed = true; };
@@ -265,6 +270,7 @@ Text_Input :: struct {
 
     typed := false;
 
+    // @Todo: Handle buffer overflows
     MAX_BUFFER_SIZE :: 8000;
     input_buffer: [MAX_BUFFER_SIZE] u8;
 
