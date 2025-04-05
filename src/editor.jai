@@ -118,11 +118,11 @@ delete_selected_range_if_has_any :: inline (editor: *Editor, buffer: *Buffer, cu
     return false;
 }
 
-delete_selected_range :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
+delete_selected_range :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, $history := true) {
     if !has_selection(cursor) return;
 
     start, end := selected_range(cursor);
-    remove_text_from_left(editor, buffer, start, end - start);
+    remove_text_from_left(editor, buffer, start, end - start, history=history);
     set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
 }
 

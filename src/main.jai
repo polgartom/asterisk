@@ -173,6 +173,8 @@ main :: () {
 
         wait_for_this_key_to_release: *u32; // Key_Code
 
+        ctrl_released := false;
+
         for event : events_this_frame {
             if event.type == .QUIT {
                 // print("quit!\n");
@@ -206,7 +208,10 @@ main :: () {
                 continue;
             }
 
-            // print("event: % ; % ; handled: %\n", event.modifier_flags.packed, event.ctrl_pressed, handled);
+            // @Cleanup: !!!!
+            if event.key_code == .CTRL && !event.key_pressed {
+                ctrl_released = true;
+            }
 
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT && !event.ctrl_pressed {
@@ -220,6 +225,19 @@ main :: () {
                 }
             }
         }
+
+        if ctrl_released {
+            if word_complete.active {
+                word_complete_abort();
+            }
+        }
+
+        // word_complete.should_abort = true;
+        // defer {
+        //     if word_complete.should_abort && word_complete.active {
+        //         word_complete_abort();
+        //     }
+        // }
 
         for * buffers {
             commit_buffer_changes(it);
@@ -495,10 +513,15 @@ seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
     return point + 1 + trailingBytesForUTF8[s[point]];
 }
 
-seek_left_utf8_until_alphanum :: (s: string, point: int) -> int {
+seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alphanum_char := true) -> int {
     while point {
         point = seek_left_one_utf8_character_byte_pos(s, point);
-        if !is_alphanum(s[point]) break;
+        if !is_alphanum(s[point]) {
+            #if !include_last_non_alphanum_char {
+                point += 1;
+            }
+            break;
+        }
     }
 
     return point;
@@ -553,6 +576,10 @@ advance :: (arr: *[]$T, steps := 1) {
 
     arr.data  += steps;
     arr.count -= steps;
+}
+
+get_range_as_string :: (s: string, range: Range) -> string {
+    return slice(s, range.start, range.end - range.start);    
 }
 
 rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
@@ -616,6 +643,8 @@ Code_get_identifier_name :: (name: Code) -> string {
 #load "widget.jai";
 #load "lang.jai";
 #load "debug.jai";
+
+#load "word_completion.jai";
 
 #import "System";
 #import "Basic";

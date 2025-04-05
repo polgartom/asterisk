@@ -285,7 +285,7 @@ is_digit :: inline (c: u32) -> bool{
     return (c >= #char "0" && c <= #char "9");
 }
 
-is_alphanum :: (c: u32) -> bool {
+is_alphanum :: inline (c: u32) -> bool {
     return is_alpha(c) || is_digit(c) || c == #char "_";
 }
 
@@ -301,6 +301,10 @@ is_line_end :: inline (c: u32) -> bool {
 
 is_hex_digit :: (c: u32) -> bool {
     return (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F") || (c >= #char "0" && c <= #char "9");
+}
+
+is_upper :: inline (char: u8) -> bool {
+    return char >= #char "A" && char <= #char "Z";
 }
 
 Token_Type :: enum {

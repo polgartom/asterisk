@@ -1058,6 +1058,10 @@ Redo :: () {
     redo(editor, buffer);
 }
 
+WordCompletion :: () {
+    word_completion();
+}
+
 ////////////////////////////////////
 //
 
@@ -1144,6 +1148,8 @@ register_keymap_procedures :: () {
 
     Add(editor_keymap, Undo);
     Add(editor_keymap, Redo);
+
+    Add(editor_keymap, WordCompletion);
 }
 
 init_keymaps :: () {
@@ -1260,6 +1266,8 @@ C-[ IndentLeft
 
 C-z Undo
 C-y Redo
+
+C-e WordCompletion
 
 DONE;
 
