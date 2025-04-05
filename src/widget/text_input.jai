@@ -48,7 +48,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
                 if key == {
                     case 65 /* a */;   if (event.ctrl_pressed) select_all(input);
                     case 67 /* c */;   if (event.ctrl_pressed) copy_to_os_clipboard(input);
-                    case 86 /* v */;   if (event.ctrl_pressed) insert_os_clipboard_text(input);
+                    case 86 /* v */;   if (event.ctrl_pressed) { insert_os_clipboard_text(input); typed = true; }
 
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
