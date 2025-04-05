@@ -1,7 +1,6 @@
+
 // The r: Rect's h (height) param represents the maximum height of the list.
-list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_Input.Option = .[], theme := List_Input.DEFAULT_THEME) -> *List_Input {
-//    timer := seconds_since_init();
-//    defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
+list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
     
     input, found := table_find(*inputs, ui_id);
     if !found {
@@ -10,10 +9,6 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
     }
 
     using input;
-
-    // if new_options.count {
-    //     replace_options(input, new_options);
-    // }
 
     moved := false;
     entered = false;
@@ -102,10 +97,8 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
             d := clamp(_anim.elapsed / _anim.duration, 0.0, 1.0);
             if d == 1.0 then _anim.active = false;
 
-            val := lerp(_anim.start, _anim.target, d);
-            // ll("> % / % ; elapsed: % ; d: %\n", val, _anim.target, _anim.elapsed, d);
-
-            scroll_value = val;
+            scroll_value := lerp(_anim.start, _anim.target, d);
+            // ll("> % / % ; elapsed: % ; d: %\n", scroll_value, _anim.target, _anim.elapsed, d);
         }
         
         Clamp(*scroll_value, 0.0, max_scroll_value);
@@ -132,11 +125,6 @@ list_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, options: []List_In
 }
 
 #scope_file
-
-_current: float64 = 0.0;
-_target: float64 = 1131.150024;
-_dt: float64 = 0.0;
-_time: float64 = 0.0;
 
 _anim: Anim;
 
@@ -166,16 +154,6 @@ move_to_prev_option :: (using i: *List_Input, options: [] List_Input.Option) {
     }
 }
 
-// replace_options :: (using i: *List_Input, new_options: [] List_Input.Option) {
-//     array_reset_keeping_memory(*options);
-
-//     for new_opt: new_options {
-//         opt := array_add(*options);
-//         assert(!!new_opt.label);
-//         modify_string(*opt.label, new_opt.label);
-//     }
-// }
-
 inputs: Table(u64, *List_Input);
 
 #scope_export
@@ -185,11 +163,9 @@ List_Input :: struct {
     entered := false;
     selected_index := -1;
 
-    active_t: float;
-
-    Option :: struct (T: Type) {
+    Option :: struct ($T: Type = void) {
         label: string;
-        ref: *T;
+        ref: T;
     }
 
     DEFAULT_THEME :: Theme.{

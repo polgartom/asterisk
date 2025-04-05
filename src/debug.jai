@@ -14,6 +14,6 @@ ll :: (fmt: string, args: .. Any) #expand {
 MeasureProc :: () #expand {
     time := seconds_since_init();
     `defer {
-        print("[%/time] %ms", #procedure_name(), (seconds_since_init() - time) * 1000);
+        print("[%/time] %ms\n", #procedure_name(), (seconds_since_init() - time) * 1000);
     };
 } @PrintLike

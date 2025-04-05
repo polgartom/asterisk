@@ -340,7 +340,7 @@ draw_buffer_browser :: () {
     r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
     tinp := text_input(r, xx #location(), font, placeholder="Switch to buffer", theme=theme);
 
-    options: [..] List_Input.Option(Buffer);
+    options: [..] List_Input.Option(*Buffer);
     options.allocator = temp;
     array_reserve(*options, buffers.count);
 
@@ -353,12 +353,12 @@ draw_buffer_browser :: () {
 
         title := "* New *";
         if b.exists_on_disk {
+            assert(!!b.filepath);
+
             title = b.filepath;
-            // if begins_with(title, wd) {
-            //     skip := wd.count;
-            //     if title[wd.count] == #char "/" skip += 1; 
-            //     advance(*title, skip);
-            // }
+            if begins_with(title, wd) {
+                advance(*title, wd.count);
+            }
         }
 
         if tinp.text {
@@ -372,7 +372,7 @@ draw_buffer_browser :: () {
     list_rect := r;
     k := ed_r.h * .1;
     list_rect.h = 1.5*k;
-    linp := list_input(list_rect, xx #location(), font, options);
+    linp := list_input(list_rect, xx #location(), options, font);
     
     if linp.selected_index == -1 then linp.selected_index = 0;
 
@@ -422,7 +422,7 @@ draw_file_browser :: () {
     {
         using file_browser;
 
-        options: [..] List_Input.Option(void);
+        options: [..] List_Input.Option;
         options.allocator = temp;
         array_reserve(*options, items.count);
 
@@ -432,14 +432,14 @@ draw_file_browser :: () {
                 found, rem := contains_nocase(it.short_name, fb_text_input.text);
                 if !found continue;
             }
-            array_add(*options, .{label=copy_temporary_string(it.short_name)});
+            array_add(*options, .{label = it.short_name});
         }
 
         list_rect := r;
         list_rect.w = w*2.0;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), primary_font_xs, options);
-        
+        linp := list_input(list_rect, xx #location(), options, primary_font_xs);
+
         if fb_text_input.typed then linp.scroll_value = 0.0;
 
         if linp.selected_index == -1 then linp.selected_index = 0;
