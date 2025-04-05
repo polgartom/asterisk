@@ -328,7 +328,6 @@ draw_buffer_browser :: () {
     pad  := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
-    // @Temporary: We don't want to set those values on every frame, right?
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
@@ -374,6 +373,7 @@ draw_buffer_browser :: () {
     list_rect.h = 1.5*k;
     linp := list_input(list_rect, xx #location(), options, font);
     
+    if tinp.typed then linp.scroll_value = 0.0;
     if linp.selected_index == -1 then linp.selected_index = 0;
 
     if linp.entered && options.count {
@@ -398,7 +398,6 @@ draw_file_browser :: () {
     pad  := cast(float32) primary_font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
-    // @Temporary: We don't want to set those values on every frame, right?
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
     theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
@@ -426,12 +425,13 @@ draw_file_browser :: () {
         options.allocator = temp;
         array_reserve(*options, items.count);
 
-        // @Speed: We are doing this on every frame!!!
         for items {
             if fb_text_input.text {
-                found, rem := contains_nocase(it.short_name, fb_text_input.text);
+                // found := wildcard_match(it.short_name, fb_text_input.text);
+                found := contains_nocase(it.short_name, fb_text_input.text);
                 if !found continue;
             }
+
             array_add(*options, .{label = it.short_name});
         }
 
@@ -441,7 +441,6 @@ draw_file_browser :: () {
         linp := list_input(list_rect, xx #location(), options, primary_font_xs);
 
         if fb_text_input.typed then linp.scroll_value = 0.0;
-
         if linp.selected_index == -1 then linp.selected_index = 0;
 
         if linp.entered && options.count {

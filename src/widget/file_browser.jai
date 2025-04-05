@@ -50,23 +50,25 @@ file_browser_scan :: () {
         file_browser_change_dir(wd);
     }
 
-    {
-        parent_dir := array_add(*items);
-        parent_dir.short_name = "..";
-        modify_string(*parent_dir.full_name, current_dir);
-        t := path_strip_filename(parent_dir.full_name);
-        if t then parent_dir.full_name = t;
+    // {
+    //     parent_dir := array_add(*items);
+    //     parent_dir.short_name = "..";
+    //     modify_string(*parent_dir.full_name, current_dir);
+    //     t := path_strip_filename(parent_dir.full_name);
+    //     if t then parent_dir.full_name = t;
 
-        if ends_with(parent_dir.full_name, "/") then parent_dir.full_name.count -= 1;
+    //     if ends_with(parent_dir.full_name, "/") then parent_dir.full_name.count -= 1;
         
-        is, success := is_directory(parent_dir.full_name);
-        assert(success, "Failed to % check if it's a directory or not.", parent_dir.full_name);
-        assert(is, "The % is doesn't a valid directory!", parent_dir.full_name);
+    //     is, success := is_directory(parent_dir.full_name);
+    //     assert(success, "Failed to % check if it's a directory or not.", parent_dir.full_name);
+    //     assert(is, "The % is doesn't a valid directory!", parent_dir.full_name);
 
-        parent_dir.is_directory = true;
-    }
+    //     parent_dir.is_directory = true;
+    // }
 
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
+        if info.is_directory return;
+
         new_item := array_add(*browser.items);
 
         // Replace the temporary allocated strings
@@ -92,7 +94,7 @@ file_browser_scan :: () {
     }
 
     // @Todo: We need to make a recursive version of this file browser, like the "Search files by name" dialog in vscode
-    visit_files(current_dir, recursive=false, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
+    visit_files(current_dir, recursive=true, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
 }
 
 file_browser: File_Browser;
