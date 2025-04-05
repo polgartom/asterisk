@@ -678,6 +678,8 @@ create_buffer :: () -> *Buffer {
 change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     editor.active_buffer = buffer;
     
+    clamp_cursor(*editor.cursor, buffer.count);
+
     // @Todo: Restore the viewport and the cursors
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
