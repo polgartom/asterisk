@@ -97,7 +97,7 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
             d := clamp(_anim.elapsed / _anim.duration, 0.0, 1.0);
             if d == 1.0 then _anim.active = false;
 
-            scroll_value := lerp(_anim.start, _anim.target, d);
+            scroll_value = lerp(_anim.start, _anim.target, d);
             // ll("> % / % ; elapsed: % ; d: %\n", scroll_value, _anim.target, _anim.elapsed, d);
         }
         
