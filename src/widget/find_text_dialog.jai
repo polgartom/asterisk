@@ -91,10 +91,7 @@ open_find_text_dialog :: () {
     using find_text_dialog;
     
     if !input then input = create_text_input(cast(u64, #location()));
-    clear_text(input);
-
-    array_reset_keeping_memory(*occurences);
-    current_occurance = -1;
+    if input.text then select_all(input);
 
     switch_editor_mode(.WIDGET);
     active_widget = Find_Text_Dialog;

@@ -91,7 +91,8 @@ file_browser_scan :: () {
         // ll("> %\n", new_item.*);
     }
 
-    visit_files(current_dir, recursive=true, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
+    // @Todo: We need to make a recursive version of this file browser, like the "Search files by name" dialog in vscode
+    visit_files(current_dir, recursive=false, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
 }
 
 file_browser: File_Browser;

@@ -30,6 +30,8 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
             utf8_text := character_utf32_to_utf8(event.utf32);
             defer free(utf8_text);
 
+            delete_selected_text(input);
+
             insert_text(input, utf8_text);
             
             typed = true;
@@ -38,8 +40,11 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
             key := event.key_code;
             using Key_Code;
             if event.key_pressed {
+                // ll("> %\n", key);
                 if key == {
                     case 65 /* a */;   if (event.ctrl_pressed) select_all(input);
+                    case 67 /* c */;   if (event.ctrl_pressed) copy_to_os_clipboard(input);
+                    case 86 /* v */;   if (event.ctrl_pressed) insert_os_clipboard_text(input);
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
                     case BACKSPACE;    { backspace_from_cursor(input, event.ctrl_pressed); typed = true; };
@@ -129,17 +134,32 @@ insert_text :: (using input: *Text_Input, s: string) -> bool {
     return true;
 }
 
+insert_os_clipboard_text :: (using i: *Text_Input) {
+    delete_selected_text(i);
+
+    clipboard_text := Clipboard.os_clipboard_get_text();
+    defer free(clipboard_text);
+
+    insert_text(i, clipboard_text);
+}
+
+copy_to_os_clipboard :: (using i: *Text_Input) {
+    if !has_selection(i.cursor) return;
+
+    s := get_selected_text(i);
+    Clipboard.os_clipboard_set_text(s);
+}
+
+get_selected_text :: (using i: *Text_Input) -> string {
+    start, end := selected_range(*cursor);
+    return slice(text, start, end - start);
+}
+
 clear_text :: (using i: *Text_Input) {
     text.count = 0;
     
     cursor.pos = 0;
     cursor.sel = 0;
-}
-
-#scope_file
-
-clamp_cursor_pos :: (using i: *Text_Input) {
-    Clamp(*cursor.pos, 0, text.count);
 }
 
 move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
@@ -217,9 +237,22 @@ backspace_from_cursor :: (using i: *Text_Input, ctrl_pressed := false) {
     text.count -= (from - to);
 }
 
+delete_selected_text :: (using i: *Text_Input) {
+    if !has_selection(i.cursor) return;
+
+    backspace_from_cursor(i);
+}
+
 select_all :: (using i: *Text_Input) {
     cursor.pos = i.text.count;
     cursor.sel = 0;
+}
+
+#scope_file
+
+clamp_cursor_pos :: (using i: *Text_Input) {
+    Clamp(*cursor.pos, 0, text.count);
+    Clamp(*cursor.sel, 0, text.count);
 }
 
 inputs: Table(u64, *Text_Input);
