@@ -643,7 +643,6 @@ Code_get_identifier_name :: (name: Code) -> string {
 #load "widget.jai";
 #load "lang.jai";
 #load "debug.jai";
-
 #load "word_completion.jai";
 
 #import "System";

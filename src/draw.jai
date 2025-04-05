@@ -180,8 +180,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             fileinfo := tprint(
                 "%1%2%3",
                 path,
-                ifx !exists_on_disk then " <new>"      else "",
-                ifx dirty           then " (unsaved)"  else "",
+                ifx !exists_on_disk then " <new>" else "",
+                ifx unsaved         then "*"      else "",
             );
 
             width = Simp.prepare_text(font, fileinfo);

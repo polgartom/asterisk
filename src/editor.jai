@@ -77,6 +77,7 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
 
     buffer.count += text.count;
     buffer.dirty = true;
+    buffer.unsaved = true;
 
     #if history {
         add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
@@ -291,6 +292,7 @@ shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
     count -= (from - to);
 
     dirty = true;
+    unsaved = true;
 }
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
@@ -734,6 +736,7 @@ Buffer :: struct {
     colors: [] Color;
 
     dirty := false;
+    unsaved := false;
 
     row_table: [..] Row_Info;
     row_table_recalc_time: float64 = 0.0;

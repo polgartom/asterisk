@@ -123,14 +123,16 @@ Save :: () {
 
         s := to_string(buffer);
         File.write_entire_file(filepath, to_string(buffer));
+        
         exists_on_disk = file_exists(filepath);
+        unsaved = false;
         
     } else {
         #if OS == .WINDOWS {
             Win :: #import "Windows";
 
-            OFN_FILEMUSTEXIST :: 0x00001000;
-            OFN_PATHMUSTEXIST :: 0x00000800;
+            OFN_FILEMUSTEXIST   :: 0x00001000;
+            OFN_PATHMUSTEXIST   :: 0x00000800;
             OFN_OVERWRITEPROMPT :: 0x00000002;
 
             ofn: Win.OPENFILENAMEA;
@@ -157,7 +159,9 @@ Save :: () {
                 // ll("% ; %\n", ofn, filepath);
 
                 File.write_entire_file(filepath, to_string(buffer));
+                
                 exists_on_disk = file_exists(filepath);
+                unsaved = false;
             }
 
         } else {
