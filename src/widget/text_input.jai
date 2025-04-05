@@ -50,6 +50,14 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
                     case 67 /* c */;   if (event.ctrl_pressed) copy_to_os_clipboard(input);
                     case 86 /* v */;   if (event.ctrl_pressed) { insert_os_clipboard_text(input); typed = true; }
 
+                    case HOME; {
+                        if event.alt_pressed {
+                            move_cursor_to_end(input, event.shift_pressed);
+                        } else {
+                            move_cursor_to_start(input, event.shift_pressed);
+                        }
+                    }
+                    case END;          move_cursor_to_end(input, event.shift_pressed);
                     case ARROW_LEFT;   move_cursor_left(input, event.shift_pressed, event.ctrl_pressed);
                     case ARROW_RIGHT;  move_cursor_right(input, event.shift_pressed, event.ctrl_pressed);
                     case BACKSPACE;    { backspace_from_cursor(input, event.ctrl_pressed); typed = true; };
@@ -214,6 +222,20 @@ move_cursor_right :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed
     cursor.pos = at;
     if !shift_pressed {
         cursor.sel = at;
+    }
+}
+
+move_cursor_to_start :: (using i: *Text_Input, shift_pressed := false) {
+    cursor.pos = 0;
+    if !shift_pressed {
+        cursor.sel = 0;
+    }
+}
+
+move_cursor_to_end :: (using i: *Text_Input, shift_pressed := false) {
+    cursor.pos = text.count;
+    if !shift_pressed {
+        cursor.sel = text.count;
     }
 }
 
