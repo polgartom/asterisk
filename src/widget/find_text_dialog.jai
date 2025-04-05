@@ -31,6 +31,22 @@ next_occurance :: ($roundtrip: bool) {
         if current_occurance == occurences.count-1 return;
     }
 
+    // Jump to the first occurance after the current cursor position
+    if current_occurance == -1 {
+        cursor_pos := editor.cursor.pos;
+        for pos, index: occurences {
+            // Use less-than instead of less-than-or-equal,  
+            // because with that, we get stuck on the current occurrence based on the cursor position.  
+            // This would require an extra keypress to move to the next match,  
+            // which we want to avoid.
+            if cursor_pos < pos {
+                current_occurance = index;
+                set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
+                return;
+            }
+        }
+    }
+
     Clamp(*current_occurance, 0, occurences.count-1);
     current_occurance = (current_occurance + 1) % occurences.count;
 
@@ -45,7 +61,24 @@ previous_occurance :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if occurences.count == 0 || current_occurance <= 0 return;
+    if occurences.count == 0 || current_occurance == 0 return;
+
+    // Jump to the first occurance before the current cursor position
+    if current_occurance == -1 {
+        cursor_pos := editor.cursor.pos;
+        for pos, index: occurences {
+            if cursor_pos <= pos {
+                if index != 0 {
+                    index -= 1;
+                    pos = occurences[index];
+                }
+
+                current_occurance = index;
+                set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
+                return;
+            }
+        }
+    }
 
     current_occurance -= 1;
 
