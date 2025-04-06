@@ -33,7 +33,9 @@ HideSecondEditorPanel :: () {
 
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
-    editor.active_buffer = create_or_find_empty_buffer(editor);
+    
+    buffer := create_or_find_empty_buffer(editor);
+    change_active_buffer(editor, buffer);
 }
 
 CloseCurrentBuffer :: () {
