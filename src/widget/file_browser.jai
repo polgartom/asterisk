@@ -70,7 +70,7 @@ file_browser_scan :: () {
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
         if info.is_directory {
             // @Temporary @Todo Put this to a project config file
-            if (info.short_name == ".git" || info.short_name == ".vs" || info.short_name == ".vscode" || info.short_name == ".build") {
+            if (info.short_name == ".git" || info.short_name == ".vs" || info.short_name == ".vscode" || info.short_name == ".build" || info.short_name == ".idea" || info.short_name == "node_modules" || info.short_name == "vendor") {
                 info.descend_into_directory = false;
             }
             
