@@ -14,7 +14,7 @@ tokenize :: (buffer: *Buffer, $language: Language) {
     if at == end return;
 
     while at < end {
-        if is_alpha(at[0]) {
+        if is_alpha(at[0]) || at[0] == #char "_" {
             if at > buffer.data {
                 prev_char := (at-1).*;
                 if is_alphanum(prev_char) { // It can't be an identifier if the previous char is not a separator
