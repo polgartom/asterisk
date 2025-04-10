@@ -82,6 +82,12 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     #if history {
         add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
     }
+
+    // @Temporary? 
+    // We must rescan the lines right after text insertion because the byte_pos_to_row_col_index() works on the buffer's "row_table" that is dirty at that point so
+    // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
+    // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
+    commit_buffer_changes(buffer);
 }
 
 remove_text_from_right_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
@@ -205,7 +211,7 @@ commit_buffer_changes :: (buffer: *Buffer, $force := false) {
         if !buffer.dirty return;
     }
 
-    defer buffer.dirty = false;
+    buffer.dirty = false;
 
     rescan_line_ends(buffer);
     tokenize(buffer, language = .C_STYLE); // @Todo: Multiple language support
