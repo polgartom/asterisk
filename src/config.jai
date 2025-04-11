@@ -72,10 +72,17 @@ parse_color_config :: () {
 
 }
 
+parse_project_config :: () {
+    if !file_exists("./.asterisk/config") {
+        return;    
+    }
+}
+
 #scope_export
 
 load_global_config :: () {
     parse_color_config();
+    parse_project_config();
 }
 
 #scope_file
@@ -84,9 +91,12 @@ DEFAULT_CONFIG_STRING :: #string CONFIG
 [1] # Version number; do not delete!
 
 [Color]
-background:                 0c1a21ff
+#background:                 0c_1a_11_ff
+#background:                 0c1a1aff
+
+background:                 0f1a15ff
 layout_separator:           dddddd1b
-text_default:               d0d0d0ff
+text_default:               c2c2c2ff
 text_dimmed:                bbbbbbff
 text_selection:             ffffff20
 text_highlight:             e3_31_9f_6a

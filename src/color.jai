@@ -43,7 +43,7 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
             case .NONE;                        Add(0x00000000);
 
             case .LANG_TOKEN_KEYWORD;          Add(0x9c9d29ff);
-            case .LANG_TOKEN_DIRECTIVE;        Add(0x3D8D7Aff);
+            case .LANG_TOKEN_DIRECTIVE;        Add(0xa8_6D_5A_ff);
             case .LANG_TOKEN_COMMENT;          Add(0x3f_7a_3fff);
             case .LANG_TOKEN_STRING_LITERAL;   Add(0x7a7a5a_ff);
             case .LANG_TOKEN_NUMERIC_VALUE;    Add(0x9A7E6Fff);
