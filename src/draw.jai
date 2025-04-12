@@ -763,7 +763,9 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
 
 swap_buffers :: inline (window: Window_Type) {
     Simp.swap_buffers(my_window, vsync=false);
-
+    
+    glFinish();
+    
     // {
     //     // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
     //     BOOST_THE_FPS_MAGICALLY :: true;

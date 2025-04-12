@@ -91,10 +91,12 @@ DEFAULT_CONFIG_STRING :: #string CONFIG
 [1] # Version number; do not delete!
 
 [Color]
-#background:                 0c_1a_11_ff
+background:                 0c_1a_11_ff
 #background:                 0c1a1aff
 
-background:                 0f1a15ff
+background:                 0c_1a_21_ff
+
+#background:                 0f1a15ff
 layout_separator:           dddddd1b
 text_default:               c2c2c2ff
 text_dimmed:                bbbbbbff

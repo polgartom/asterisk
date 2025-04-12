@@ -182,11 +182,11 @@ main :: () {
                 break;
             }
 
-            #if DEBUG {
-                if mode == .EDITOR && event.key_code == .ESCAPE {
-                    if event.key_pressed should_quit = true;
-                }
-            }
+            // #if DEBUG {
+            //     if mode == .EDITOR && event.key_code == .ESCAPE {
+            //         if event.key_pressed should_quit = true;
+            //     }
+            // }
 
             // This prevents some crazy situations like those in Adobe Premiere Pro. For example,
             // when we try to paste a text, it triggers the Paste() action while also inserting a "v" character.
@@ -226,6 +226,7 @@ main :: () {
             }
         }
 
+        // @Cleanup
         if ctrl_released {
             if word_complete.active {
                 word_complete_abort();
@@ -251,7 +252,7 @@ main :: () {
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
         }
 
-        #if DEBUG {
+        #if 1 {
             if show_debug_info {
                 debug_time := seconds_since_init();
 
@@ -315,7 +316,6 @@ byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
     row := find_row(buffer, byte_pos);
-
     col := 0;
     pos := row.start;
     while pos < byte_pos {
