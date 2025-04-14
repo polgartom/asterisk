@@ -734,6 +734,8 @@ Editor :: struct {
     left_offset := 0.0;
 
     cursor: Cursor;
+    y_scroll_anim: Anim;
+    x_scroll_anim: Anim;
 
     rect_for_draw: Rect;
     visible := true;

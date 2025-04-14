@@ -51,7 +51,8 @@ draw_frame :: (current_time: float64) {
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
-    left_pad := cast(float32) primary_font.em_width;
+    // left_pad := cast(float32) primary_font.em_width;
+    left_pad := 0.0;
 
     r, footer_r := cut_top(rect, window_height-footer_height);
     _, r=       := cut_left(r, left_pad);
@@ -62,31 +63,105 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     buffer := editor.active_buffer;
 
-    {
-        cw := em(1.0, primary_font);
-        ch := primary_font.character_height;
+    if editor.cursor.moved {
+        editor.cursor.moved = false;
 
-        x_pad := left_pad   * 2.0;
-        y_pad := footer_r.h * 2.0;
+        // Viewport (Y)
 
-        mx    := get_cursor_x(buffer, *editor.cursor);
-        relmx := mx - editor.left_offset - r.w;
-        if relmx + x_pad + cw > 0 {
-            editor.left_offset += abs(relmx + x_pad + cw);
-        } else if abs(relmx - x_pad) > r.w {
-            editor.left_offset -= abs(relmx - x_pad) - r.w;
-            if editor.left_offset < 0 then editor.left_offset = 0;
+        y_threshold := footer_r.h * 2.0;
+
+        my := get_line_height(find_row_index(buffer, editor.cursor.pos));
+        my = r.h - my + editor.top_offset;
+
+        target := editor.top_offset;
+        if my - y_threshold < 0 {
+            target += abs(my - y_threshold);
+        } else if my + y_threshold > r.h + r.y {
+            target -= (my + y_threshold) - (r.h + r.y);
+            if target < 0 then target = 0;
         }
 
-        my    := get_line_height(find_row_index(buffer, editor.cursor.pos));
-        relmy := r.h - my + editor.top_offset;
-        if relmy - y_pad < 0 {
-            editor.top_offset += abs(relmy - y_pad);
-        } else if relmy + y_pad > r.h + r.y {
-            editor.top_offset -= (relmy + y_pad) - (r.h+r.y);
-            if editor.top_offset < 0 then editor.top_offset = 0;
+        anim_y: Anim;
+        anim_y.active = true;
+        anim_y.start  = editor.top_offset;
+        anim_y.target = target;
+        anim_y.duration = 0.06;
+        anim_y.elapsed  = 0.0;
+
+        editor.y_scroll_anim = anim_y;
+
+        // Viewport (X)
+
+        x_threshold := em(1.0, primary_font) * 2;
+
+        mx := get_cursor_x(buffer, *editor.cursor);
+        mx = cast(s64)(mx - editor.left_offset - r.w);
+
+        target = editor.left_offset;
+        if mx + x_threshold > 0 {
+            target += abs(mx + x_threshold);
+        } else if abs(mx) > xx r.w {
+            target -= abs(mx) - r.w;
+            if target < 0 then target = 0;
         }
+
+        anim_x: Anim;
+        anim_x.active = true;
+        anim_x.start  = editor.left_offset;
+        anim_x.target = target;
+        anim_x.duration = 0.06;
+        anim_x.elapsed  = 0.0;
+
+        editor.x_scroll_anim = anim_x;
     }
+
+    if editor.y_scroll_anim.active {
+        using editor;
+
+        y_scroll_anim.elapsed += xx current_dt;
+        
+        d := clamp(y_scroll_anim.elapsed / y_scroll_anim.duration, 0.0, 1.0);
+        if d == 1.0 then y_scroll_anim.active = false;
+        
+        editor.top_offset = lerp(y_scroll_anim.start, y_scroll_anim.target, d);
+    }
+
+    if editor.x_scroll_anim.active {
+        using editor;
+
+        x_scroll_anim.elapsed += xx current_dt;
+        
+        d := clamp(x_scroll_anim.elapsed / x_scroll_anim.duration, 0.0, 1.0);
+        if d == 1.0 then x_scroll_anim.active = false;
+        
+        editor.left_offset = lerp(x_scroll_anim.start, x_scroll_anim.target, d);
+    }
+
+    // if editor.cursor.moved || editor.anim.active {
+    //     cw := em(1.0, primary_font);
+    //     ch := primary_font.character_height;
+
+    //     x_pad := 0.0; //left_pad   * 2.0;
+    //     y_pad := 0.0; // footer_r.h * 2.0;
+
+    //     mx    := get_cursor_x(buffer, *editor.cursor);
+    //     relmx := mx - editor.left_offset - r.w;
+    //     if relmx + x_pad + cw > 0 {
+    //         editor.left_offset += abs(relmx + x_pad + cw);
+    //     } else if abs(relmx - x_pad) > r.w {
+    //         editor.left_offset -= abs(relmx - x_pad) - r.w;
+    //         if editor.left_offset < 0 then editor.left_offset = 0;
+    //     }
+
+    //     my    := get_line_height(find_row_index(buffer, editor.cursor.pos));
+    //     relmy := r.h - my + editor.top_offset;
+    //     if relmy - y_pad < 0 {
+    //         editor.top_offset += abs(relmy - y_pad);
+    //     } else if relmy + y_pad > r.h + r.y {
+    //         editor.top_offset -= (relmy + y_pad) - (r.h+r.y);
+    //         if editor.top_offset < 0 then editor.top_offset = 0;
+    //     }
+    // }
 
     draw_selection(editor, buffer, r);
 

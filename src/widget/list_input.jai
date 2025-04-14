@@ -98,7 +98,6 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
             if d == 1.0 then _anim.active = false;
 
             scroll_value = lerp(_anim.start, _anim.target, d);
-            // ll("> % / % ; elapsed: % ; d: %\n", scroll_value, _anim.target, _anim.elapsed, d);
         }
         
         Clamp(*scroll_value, 0.0, max_scroll_value);
@@ -127,16 +126,6 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
 #scope_file
 
 _anim: Anim;
-
-Anim :: struct {
-    active: bool;
-
-    start: float;
-    target: float;
-
-    duration: float;
-    elapsed: float;
-}
 
 move_to_next_option :: (using i: *List_Input, options: [] List_Input.Option) {
     if !options.count return;

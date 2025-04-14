@@ -11,6 +11,8 @@ last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
+mode := Program_Mode.EDITOR;
+
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
 font_width: s64;
@@ -611,11 +613,19 @@ Program_Mode :: enum u8 {
     WIDGET;
 };
 
-mode := Program_Mode.EDITOR;
-
 Range :: struct {
     start: s64;
     end:   s64;
+}
+
+Anim :: struct {
+    active: bool;
+
+    start: float;
+    target: float;
+
+    duration: float;
+    elapsed: float;
 }
 
 Code_get_identifier_name :: (name: Code) -> string {

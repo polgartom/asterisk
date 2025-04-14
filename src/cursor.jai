@@ -1,5 +1,6 @@
 // @Cleanup: Rename the $with_selection param because the opposite is happening right now!
 set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
+    cursor.moved = true;
 
     Clamp(*target_pos, 0, buffer.count);
 
@@ -106,6 +107,8 @@ Cursor :: struct {
     pos: s64 = 0;
     sel: s64 = 0;
     col: s64 = 0; // last_cursor_col_for_up_down_movement
+
+    moved := false;
 
     backup: Backup_Point;
 
