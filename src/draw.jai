@@ -574,40 +574,41 @@ draw_find_text_dialog :: () {
 draw_goto_line_dialog :: () {
     using goto_line_dialog;
 
+    assert(active_editor != null && active_editor.active_buffer != null);
+    buffer := active_editor.active_buffer;
+
     ed_r := active_editor.rect_for_draw;
 
-    {
-        font   := primary_font_xs;
-        k      := ed_r.h * .1;
-        kw     := ed_r.w * .1;
-        width  := kw * 2.0;
-        height := em(2.0, font);
-        pad    := cast(float32, primary_font.em_width);// * .5;
+    font   := primary_font_xs;
+    k      := ed_r.h * .1;
+    kw     := ed_r.w * .12;
+    width  := kw * 2.0;
+    height := em(2.0, font);
+    pad    := cast(float32, primary_font.em_width);// * .5;
 
-        r := get_rect(
-            ed_r.x + ed_r.w - width - pad,
-            ed_r.h - footer_height,
-            width,
-            xx font.character_height * 2.0,
-        );
+    r := get_rect(
+        ed_r.x + ed_r.w - width - pad,
+        ed_r.h - footer_height,
+        width,
+        xx font.character_height * 2.0,
+    );
 
-        // @Temporary: We don't want to set those values on every frame, right?
-        theme := Text_Input.DEFAULT_THEME;
-        theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-        theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
-        theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
-        theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
-        theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
-        
-        theme.border_color = #run hex_to_vec4(0xff_ff_ff_10);
-        
-        line, ok := get_goto_line_dialog_value();
-        if ok && is_valid_line(active_editor.active_buffer, line) {
-            theme.border_color = #run hex_to_vec4(0x5a_9e_22_6a);
-        }
-
-        update_text_input(input, r, font, placeholder="Got to line", theme);
+    // @Temporary: We don't want to set those values on every frame, right?
+    theme := Text_Input.DEFAULT_THEME;
+    theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
+    theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    
+    theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
+    
+    line, ok := get_goto_line_dialog_value();
+    if ok && is_valid_line(buffer, line) {
+        theme.border_color = #run hex_to_vec4(0x5a_9e_22_6a);
     }
+
+    update_text_input(input, r, font, placeholder="Go to line", theme);
 
     update_goto_line_dialog();
 

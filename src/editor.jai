@@ -1,7 +1,11 @@
-is_valid_line :: inline (buffer: *Buffer, line: int) -> bool {
+is_valid_line :: inline (buffer: *Buffer, line: s64) -> bool {
     if line < 0 || line - 1 >= buffer.row_table.count return false;
 
     return true;
+}
+
+get_current_line :: inline (using buffer: *Buffer, byte_pos: s64) -> s64 {
+    return find_row_index(buffer, byte_pos) + 1;
 }
 
 get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
