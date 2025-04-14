@@ -74,7 +74,7 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
     if selected_index != -1 {
         i := selected_index;
         target := y - (i*y_off);
-        bottom_threshold := b + ch*3.0;
+        bottom_threshold := b + ch*2.0;
 
         if moved {
             if target < bottom_threshold {
