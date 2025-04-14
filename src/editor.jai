@@ -703,22 +703,22 @@ change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
     editor.top_offset  = 0.0;
 }
 
-replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
+replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, occurrences: int) {
     #if autofree {
         defer free(input);
     }
     
-    result, ocurrences := replace(input, "\t", TAB_SPACE_CHARS);
-    return result, ocurrences;
+    result, occurrences := replace(input, "\t", TAB_SPACE_CHARS);
+    return result, occurrences;
 }
 
-replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: string, ocurrences: int) {
+replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: string, occurrences: int) {
     #if autofree {
         defer free(input);
     }
 
-    result, ocurrences := replace(input, "\r\n", "\n");
-    return result, ocurrences;
+    result, occurrences := replace(input, "\r\n", "\n");
+    return result, occurrences;
 }
 
 active_editor: *Editor = null;

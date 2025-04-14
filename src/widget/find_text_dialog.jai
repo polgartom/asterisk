@@ -2,7 +2,7 @@ find_occurences :: (_text: string) {
     using find_text_dialog;
 
     array_reset_keeping_memory(*occurences);
-    current_occurance = -1;
+    current_occurrence = -1;
     if !_text return;
 
     _, buffer := get_active_editor_and_buffer();
@@ -20,7 +20,7 @@ find_occurences :: (_text: string) {
     }
 }
 
-next_occurance :: ($roundtrip: bool) {
+next_occurrence :: ($roundtrip: bool) {
     using find_text_dialog;
 
     editor, buffer := get_active_editor_and_buffer();
@@ -28,11 +28,11 @@ next_occurance :: ($roundtrip: bool) {
 
     if occurences.count == 0 return;
     #if !roundtrip {
-        if current_occurance == occurences.count-1 return;
+        if current_occurrence == occurences.count-1 return;
     }
 
-    // Jump to the first occurance after the current cursor position
-    if current_occurance == -1 {
+    // Jump to the first occurrence after the current cursor position
+    if current_occurrence == -1 {
         cursor_pos := editor.cursor.pos;
         for pos, index: occurences {
             // Use less-than instead of less-than-or-equal,  
@@ -40,31 +40,31 @@ next_occurance :: ($roundtrip: bool) {
             // This would require an extra keypress to move to the next match,  
             // which we want to avoid.
             if cursor_pos < pos {
-                current_occurance = index;
+                current_occurrence = index;
                 set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
                 return;
             }
         }
     }
 
-    Clamp(*current_occurance, 0, occurences.count-1);
-    current_occurance = (current_occurance + 1) % occurences.count;
+    Clamp(*current_occurrence, 0, occurences.count-1);
+    current_occurrence = (current_occurrence + 1) % occurences.count;
 
-    pos := occurences[current_occurance];
+    pos := occurences[current_occurrence];
 
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
 }
 
-previous_occurance :: () {
+previous_occurrence :: () {
     using find_text_dialog;
 
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if occurences.count == 0 || current_occurance == 0 return;
+    if occurences.count == 0 || current_occurrence == 0 return;
 
-    // Jump to the first occurance before the current cursor position
-    if current_occurance == -1 {
+    // Jump to the first occurrence before the current cursor position
+    if current_occurrence == -1 {
         cursor_pos := editor.cursor.pos;
         for pos, index: occurences {
             if cursor_pos <= pos {
@@ -73,16 +73,16 @@ previous_occurance :: () {
                     pos = occurences[index];
                 }
 
-                current_occurance = index;
+                current_occurrence = index;
                 set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
                 return;
             }
         }
     }
 
-    current_occurance -= 1;
+    current_occurrence -= 1;
 
-    pos := occurences[current_occurance];
+    pos := occurences[current_occurrence];
 
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
 }
@@ -91,7 +91,13 @@ open_find_text_dialog :: () {
     using find_text_dialog;
     
     if !input then input = create_text_input(cast(u64, #location()));
-    if input.text then select_all(input);
+    
+    if input.text {
+        select_all(input);
+
+        // The occurrences locations may changed since we last opened this dialog, so we need to find the new position of them.
+        find_occurences(input.text);
+    }
 
     switch_editor_mode(.WIDGET);
     active_widget = Find_Text_Dialog;
@@ -114,9 +120,9 @@ update_find_text_dialog :: () {
             using Key_Code;
             if event.key_pressed {
                 if key == {
-                    case ARROW_UP;   previous_occurance();
-                    case ARROW_DOWN; next_occurance(roundtrip=false);
-                    case ENTER;      next_occurance(roundtrip=true);
+                    case ARROW_UP;   previous_occurrence();
+                    case ARROW_DOWN; next_occurrence(roundtrip=false);
+                    case ENTER;      next_occurrence(roundtrip=true);
                 }
             }
         }
@@ -130,5 +136,5 @@ Find_Text_Dialog :: struct {
     input: *Text_Input;
 
     occurences: [..] s64;
-    current_occurance: s64 = -1;
+    current_occurrence: s64 = -1;
 }

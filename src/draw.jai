@@ -543,7 +543,7 @@ draw_find_text_dialog :: () {
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(r.x - weight, r.y - weight, r.x + r.w + weight, r.y+r.h + weight, theme.bg_color);
 
-        hint := tprint("%/%", current_occurance+1, occurences.count);
+        hint := tprint("%/%", current_occurrence+1, occurences.count);
         x := r.x + r.w*.5 - measure_text_width(font, hint)*.5;
         label(xx x, xx (r.y+r.h*.5-ch*.3), hint, font, theme.fg_color);
     }
