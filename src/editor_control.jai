@@ -1092,6 +1092,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, open_find_text_dialog);
     Add(editor_keymap, open_file_browser);
     Add(editor_keymap, open_buffer_browser);
+    Add(editor_keymap, open_goto_line_dialog);
 
     // Editor
 
@@ -1209,6 +1210,7 @@ A-w HideSecondEditorPanel
 C-f open_find_text_dialog
 C-o open_file_browser
 A-x open_buffer_browser
+C-g open_goto_line_dialog
 
 F1 ToggleDevInfo
 
@@ -1262,8 +1264,8 @@ S-ArrowDown ExpandSelectionDown
 S-ArrowRight ExpandSelectionRight
 C-S-ArrowLeft ExpandSelectionLeftByWord
 C-S-ArrowRight ExpandSelectionRightbyWord
-C-S-PageUp ExpandSelectionViewPortUp
-C-S-PageDown ExpandSelectionViewPortDown
+S-PageUp ExpandSelectionViewPortUp
+S-PageDown ExpandSelectionViewPortDown
 
 C-d ExtendSelectionByToken
 

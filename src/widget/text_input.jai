@@ -3,8 +3,8 @@
 //
 
 text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") -> *Text_Input {
-    timer := seconds_since_init();
-    defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
+    // timer := seconds_since_init();
+    // defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
     input, found := table_find(*inputs, ui_id);
     if !found {

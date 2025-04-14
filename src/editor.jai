@@ -1,3 +1,9 @@
+is_valid_line :: inline (buffer: *Buffer, line: int) -> bool {
+    if line < 0 || line - 1 >= buffer.row_table.count return false;
+
+    return true;
+}
+
 get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
     assert(index < row_table.count);
 
