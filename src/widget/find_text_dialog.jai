@@ -20,17 +20,14 @@ find_occurences :: (_text: string) {
     }
 }
 
-next_occurrence :: ($roundtrip: bool) {
+next_occurrence :: () {
     using find_text_dialog;
 
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
     if occurences.count == 0 return;
-    #if !roundtrip {
-        if current_occurrence == occurences.count-1 return;
-    }
-
+    
     // Jump to the first occurrence after the current cursor position
     if current_occurrence == -1 {
         cursor_pos := editor.cursor.pos;
@@ -117,8 +114,8 @@ update_find_text_dialog :: () {
             if event.key_pressed {
                 if key == {
                     case ARROW_UP;   previous_occurrence();
-                    case ARROW_DOWN; next_occurrence(roundtrip=false);
-                    case ENTER;      next_occurrence(roundtrip=true);
+                    case ARROW_DOWN; next_occurrence();
+                    case ENTER;      next_occurrence();
                 }
             }
         }
