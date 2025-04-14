@@ -67,23 +67,19 @@ previous_occurrence :: () {
     if current_occurrence == -1 {
         cursor_pos := editor.cursor.pos;
         for pos, index: occurences {
-            if cursor_pos <= pos {
-                if index != 0 {
-                    index -= 1;
-                    pos = occurences[index];
-                }
-
-                current_occurrence = index;
-                set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
-                return;
+            if pos >= editor.cursor.pos {
+                break;
             }
+
+            current_occurrence = index;
         }
+    } else {
+        current_occurrence -= 1;
+        Clamp(*current_occurrence, 0, occurences.count);
     }
 
-    current_occurrence -= 1;
 
     pos := occurences[current_occurrence];
-
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
 }
 
