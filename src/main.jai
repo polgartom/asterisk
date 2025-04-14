@@ -593,6 +593,12 @@ rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
     };
 }
 
+smoothstep :: (edge0: float, edge1: float, x: float) -> float {
+    x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+    // ll("> %\n", x * x * (3.0 - 2.0 * x));
+    return x * x * (3.0 - 2.0 * x);
+}
+
 hex_to_vec4 :: (hex: u32) -> Vector4 {
     r := (hex>>24) & 0xFF;
     g := (hex>>16) & 0xFF;
@@ -626,6 +632,8 @@ Anim :: struct {
 
     duration: float;
     elapsed: float;
+
+    started: float;
 }
 
 Code_get_identifier_name :: (name: Code) -> string {

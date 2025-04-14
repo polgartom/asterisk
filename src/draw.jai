@@ -85,7 +85,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         anim_y.active = true;
         anim_y.start  = editor.top_offset;
         anim_y.target = target;
-        anim_y.duration = 0.06;
+        anim_y.duration = 0.08;
         anim_y.elapsed  = 0.0;
 
         editor.y_scroll_anim = anim_y;
@@ -119,23 +119,24 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         using editor;
 
         y_scroll_anim.elapsed += xx current_dt;
-        
-        d := clamp(y_scroll_anim.elapsed / y_scroll_anim.duration, 0.0, 1.0);
-        if d == 1.0 then y_scroll_anim.active = false;
-        
+        dt := y_scroll_anim.elapsed;
+        d := smoothstep(0.0, y_scroll_anim.duration, dt);
         editor.top_offset = lerp(y_scroll_anim.start, y_scroll_anim.target, d);
+
+        if d == 1.0 then y_scroll_anim.active = false;
     }
 
     if editor.x_scroll_anim.active {
         using editor;
 
         x_scroll_anim.elapsed += xx current_dt;
-        
-        d := clamp(x_scroll_anim.elapsed / x_scroll_anim.duration, 0.0, 1.0);
-        if d == 1.0 then x_scroll_anim.active = false;
-        
+        dt := x_scroll_anim.elapsed;
+        d := smoothstep(0.0, x_scroll_anim.duration, dt);
         editor.left_offset = lerp(x_scroll_anim.start, x_scroll_anim.target, d);
+
+        if d == 1.0 then x_scroll_anim.active = false;
     }
+
 
     // if editor.cursor.moved || editor.anim.active {
     //     cw := em(1.0, primary_font);
