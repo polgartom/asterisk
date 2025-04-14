@@ -73,7 +73,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
 
     Simp.set_shader_for_color(true);
     
-    weight :: 2;
+    weight :: 2; // border weight
     Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color); // border
     Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color); // input background
 

@@ -503,14 +503,17 @@ draw_find_text_dialog :: () {
 
     {
         font   := primary_font_xs;
+        ch := font.character_height;
         k      := ed_r.h * .1;
+        kw     := ed_r.w * .15;
+        width  := kw * 2.0;
         height := em(2.0, font);
         pad    := cast(float32, primary_font.em_width);// * .5;
 
         r := get_rect(
-            ed_r.x - pad,
-            footer_height + 3.0,
-            ed_r.w + pad,
+            ed_r.x + ed_r.w - width - pad,
+            ed_r.h - footer_height,
+            width,
             xx font.character_height * 2.0,
         );
 
@@ -521,15 +524,28 @@ draw_find_text_dialog :: () {
         theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
         theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
-
+        
+        theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
         if occurences {
             theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
         } else if input.text {
-            theme.border_color = #run hex_to_vec4(0xa9_22_22_ff);
+            theme.border_color = #run hex_to_vec4(0xa9_22_22_a0);
         }
 
-        prefix := tprint("%/% | ", current_occurance+1, occurences.count); // UGLY!
-        update_text_input(input, r, font, placeholder="Find...", theme, prefix);
+        // prefix :=  // UGLY!
+        update_text_input(input, r, font, placeholder="Find text", theme);
+
+        weight :: 2; // border weight
+        r.h = ch*1.5;
+        r.y -= r.h + 5 + weight*2;
+        r.w *= .30;
+
+        Simp.set_shader_for_color(true);
+        Simp.immediate_quad(r.x - weight, r.y - weight, r.x + r.w + weight, r.y+r.h + weight, theme.bg_color);
+
+        hint := tprint("%/%", current_occurance+1, occurences.count);
+        x := r.x + r.w*.5 - measure_text_width(font, hint)*.5;
+        label(xx x, xx (r.y+r.h*.5-ch*.3), hint, font, theme.fg_color);
     }
 
     update_find_text_dialog();
@@ -566,6 +582,7 @@ draw_find_text_dialog :: () {
 
         bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
 
+        Simp.set_shader_for_color(true);
         Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), color);
     }
 
