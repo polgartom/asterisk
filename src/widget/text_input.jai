@@ -176,24 +176,29 @@ clear_text :: (using i: *Text_Input) {
 }
 
 move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
-    if !text || !cursor.pos return;
+    if !text return;
 
-    at := seek_left_one_utf8_character_byte_pos(text, cursor.pos);
-    if (ctrl_pressed) {
-        if is_separator(text[at]) {
-            while at {
-                point := seek_left_one_utf8_character_byte_pos(text, at);
-                if is_alphanum(text[point]) break;
-                at = point;
-            }
-        } else {
-            while at {
-                point := seek_left_one_utf8_character_byte_pos(text, at);
-                if !is_alphanum(text[point]) break;
-                at = point;
+    at := cursor.pos;
+
+    if cursor.pos > 0 {
+        at = seek_left_one_utf8_character_byte_pos(text, at);
+        if (ctrl_pressed) {
+            if is_separator(text[at]) {
+                while at {
+                    point := seek_left_one_utf8_character_byte_pos(text, at);
+                    if is_alphanum(text[point]) break;
+                    at = point;
+                }
+            } else {
+                while at {
+                    point := seek_left_one_utf8_character_byte_pos(text, at);
+                    if !is_alphanum(text[point]) break;
+                    at = point;
+                }
             }
         }
     }
+
 
     cursor.pos = at;
     if !shift_pressed {
@@ -202,19 +207,23 @@ move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed 
 }
 
 move_cursor_right :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
-    if !text || cursor.pos == text.count return;
+    if !text return;
 
-    at := seek_right_one_utf8_character_byte_pos(text, cursor.pos);
-    if (ctrl_pressed && at != text.count) {
-        if is_separator(text[at]) {
-            while at {
-                at = seek_right_one_utf8_character_byte_pos(text, at);
-                if at == text.count || is_alphanum(text[at]) break;
-            }
-        } else {
-            while at {
-                at = seek_right_one_utf8_character_byte_pos(text, at);
-                if at == text.count || !is_alphanum(text[at]) break;
+    at := cursor.pos;
+
+    if at < text.count {
+        at = seek_right_one_utf8_character_byte_pos(text, at);
+        if (ctrl_pressed && at != text.count) {
+            if is_separator(text[at]) {
+                while at {
+                    at = seek_right_one_utf8_character_byte_pos(text, at);
+                    if at == text.count || is_alphanum(text[at]) break;
+                }
+            } else {
+                while at {
+                    at = seek_right_one_utf8_character_byte_pos(text, at);
+                    if at == text.count || !is_alphanum(text[at]) break;
+                }
             }
         }
     }
