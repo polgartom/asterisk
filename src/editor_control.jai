@@ -147,7 +147,7 @@ Save :: () {
             ofn.lpstrFile = *szFile[0];
             ofn.nMaxFile = size_of(type_of(szFile));
             // ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.TXT\0";
-            ofn.lpstrFilter = "All Files\0*.*\0";
+            ofn.lpstrFilter = "All Files\0*.*\0\0"; // A buffer containing pairs of null-terminated filter strings. The last string in the buffer must be terminated by two NULL characters.
             ofn.nFilterIndex = 1;
             ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 
