@@ -229,12 +229,15 @@ MoveDown :: () {
 
 move_left_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
-    
-    if editor.cursor.pos == 0 return;
 
-    offset := prev_char_byte_offset(buffer, editor.cursor.pos);
-    
-    set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true, with_selection=with_selection);
+    pos := editor.cursor.pos;
+
+    // We do want to discard the selection if we on the first character of the buffer and we don't press the shift
+    if pos != 0 {
+        pos = prev_char_byte_offset(buffer, pos); // it is enough to use the seek_previous_utf8_char for this?
+    }
+
+    set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=with_selection);
 }
 
 MoveLeft :: () {
@@ -244,10 +247,13 @@ MoveLeft :: () {
 move_right_by_one_character :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     
-    if !(editor.cursor.pos < buffer.count) return;
+    steps := 0;
 
-    byte := buffer.data[editor.cursor.pos];
-    steps := 1 + trailingBytesForUTF8[byte];
+    // We do want to discard the selection if we on the last character of the buffer and we don't press the shift
+    if editor.cursor.pos != buffer.count {
+        byte := buffer.data[editor.cursor.pos];
+        steps = 1 + trailingBytesForUTF8[byte];
+    }
     
     set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + steps, horizontal=true, with_selection=with_selection);
 }
@@ -1055,6 +1061,16 @@ ExtendSelectionByToken :: () {
     // @Incomplete: Currently, we are working with one cursor instance per buffer
 }
 
+SelectAll :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    if !editor || !buffer return;
+
+    editor.cursor.sel = 0;
+    set_cursor_pos(buffer, *editor.cursor, buffer.count, horizontal=false, with_selection=false);
+}
+
 Undo :: () {
     editor, buffer := get_active_editor_and_buffer();
     undo(editor, buffer);
@@ -1150,6 +1166,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ExpandSelectionViewPortDown);
 
     Add(editor_keymap, ExtendSelectionByToken);
+    Add(editor_keymap, SelectAll);
 
     Add(editor_keymap, IndentLeft);
     Add(editor_keymap, IndentRight);
@@ -1269,6 +1286,7 @@ S-PageUp ExpandSelectionViewPortUp
 S-PageDown ExpandSelectionViewPortDown
 
 C-d ExtendSelectionByToken
+C-a SelectAll
 
 C-] IndentRight
 C-[ IndentLeft
