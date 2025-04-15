@@ -1,33 +1,11 @@
-- Undo/Redo ; Ctrl-z to redo, Ctrl-y to undo
-- Add Jump to line action and by it to the Ctrl-G key combination
-- Store the buffers globally
-- Shift-Alt-(PageDown) key combination to select everything from right from cursor until line end
-- Shift-Alt-(PageUp) key combination to select everything from left from cursor until line start
-- Invesitage memory arithmetic overflows specified in the bugs.txt
-- File save modal
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
 - File watcher
 - Update the cursor position in the other editor panel if the same file is open in both. For example, if we insert text in the left editor, the right editor’s cursor would appear to move backward because its position stays the same while the content grows.
-
-[Search widget]
-- Draw on the active panel (left or right)
-- The widget should be translucent
-
-[File open widget]
-- Highlight files which already opened
-- Search for files
-
-[Switch to buffers]
-- Bind this widget to the Alt-x key combination
 
 [Config]
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
 	
-[Syntax highlighting/tokenization]
-- Do partial tokenization due the performance issues caused by large files
-- We have a basic highlighting/tokenization but we need to improve the performance of it
-
 ------------------------------------------------
 
 C:/jai/modules/String/module.jai:819,5: Assertion failed: index = -2,251,774,043,881,096
