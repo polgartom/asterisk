@@ -656,7 +656,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
 
     for #v2 < point: 0..start {
         if is_separator(text[point], subword_mode) {
-            point += 1;
+            point += 1 + trailingBytesForUTF8[text[point]];
             remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
             return;
         } else if point == 0 {
