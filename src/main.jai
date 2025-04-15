@@ -174,6 +174,7 @@ main :: () {
         }
 
         {
+            // @Cleanup: Remove it!!
             enable(*keymap_set, editor_keymap, mode == .EDITOR);
             enable(*keymap_set, widget_keymap, mode == .WIDGET);
         }
@@ -183,6 +184,8 @@ main :: () {
         ctrl_released := false;
 
         for event : events_this_frame {
+            register_widget_event(event);
+
             if event.type == .QUIT {
                 // print("quit!\n");
                 should_quit = true;
@@ -205,8 +208,6 @@ main :: () {
                     continue;
                 }
             }
-
-            register_widget_event(event);
 
             last_input_event = event;
             handled := handle_event(*keymap_set, event);

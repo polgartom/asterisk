@@ -24,6 +24,8 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     typed = false;
 
     for event: events_to_handle_this_frame_for_widgets {
+        ll("> %\n", event);
+
         if event.type == .TEXT_INPUT {
             #if OS == .WINDOWS if event.utf32 == 0x7F continue;
 
@@ -40,15 +42,68 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
             key := event.key_code;
             using Key_Code;
             if event.key_pressed {
-                // @Temporary @Todo @Investigate
-                // CTRL and ALT is pressed if AltGr is pressed, why?
-                // Now, we just skip this key combination because it will cause some mess if we use hungarian keymap, like
-                // we can't insert a '@' token without pasting some junk with it.
+                // @Temporary @Todo Temporary hotfix for altGr+something keycombos.
+                // This is how the input events come if we press altGr+v:
+                // [update_text_input] > {
+                //   type = KEYBOARD;
+                //   key_pressed = 1;
+                //   key_code = CTRL;
+                //   modifier_flags = (union);
+                //   utf32 = 0;
+                //   repeat = false;
+                //   text_input_count = 0;
+                //   typical_wheel_delta = 0;
+                //   wheel_delta = 0;
+                //   files = [];
+                //   touch_type = MOVED;
+                //   touch_index = 0;
+                // }
+                // [update_text_input] > {
+                //   type = KEYBOARD;
+                //   key_pressed = 1;
+                //   key_code = ALT;
+                //   modifier_flags = (union);
+                //   utf32 = 0;
+                //   repeat = false;
+                //   text_input_count = 0;
+                //   typical_wheel_delta = 0;
+                //   wheel_delta = 0;
+                //   files = [];
+                //   touch_type = MOVED;
+                //   touch_index = 0;
+                // }
+                // [update_text_input] > {
+                //   type = KEYBOARD;
+                //   key_pressed = 1;
+                //   key_code = (enum out of range: 86);
+                //   modifier_flags = (union);
+                //   utf32 = 0;
+                //   repeat = false;
+                //   text_input_count = 0;
+                //   typical_wheel_delta = 0;
+                //   wheel_delta = 0;
+                //   files = [];
+                //   touch_type = MOVED;
+                //   touch_index = 0;
+                // }
+                // [update_text_input] > {
+                //   type = TEXT_INPUT;
+                //   key_pressed = 0;
+                //   key_code = UNKNOWN;
+                //   modifier_flags = (union);
+                //   utf32 = 64;
+                //   repeat = false;
+                //   text_input_count = 0;
+                //   typical_wheel_delta = 0;
+                //   wheel_delta = 0;
+                //   files = [];
+                //   touch_type = MOVED;
+                //   touch_index = 0;
+                // }                
                 if event.ctrl_pressed && event.alt_pressed {
                     continue;
                 }
 
-                // ll("> %\n", event);
                 if key == {
                     case 65 /* a */; if (event.ctrl_pressed) select_all(input);
                     case 67 /* c */; if (event.ctrl_pressed) copy_to_os_clipboard(input);
