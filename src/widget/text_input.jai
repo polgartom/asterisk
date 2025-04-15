@@ -40,11 +40,19 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
             key := event.key_code;
             using Key_Code;
             if event.key_pressed {
-                // ll("> %\n", key);
+                // @Temporary @Todo @Investigate
+                // CTRL and ALT is pressed if AltGr is pressed, why?
+                // Now, we just skip this key combination because it will cause some mess if we use hungarian keymap, like
+                // we can't insert a '@' token without pasting some junk with it.
+                if event.ctrl_pressed && event.alt_pressed {
+                    continue;
+                }
+
+                // ll("> %\n", event);
                 if key == {
-                    case 65 /* a */;   if (event.ctrl_pressed) select_all(input);
-                    case 67 /* c */;   if (event.ctrl_pressed) copy_to_os_clipboard(input);
-                    case 86 /* v */;   if (event.ctrl_pressed) { insert_os_clipboard_text(input); typed = true; }
+                    case 65 /* a */; if (event.ctrl_pressed) select_all(input);
+                    case 67 /* c */; if (event.ctrl_pressed) copy_to_os_clipboard(input);
+                    case 86 /* v */; if (event.ctrl_pressed) { insert_os_clipboard_text(input); typed = true; }
 
                     case HOME; {
                         if event.alt_pressed {
