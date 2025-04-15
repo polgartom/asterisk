@@ -7,6 +7,7 @@ current_time: float64 = 0.0;
 last_time: float64 = 0.0;
 current_dt: float64 = 0.0;
 
+
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
@@ -92,7 +93,7 @@ main :: () {
 
     load_global_config();
     init_keymaps();
-    
+
     init_fonts();
 
     my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
@@ -132,9 +133,13 @@ main :: () {
     }
 
     while !should_quit {
-        if !should_redraw() {
+        if mode == .WIDGET then redraw_requested = true;
+
+        if !redraw_requested {
             #if OS == .WINDOWS WaitMessage();
         }
+
+        redraw_requested = false;
 
         current_time = seconds_since_init();
         current_dt = current_time - last_time;
@@ -262,7 +267,7 @@ main :: () {
                 using active_editor;
 
                 PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-    
+
                 PrintDev("rows: % ; gentime: %ms ; row_table size: %\n",
                     active_buffer.row_table.count,
                     formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
@@ -581,7 +586,7 @@ advance :: (arr: *[]$T, steps := 1) {
 }
 
 get_range_as_string :: (s: string, range: Range) -> string {
-    return slice(s, range.start, range.end - range.start);    
+    return slice(s, range.start, range.end - range.start);
 }
 
 rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {

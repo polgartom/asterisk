@@ -85,6 +85,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         anim_y.active = true;
         anim_y.start  = editor.top_offset;
         anim_y.target = target;
+        // anim_y.duration = 0.08;
         anim_y.duration = 0.08;
         anim_y.elapsed  = 0.0;
 
@@ -109,32 +110,39 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         anim_x.active = true;
         anim_x.start  = editor.left_offset;
         anim_x.target = target;
-        anim_x.duration = 0.06;
+        anim_x.duration = 0.08;
         anim_x.elapsed  = 0.0;
 
         editor.x_scroll_anim = anim_x;
-    }
 
-    if editor.y_scroll_anim.active {
-        using editor;
+        redraw_requested = true;
 
-        y_scroll_anim.elapsed += xx current_dt;
-        dt := y_scroll_anim.elapsed;
-        d := smoothstep(0.0, y_scroll_anim.duration, dt);
-        editor.top_offset = lerp(y_scroll_anim.start, y_scroll_anim.target, d);
+    } else {
+        if editor.y_scroll_anim.active {
+            using editor;
 
-        if d == 1.0 then y_scroll_anim.active = false;
-    }
+            y_scroll_anim.elapsed += xx current_dt;
+            dt := y_scroll_anim.elapsed;
+            d := smoothstep(0.0, y_scroll_anim.duration, dt);
+            editor.top_offset = lerp(y_scroll_anim.start, y_scroll_anim.target, d);
 
-    if editor.x_scroll_anim.active {
-        using editor;
+            if d == 1.0 then y_scroll_anim.active = false;
 
-        x_scroll_anim.elapsed += xx current_dt;
-        dt := x_scroll_anim.elapsed;
-        d := smoothstep(0.0, x_scroll_anim.duration, dt);
-        editor.left_offset = lerp(x_scroll_anim.start, x_scroll_anim.target, d);
+            redraw_requested = true;
+        }
 
-        if d == 1.0 then x_scroll_anim.active = false;
+        if editor.x_scroll_anim.active {
+            using editor;
+
+            x_scroll_anim.elapsed += xx current_dt;
+            dt := x_scroll_anim.elapsed;
+            d := smoothstep(0.0, x_scroll_anim.duration, dt);
+            editor.left_offset = lerp(x_scroll_anim.start, x_scroll_anim.target, d);
+
+            if d == 1.0 then x_scroll_anim.active = false;
+
+            redraw_requested = true;
+        }
     }
 
 
@@ -913,12 +921,6 @@ swap_buffers :: inline (window: Window_Type) {
     //         glFinish();
     //     }
     // }
-}
-
-should_redraw :: inline () -> bool {
-    #if DEBUG return true;
-
-    return redraw_requested && mode == .WIDGET;
 }
 
 redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX

@@ -81,13 +81,13 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
                 _anim.active = true;
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value + (bottom_threshold - target);
-                _anim.duration = 0.05;
+                _anim.duration = 0.1;
                 _anim.elapsed = 0.0;
-            } else if target >= t {
+            } else if target >= t - ch {
                 _anim.active = true;
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value - (target + y_off - t);
-                _anim.duration = 0.05;
+                _anim.duration = .1;
                 _anim.elapsed = 0.0;
             }
         }
