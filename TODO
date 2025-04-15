@@ -27,3 +27,14 @@
 [Syntax highlighting/tokenization]
 - Do partial tokenization due the performance issues caused by large files
 - We have a basic highlighting/tokenization but we need to improve the performance of it
+
+------------------------------------------------
+
+C:/jai/modules/String/module.jai:819,5: Assertion failed: index = -2,251,774,043,881,096
+Stack trace:
+C:/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
+C:/jai/modules/Basic/module.jai:87: assert_helper
+K:/Programming/asterisk/src/draw.jai:211: draw_editor
+K:/Programming/asterisk/src/draw.jai:13: draw_frame
+K:/Programming/asterisk/src/main.jai:291: main
+A breakpoint was hit, but no debugger is attached.

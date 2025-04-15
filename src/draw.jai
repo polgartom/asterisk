@@ -68,7 +68,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         // Viewport (Y)
 
-        y_threshold := footer_r.h * 2.0;
+        y_threshold := footer_r.h * 5;
 
         my := get_line_height(find_row_index(buffer, editor.cursor.pos));
         my = r.h - my + editor.top_offset;
@@ -85,8 +85,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         anim_y.active = true;
         anim_y.start  = editor.top_offset;
         anim_y.target = target;
-        // anim_y.duration = 0.08;
-        anim_y.duration = 0.08;
+        anim_y.duration = 0.06;
         anim_y.elapsed  = 0.0;
 
         editor.y_scroll_anim = anim_y;
@@ -110,7 +109,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         anim_x.active = true;
         anim_x.start  = editor.left_offset;
         anim_x.target = target;
-        anim_x.duration = 0.08;
+        anim_x.duration = 0.06;
         anim_x.elapsed  = 0.0;
 
         editor.x_scroll_anim = anim_x;
@@ -291,6 +290,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 }
 
 draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
+    push_scissor(r);
+    defer pop_scissor();
+
     c  := *editor.cursor;
 
     row_index := find_row_index(buffer, c.pos);

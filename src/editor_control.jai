@@ -621,6 +621,7 @@ DeleteSubwordFromRight :: inline () {
     delete_word_or_subword_from_right(subword_mode=true);
 }
 
+// @Speed!
 delete_word_or_subword_from_right :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
