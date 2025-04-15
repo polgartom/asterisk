@@ -100,7 +100,7 @@ background:                 0c_1a_21_ff
 layout_separator:           dddddd1b
 text_default:               c2c2c2ff
 text_dimmed:                bbbbbbff
-text_selection:             ffffff20
+#text_selection:             e3_71_ff_49  #ffffff20
 text_highlight:             e3_31_9f_6a
 text_under_cursor:          0c1021ff
 text_under_inactive_cursor: fbde2da0

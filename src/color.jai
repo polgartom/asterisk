@@ -54,8 +54,9 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
             case .LAYOUT_SEPARATOR;            Add(0xdddddd1B);
             case .TEXT_DEFAULT;                Add(0xd0d0d0ff);
             case .TEXT_DIMMED;                 Add(0xbbbbbbff);
-            case .TEXT_SELECTION;              Add(0xffffff20);
-            case .TEXT_HIGHLIGHT;              Add(0xe3_71_ff_53);
+            case .TEXT_SELECTION;              Add(0x00_e1_fa_35);
+            case .TEXT_SELECTION_MATCH;        Add(0xffffff20);
+            case .TEXT_HIGHLIGHT;              Add(0xe3_71_ff_5a);
             case .TEXT_UNDER_CURSOR;           Add(0x0c1021ff);
             case .TEXT_UNDER_INACTIVE_CURSOR;  Add(0xFBDE2Da0);
             case .CURSOR;                      Add(0xFBDE2Dc0);
@@ -86,6 +87,7 @@ Color :: enum u8 {
     TEXT_DEFAULT;
     TEXT_DIMMED;
     TEXT_SELECTION;
+    TEXT_SELECTION_MATCH;
     TEXT_HIGHLIGHT;
     TEXT_UNDER_CURSOR;
     TEXT_UNDER_INACTIVE_CURSOR;

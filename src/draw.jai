@@ -399,6 +399,55 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left+width, bottom - (ch*.5-(ch*0.2)), selection_color);
     }
 
+    ///////
+    
+    show_selection_occurences := false;
+    t := s.data;
+    while t < s.data + s.count {
+        if !is_whitespace(t.*) {
+            // We don't want to highlight a bunch of spaces without one unicode character at least
+            show_selection_occurences = true;
+            break;
+        }
+
+        t += 1 + trailingBytesForUTF8[t.*];
+    }
+
+    if show_selection_occurences {
+        start_row := first_visible_row(editor, buffer);
+        end_row := last_visible_row(editor, buffer);
+
+        str := slice(buffer, start_row.start, end_row.end - start_row.start);
+        step := 1 + trailingBytesForUTF8[s[s.count-1]];
+
+        while str {
+            index, found := find_index_from_left_nocase(str, s);
+            if !found || index == -1 break;
+            defer { advance(*str, index + s.count + step); }
+
+            if str.data + index == s.data continue; // Don't highlight again the current selection
+
+            pos := str.data + index - buffer.data;
+
+            ri := find_row_index(buffer, pos);
+            row := buffer.row_table[ri];
+
+            left := r.x - editor.left_offset;
+            rem_left  := slice(buffer, row.start, pos - row.start);
+            if rem_left then left += cast(float32) measure_text_width(primary_font, rem_left);
+
+            text := slice(buffer, row.start, row.end);
+            text  = advance(text, rem_left.count);
+            text  = slice(text, 0, s.count);
+            width := measure_text_width(primary_font, text);
+
+            bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
+
+            // Simp.set_shader_for_color(true); // do we need this right here?
+            Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), map_color_to_vec4(.TEXT_SELECTION_MATCH));
+        }
+    }
+
 }
 
 draw_widgets :: () {

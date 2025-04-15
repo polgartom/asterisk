@@ -477,6 +477,18 @@ last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64
     return end_row;
 }
 
+first_visible_row :: inline (editor: *Editor, buffer: *Buffer) -> Row_Info {
+    index := first_visible_row_index(editor, buffer);;
+    
+    return buffer.row_table[index];
+}
+
+last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info {
+    index := last_visible_row_index(editor, buffer);
+
+    return buffer.row_table[index];
+}
+
 get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
     if !font then font = primary_font;
 
