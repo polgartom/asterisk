@@ -423,7 +423,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         while str {
             index, found := find_index_from_left_nocase(str, s);
             if !found || index == -1 break;
-            defer { advance(*str, index + s.count + step); }
+            defer advance(*str, index + s.count + step - 1);
 
             if str.data + index == s.data continue; // Don't highlight again the current selection
 
