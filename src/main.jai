@@ -137,6 +137,13 @@ main :: () {
 
         if !redraw_requested {
             #if OS == .WINDOWS WaitMessage();
+
+            #if OS == .LINUX {
+                // @Temporary!!!
+                X11:: #import "X11";
+                xevent: X11.XEvent;
+                while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
+            }
         }
 
         redraw_requested = false;
