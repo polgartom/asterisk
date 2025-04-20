@@ -154,7 +154,7 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
 
 count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
     count := 0;
-    for * buffers {
+    for buffers {
         if it.initialized == initialized then count += 1;
     }
 
@@ -163,7 +163,7 @@ count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
 
 // @Cleanup Use -1 if failed
 find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
-    for * buffers {
+    for buffers {
         if it == buffer return true, it_index;
     }
 
@@ -171,7 +171,7 @@ find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
 }
 
 find_buffer_index_by_filepath :: (filepath: string) -> s64 {
-    for * buffers {
+    for buffers {
         if it.filepath == filepath return it_index;
     }
 
@@ -180,7 +180,7 @@ find_buffer_index_by_filepath :: (filepath: string) -> s64 {
 
 // @Cleanup Use -1 if failed
 find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
-    for * buffers {
+    for buffers {
         if it.initialized return true, it_index;
     }
 
@@ -189,7 +189,7 @@ find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index:
 
 // @Cleanup Use -1 if failed
 find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
-    for * buffers {
+    for buffers {
         if !it.initialized return true, it_index;
     }
 
@@ -202,7 +202,7 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     found, index := find_uninitialized_buffer_index(editor);
     if found {
         assert(index > -1);
-        buffer = *buffers[index];
+        buffer = buffers[index];
     } else {
         buffer = create_buffer();
     }
@@ -366,8 +366,15 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     }
     reset_history(buffer);
 
-    new_buffer: Buffer;
-    buffer.* = new_buffer;
+    for buffers {
+        if it == buffer {
+            remove it;
+            break;
+        }
+    }
+
+    // new_buffer: Buffer;
+    // buffer.* = new_buffer;
 }
 
 undo :: (editor: *Editor, using buffer: *Buffer) {
@@ -575,12 +582,12 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
     filepath := File.get_absolute_path(_filepath);
     path_overwrite_separators(filepath, #char "/");
 
-    for * buffers {
+    for buffers {
         if it.filepath == filepath return it;
     }
 
     buffer: *Buffer;
-    for * buffers {
+    for buffers {
         if it.initialized && !it.exists_on_disk && !it.dirty && !it.count {
             buffer = it;
             break;
@@ -628,7 +635,7 @@ close_buffer :: (buffer: *Buffer) {
     buffer_reset_keeping_memory(buffer);
 
     FindNewBuffer :: (e: *Editor) -> *Buffer {
-        for *b: buffers {
+        for b: buffers {
             if b.initialized {
                 if b.exists_on_disk {
                     return b;
@@ -660,7 +667,7 @@ close_buffer :: (buffer: *Buffer) {
 }
 
 get_buffer_index :: (buffer: *Buffer) -> s64 {
-    for * buffers {
+    for buffers {
         if buffer == it {
             return it_index;
         }
@@ -687,8 +694,11 @@ create_editor :: () -> *Editor {
 }
 
 create_buffer :: () -> *Buffer {
-    buffer := array_add(*buffers);
+    // @Todo: Check id collisions
+    buffer := New(Buffer);
     buffer.id = random_get();
+    
+    array_add(*buffers, buffer);
 
     return buffer;
 }
@@ -723,7 +733,7 @@ replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: str
 
 active_editor: *Editor = null;
 editors: [..] Editor;
-buffers: [..] Buffer;
+buffers: [..] *Buffer;
 
 BUFFER_PAGE_SIZE :: 4096;
 

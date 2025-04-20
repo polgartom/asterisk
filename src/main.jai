@@ -248,7 +248,7 @@ main :: () {
         //     }
         // }
 
-        for * buffers {
+        for buffers {
             commit_buffer_changes(it);
         }
 
@@ -282,6 +282,17 @@ main :: () {
 
                 debug_time = (seconds_since_init() - debug_time) * 1000;
                 PrintDev("[DEBUG TIME] %ms\n", formatFloat(debug_time, trailing_width=4));
+
+                // bytes := size_of(Buffer) * buffers.count;
+                // for buffers {
+                //     bytes += it.count;
+                //     bytes += size_of(Row_Info) * it.row_table.count;
+                //     bytes += size_of(Color) * it.colors.count;
+
+                //     PrintDev("buf: % ; data: % ; rt: % ; colors: %\n", size_of(Buffer), it.count, size_of(Row_Info) * it.row_table.count, size_of(Color) * it.colors.count);
+                // }
+
+                // PrintDev("[BUFFERS]: % ; % ; % mb\n", buffers.count, buffers.allocated, bytes/1024/1024);
 
                 last_simulation_time = (seconds_since_init()-last_time)*1000;
             }

@@ -24,7 +24,7 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     typed = false;
 
     for event: events_to_handle_this_frame_for_widgets {
-        ll("> %\n", event);
+        // ll("> %\n", event);
 
         if event.type == .TEXT_INPUT {
             #if OS == .WINDOWS if event.utf32 == 0x7F continue;

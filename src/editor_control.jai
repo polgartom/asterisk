@@ -56,7 +56,7 @@ PrevBuffer :: () {
     assert(found, "-> %\n", buffer.*);
 
     prev_buffer: *Buffer;
-    for < * buffers {
+    for < buffers {
         if it_index < index && it.initialized {
             prev_buffer = it;
             break;
@@ -64,7 +64,7 @@ PrevBuffer :: () {
     }
 
     if !prev_buffer {
-        for < * buffers {
+        for < buffers {
             if it.initialized {
                 prev_buffer = it;
                 break;
@@ -87,7 +87,7 @@ NextBuffer :: () {
     assert(found, "-> %\n", buffer.*);
 
     next_buffer: *Buffer;
-    for * buffers {
+    for buffers {
         if it_index > index && it.initialized {
             next_buffer = it;
             break;
@@ -95,7 +95,7 @@ NextBuffer :: () {
     }
 
     if !next_buffer {
-        for * buffers {
+        for buffers {
             if it.initialized {
                 next_buffer = it;
                 break;

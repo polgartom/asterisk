@@ -483,7 +483,7 @@ draw_buffer_browser :: () {
     wd := get_working_directory();
     path_unify_sepa(wd);
 
-    for *b: buffers {
+    for b: buffers {
         if !b.initialized continue;
 
         title := "* New *";
@@ -612,7 +612,7 @@ draw_file_browser :: () {
 
                 index := find_buffer_index_by_filepath(item.full_name);
                 if index != -1 {
-                    buffer := *buffers[index];
+                    buffer := buffers[index];
                     change_active_buffer(active_editor, buffer); 
                 } else {
                     buffer := open_file_or_create_empty_buffer(active_editor, item.full_name);

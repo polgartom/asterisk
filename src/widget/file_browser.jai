@@ -99,6 +99,12 @@ file_browser_scan :: () {
 
     // @Todo: We need to make a recursive version of this file browser, like the "Search files by name" dialog in vscode
     visit_files(current_dir, recursive=true, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
+
+    // for items {
+    //     open_file_or_create_empty_buffer(active_editor, it.full_name);
+    //     // if ends_with(it.full_name, ".jai") open_file_or_create_empty_buffer(active_editor, it.full_name);
+    // }
+
 }
 
 file_browser: File_Browser;
