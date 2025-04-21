@@ -1,8 +1,8 @@
 draw_frame :: (current_time: float64) {
     Simp.set_shader_for_color(true);
 
-    x, y, width, height := get_dimensions(my_window, true);
-    ui_per_frame_update(my_window, width, height, current_time); // GetRect
+    x, y, width, height := get_dimensions(window, true);
+    ui_per_frame_update(window, width, height, current_time); // GetRect
 
     rect := get_rect(0.0, 0.0, xx width, xx height);
 
@@ -969,7 +969,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
 }
 
 swap_buffers :: inline (window: Window_Type) {
-    Simp.swap_buffers(my_window, vsync=false);
+    Simp.swap_buffers(window, vsync=false);
     
     // glFinish();
     

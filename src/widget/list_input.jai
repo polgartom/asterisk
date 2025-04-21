@@ -74,7 +74,7 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
     if selected_index != -1 {
         i := selected_index;
         target := y - (i*y_off);
-        bottom_threshold := b + ch*2.0;
+        bottom_threshold := b + ch * 2;
 
         if moved {
             if target < bottom_threshold {
@@ -82,28 +82,33 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value + (bottom_threshold - target);
                 _anim.duration = 0.1;
-                _anim.elapsed = 0.0;
+                _anim.started_at = cast(float)current_time;
             } else if target >= t - ch {
                 _anim.active = true;
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value - (target + y_off - t);
-                _anim.duration = .1;
-                _anim.elapsed = 0.0;
+                _anim.duration = 0.1;
+                _anim.started_at = cast(float)current_time;
             }
         }
-
-        if _anim.active {
-            _anim.elapsed += xx frame_dt;
-            d := clamp(_anim.elapsed / _anim.duration, 0.0, 1.0);
-            if d == 1.0 then _anim.active = false;
-
-            scroll_value = xx lerp(_anim.start, _anim.target, d);
-
-            redraw_requested = true;
-        }
-        
-        Clamp(*scroll_value, 0.0, max_scroll_value);
     }
+
+    if _anim.active {
+        using _anim;
+
+        t := (current_time - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        v := start + cast(float)(distance * t);
+
+        if t == 1.0 then active = false;
+
+        scroll_value = v;
+
+        redraw_requested = true;
+    }
+
+    scroll_value = clamp(scroll_value, 0.0, max_scroll_value);
 
     for opt, i: options {
         defer y -= y_off;

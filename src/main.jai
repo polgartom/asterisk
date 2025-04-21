@@ -30,13 +30,10 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
-x_cursor_scroll_treshold := 30;
-y_cursor_scroll_treshold := 30;
-
 fps: float64;
 frametime: float64;
 
-my_window: Window_Type;
+window: Window_Type;
 
 footer_height: float;
 
@@ -95,8 +92,8 @@ main :: () {
 
     init_fonts();
 
-    my_window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
-    Simp.set_render_target(my_window);
+    window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
+    Simp.set_render_target(window);
 
     ui_init(); // GetRect
 
@@ -151,7 +148,7 @@ main :: () {
 
         for get_window_resizes() {
             Simp.update_window(it.window);
-            if it.window == my_window {
+            if it.window == window {
                 should_reinit := (it.width != window_width) || (it.height != window_height);
 
                 window_width  = it.width;
@@ -241,7 +238,7 @@ main :: () {
         }
 
         draw_frame(last_time);
-        swap_buffers(my_window);
+        swap_buffers(window);
 
         // sleep_milliseconds(6); // @Temporary
         reset_temporary_storage();
@@ -463,11 +460,6 @@ count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s6
     return count;
 }
 
-#if OS == .WINDOWS {
-    user32 :: #system_library "user32";
-    WaitMessage :: () -> s32 #foreign user32;
-}
-
 seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
     point := _point - 1;
     while point > 0 {
@@ -667,6 +659,10 @@ Hash      :: #import "Hash";
 
 #if OS == .WINDOWS {
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
+
+    user32 :: #system_library "user32";
+    WaitMessage :: () -> s32 #foreign user32;
+
 } else #if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
     crt :: #system_library "libc";
 }

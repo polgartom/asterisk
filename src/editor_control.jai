@@ -143,7 +143,7 @@ Save :: () {
             zero_memory(*ofn, size_of(Win.OPENFILENAMEA));
             ofn.lpstrInitialDir = temp_c_string(get_working_directory());
             ofn.lStructSize = size_of(Win.OPENFILENAMEA);
-            ofn.hwndOwner = my_window;
+            ofn.hwndOwner = window;
             ofn.lpstrFile = *szFile[0];
             ofn.nMaxFile = size_of(type_of(szFile));
             // ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.TXT\0";
