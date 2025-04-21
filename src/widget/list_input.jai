@@ -93,11 +93,13 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
         }
 
         if _anim.active {
-            _anim.elapsed += xx current_dt;
+            _anim.elapsed += xx frame_dt;
             d := clamp(_anim.elapsed / _anim.duration, 0.0, 1.0);
             if d == 1.0 then _anim.active = false;
 
-            scroll_value = lerp(_anim.start, _anim.target, d);
+            scroll_value = xx lerp(_anim.start, _anim.target, d);
+
+            redraw_requested = true;
         }
         
         Clamp(*scroll_value, 0.0, max_scroll_value);

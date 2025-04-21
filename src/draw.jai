@@ -68,7 +68,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         // Viewport (Y)
 
-        y_threshold := footer_r.h * 5;
+        y_threshold := get_line_height() * 6;
 
         my := get_line_height(find_row_index(buffer, editor.cursor.pos));
         my = r.h - my + editor.top_offset;
@@ -81,14 +81,17 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if target < 0 then target = 0;
         }
 
-        anim_y: Anim;
-        anim_y.active = true;
-        anim_y.start  = editor.top_offset;
-        anim_y.target = target;
-        anim_y.duration = 0.06;
-        anim_y.elapsed  = 0.0;
 
-        editor.y_scroll_anim = anim_y;
+        if target != editor.top_offset {
+            anim_y: Anim;
+            anim_y.active = true;
+            anim_y.start  = editor.top_offset;
+            anim_y.target = target;
+            anim_y.duration = 0.1;
+            anim_y.started_at = cast(float)current_time;
+
+            editor.y_scroll_anim = anim_y;
+        }
 
         // Viewport (X)
 
@@ -105,45 +108,49 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if target < 0 then target = 0;
         }
 
-        anim_x: Anim;
-        anim_x.active = true;
-        anim_x.start  = editor.left_offset;
-        anim_x.target = target;
-        anim_x.duration = 0.06;
-        anim_x.elapsed  = 0.0;
+        if target != editor.left_offset {
+            anim_x: Anim;
+            anim_x.active = true;
+            anim_x.start  = editor.left_offset;
+            anim_x.target = target;
+            anim_x.duration = 0.1;
+            anim_x.started_at = cast(float) current_time;
 
-        editor.x_scroll_anim = anim_x;
-
-        redraw_requested = true;
-
-    } else {
-        if editor.y_scroll_anim.active {
-            using editor;
-
-            y_scroll_anim.elapsed += xx current_dt;
-            dt := y_scroll_anim.elapsed;
-            d := smoothstep(0.0, y_scroll_anim.duration, dt);
-            editor.top_offset = lerp(y_scroll_anim.start, y_scroll_anim.target, d);
-
-            if d == 1.0 then y_scroll_anim.active = false;
-
-            redraw_requested = true;
+            editor.x_scroll_anim = anim_x;
         }
 
-        if editor.x_scroll_anim.active {
-            using editor;
-
-            x_scroll_anim.elapsed += xx current_dt;
-            dt := x_scroll_anim.elapsed;
-            d := smoothstep(0.0, x_scroll_anim.duration, dt);
-            editor.left_offset = lerp(x_scroll_anim.start, x_scroll_anim.target, d);
-
-            if d == 1.0 then x_scroll_anim.active = false;
-
-            redraw_requested = true;
-        }
     }
 
+    if editor.y_scroll_anim.active {
+        using editor.y_scroll_anim;
+
+        t := (current_time - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        // v := start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+        v := start + cast(float)(distance * t);                          // lerp
+
+        if t == 1.0 then active = false;
+
+        editor.top_offset = v;
+
+        redraw_requested = true;
+    }
+
+    if editor.x_scroll_anim.active {
+        using editor.x_scroll_anim;
+
+        t := (current_time - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        v := start + cast(float)(distance * t);
+
+        if t == 1.0 then active = false;
+
+        editor.left_offset = v;
+
+        redraw_requested = true;
+    }
 
     // if editor.cursor.moved || editor.anim.active {
     //     cw := em(1.0, primary_font);
@@ -780,11 +787,13 @@ draw_global_debug_info :: (r: Rect) {
         last_rendering_time = (ct-last_time)*1000;
     }
 
-    PrintDev("sim: %ms draw: %ms\n", formatFloat(last_showed_sim_time, trailing_width=3), formatFloat(last_rendering_time, trailing_width=2));
-    PrintDev("%fps %ms %sec\n",
+    PrintDev("%fps %ms %sec | dt: % sim: %ms draw: %ms\n", 
         formatFloat(fps, trailing_width=0),
         formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO),
-        formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO)
+        formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO),
+        frame_dt, 
+        last_showed_sim_time,
+        last_rendering_time,
     );
 
     row := 1;
@@ -962,7 +971,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
 swap_buffers :: inline (window: Window_Type) {
     Simp.swap_buffers(my_window, vsync=false);
     
-    glFinish();
+    // glFinish();
     
     // {
     //     // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5

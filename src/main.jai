@@ -5,8 +5,7 @@ should_quit := false;
 
 current_time: float64 = 0.0;
 last_time: float64 = 0.0;
-current_dt: float64 = 0.0;
-
+frame_dt: float64 = 0.0;
 
 last_simulation_time : float64;
 last_showed_sim_time : float64;
@@ -133,23 +132,15 @@ main :: () {
     }
 
     while !should_quit {
-        if mode == .WIDGET then redraw_requested = true;
+        if !redraw_requested then wait_for_event();
 
-        if !redraw_requested {
-            #if OS == .WINDOWS WaitMessage();
-
-            #if OS == .LINUX {
-                // @Temporary!!!
-                X11:: #import "X11";
-                xevent: X11.XEvent;
-                while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
-            }
-        }
+        update_window_events();
+        clear_widget_events();
 
         redraw_requested = false;
 
         current_time = seconds_since_init();
-        current_dt = current_time - last_time;
+        frame_dt = current_time - last_time;
         last_time = seconds_since_init();
 
         second_elapsed = false;
@@ -157,9 +148,6 @@ main :: () {
             last_second_time = last_time;
             second_elapsed = true;
         }
-
-        update_window_events();
-        clear_widget_events();
 
         for get_window_resizes() {
             Simp.update_window(it.window);
@@ -194,16 +182,9 @@ main :: () {
             register_widget_event(event);
 
             if event.type == .QUIT {
-                // print("quit!\n");
                 should_quit = true;
                 break;
             }
-
-            // #if DEBUG {
-            //     if mode == .EDITOR && event.key_code == .ESCAPE {
-            //         if event.key_pressed should_quit = true;
-            //     }
-            // }
 
             // This prevents some crazy situations like those in Adobe Premiere Pro. For example,
             // when we try to paste a text, it triggers the Paste() action while also inserting a "v" character.
@@ -223,7 +204,7 @@ main :: () {
                 continue;
             }
 
-            // @Cleanup: !!!!
+            // We use this for the word completion for now
             if event.key_code == .CTRL && !event.key_pressed {
                 ctrl_released = true;
             }
@@ -241,19 +222,11 @@ main :: () {
             }
         }
 
-        // @Cleanup
         if ctrl_released {
             if word_complete.active {
                 word_complete_abort();
             }
         }
-
-        // word_complete.should_abort = true;
-        // defer {
-        //     if word_complete.should_abort && word_complete.active {
-        //         word_complete_abort();
-        //     }
-        // }
 
         for buffers {
             commit_buffer_changes(it);
@@ -267,51 +240,13 @@ main :: () {
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
         }
 
-        #if 1 {
-            if show_debug_info {
-                debug_time := seconds_since_init();
-
-                active_editor, buffer := get_active_editor_and_buffer();
-                using active_editor;
-
-                PrintDev("w: % ; h: % ; t: % ; l: %\n", window_width, window_height, top_offset, left_offset);
-
-                PrintDev("rows: % ; gentime: %ms ; row_table size: %\n",
-                    active_buffer.row_table.count,
-                    formatFloat(active_buffer.row_table_recalc_time, trailing_width=4),
-                    cast(s64)(size_of(type_of(buffer.row_table)) * buffer.row_table.count)
-                );
-
-                PrintDev("tokenization: %ms\n", buffer.tokenization_time);
-
-                mx, my, ok := get_mouse_pointer_position(right_handed=false);
-                PrintDev("mouse -> x % y % | ok: %\n", mx, my, ok);
-
-                debug_time = (seconds_since_init() - debug_time) * 1000;
-                PrintDev("[DEBUG TIME] %ms\n", formatFloat(debug_time, trailing_width=4));
-
-                // bytes := size_of(Buffer) * buffers.count;
-                // for buffers {
-                //     bytes += it.count;
-                //     bytes += size_of(Row_Info) * it.row_table.count;
-                //     bytes += size_of(Color) * it.colors.count;
-
-                //     PrintDev("buf: % ; data: % ; rt: % ; colors: %\n", size_of(Buffer), it.count, size_of(Row_Info) * it.row_table.count, size_of(Color) * it.colors.count);
-                // }
-
-                // PrintDev("[BUFFERS]: % ; % ; % mb\n", buffers.count, buffers.allocated, bytes/1024/1024);
-
-                last_simulation_time = (seconds_since_init()-last_time)*1000;
-            }
-
-            defer array_reset(*debug_infos);
-        }
-
         draw_frame(last_time);
         swap_buffers(my_window);
 
-        // sleep_milliseconds(20); // @Temporary
+        // sleep_milliseconds(6); // @Temporary
         reset_temporary_storage();
+
+        array_reset(*debug_infos);
     }
 
 }
@@ -629,9 +564,9 @@ rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
     };
 }
 
+// return a + (b - a) * t;
 smoothstep :: (edge0: float, edge1: float, x: float) -> float {
     x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-    // ll("> %\n", x * x * (3.0 - 2.0 * x));
     return x * x * (3.0 - 2.0 * x);
 }
 
@@ -649,6 +584,20 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
     };
 }
 
+wait_for_event :: () {
+    // @Todo: Wayland SDL
+    
+    #if OS == .WINDOWS {
+        WaitMessage();
+    }
+
+    #if OS == .LINUX {
+        X11:: #import "X11";
+        xevent: X11.XEvent;
+        while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
+    }
+}
+
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -662,14 +611,12 @@ Range :: struct {
 
 Anim :: struct {
     active: bool;
-
     start: float;
     target: float;
-
+    started_at: float;
     duration: float;
-    elapsed: float;
 
-    started: float;
+    elapsed: float64;
 }
 
 Code_get_identifier_name :: (name: Code) -> string {
