@@ -72,9 +72,9 @@ previous_occurrence :: () {
         }
     } else {
         current_occurrence -= 1;
-        Clamp(*current_occurrence, 0, occurences.count);
     }
 
+    Clamp(*current_occurrence, 0, occurences.count);
 
     pos := occurences[current_occurrence];
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
