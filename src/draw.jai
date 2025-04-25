@@ -81,13 +81,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if target < 0 then target = 0;
         }
 
-
         if target != editor.top_offset {
             anim_y: Anim;
             anim_y.active = true;
             anim_y.start  = editor.top_offset;
             anim_y.target = target;
-            anim_y.duration = 0.1;
+            anim_y.duration = 0.08;
             anim_y.started_at = cast(float)current_time;
 
             editor.y_scroll_anim = anim_y;
@@ -113,7 +112,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             anim_x.active = true;
             anim_x.start  = editor.left_offset;
             anim_x.target = target;
-            anim_x.duration = 0.1;
+            anim_x.duration = 0.08;
             anim_x.started_at = cast(float) current_time;
 
             editor.x_scroll_anim = anim_x;
@@ -152,32 +151,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         redraw_requested = true;
     }
 
-    // if editor.cursor.moved || editor.anim.active {
-    //     cw := em(1.0, primary_font);
-    //     ch := primary_font.character_height;
-
-    //     x_pad := 0.0; //left_pad   * 2.0;
-    //     y_pad := 0.0; // footer_r.h * 2.0;
-
-    //     mx    := get_cursor_x(buffer, *editor.cursor);
-    //     relmx := mx - editor.left_offset - r.w;
-    //     if relmx + x_pad + cw > 0 {
-    //         editor.left_offset += abs(relmx + x_pad + cw);
-    //     } else if abs(relmx - x_pad) > r.w {
-    //         editor.left_offset -= abs(relmx - x_pad) - r.w;
-    //         if editor.left_offset < 0 then editor.left_offset = 0;
-    //     }
-
-    //     my    := get_line_height(find_row_index(buffer, editor.cursor.pos));
-    //     relmy := r.h - my + editor.top_offset;
-    //     if relmy - y_pad < 0 {
-    //         editor.top_offset += abs(relmy - y_pad);
-    //     } else if relmy + y_pad > r.h + r.y {
-    //         editor.top_offset -= (relmy + y_pad) - (r.h+r.y);
-    //         if editor.top_offset < 0 then editor.top_offset = 0;
-    //     }
-    // }
-
     draw_selection(editor, buffer, r);
 
     // Draw text
@@ -209,20 +182,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             row := row_table[row_index];
             if row.size == 0 continue;
 
-            // time := seconds_since_init() * 1000;
-
             bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
             
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
             draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
-
-            // avg_row_render_time += (seconds_since_init() * 1000 - time);
-            // rendered_rows += 1;
         }
-
-        // avg_row_render_time = ifx rendered_rows > 0 then avg_row_render_time/rendered_rows else 0.0;
-        // PrintDev("draw_rows: %/% %ms avg/row\n", rendered_rows, row_table.count, formatFloat(avg_row_render_time, trailing_width=3));
     }
 
     draw_cursor(editor, buffer, r);
@@ -307,11 +272,6 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     line_text := get_row_as_string(buffer, row);
     line_text  = slice(line_text, 0, c.pos - row.start);
 
-    //cx := r.x + Font.prepare_text(primary_font, line_text, start_x = xx editor.left_offset, max_width = xx r.w);
-    /*left := r.x;
-    line_text := slice(buffer, row.end - row.size, row.size);
-    draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
-    */
     cx := r.x + measure_text_width(primary_font, line_text) - editor.left_offset;
     cw := em(1.0, primary_font);
     ch := primary_font.character_height;
@@ -984,7 +944,3 @@ swap_buffers :: inline (window: Window_Type) {
 }
 
 redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
-
-// DEBUG_CROSSHAIR_COLOR :: Vector4.{5.0/255.0, 6.0/255.0, 10.0/255.0, 1.0};
-// PURPLE_COLOR :: Vector4.{.5, .3, .8, 1.0};
-// FOOTER_COLOR :: Vector4.{209.0/255.0, 181.0/255.0, 142.0/255.0, 1.0};

@@ -1,11 +1,15 @@
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
 - File watcher
 - Update the cursor position in the other editor panel if the same file is open in both. For example, if we insert text in the left editor, the right editor’s cursor would appear to move backward because its position stays the same while the content grows.
+- Restore the editor's cursor position after buffer switch related to that buffer.
+- Directory watcher? It takes some time to open the file browser if we on the shared network directory.
+- Add commands like "to_snake_case" or "to_upper_case"... and a command selection widget
+- Alert if we want to close the window or a buffer that is unsaved. The dialog should contain a "save" and "save all" buttons.
 
 [Config]
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
-	
+    
 ------------------------------------------------
 
 C:/jai/modules/String/module.jai:819,5: Assertion failed: index = -2,251,774,043,881,096
