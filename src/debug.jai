@@ -8,7 +8,7 @@ PrintDev :: (fmt: string, args: .. Any) #expand {
 
 ll :: (fmt: string, args: .. Any) #expand {
     s := tprint(fmt, ..args);
-    print("[%] %", #procedure_name(), s);
+    log("[%] %", #procedure_name(), s);
 } @PrintLike
 
 MeasureProc :: () #expand {

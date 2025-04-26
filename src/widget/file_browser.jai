@@ -8,7 +8,9 @@ open_file_browser :: () {
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
 
-    file_browser_scan();
+    if scan_requested {
+        file_browser_scan();
+    }
 }
 
 file_browser_change_dir :: (path: string) -> (success: bool) {
@@ -51,22 +53,6 @@ file_browser_scan :: () {
         file_browser_change_dir(wd);
     }
 
-    // {
-    //     parent_dir := array_add(*items);
-    //     parent_dir.short_name = "..";
-    //     modify_string(*parent_dir.full_name, current_dir);
-    //     t := path_strip_filename(parent_dir.full_name);
-    //     if t then parent_dir.full_name = t;
-
-    //     if ends_with(parent_dir.full_name, "/") then parent_dir.full_name.count -= 1;
-        
-    //     is, success := is_directory(parent_dir.full_name);
-    //     assert(success, "Failed to % check if it's a directory or not.", parent_dir.full_name);
-    //     assert(is, "The % is doesn't a valid directory!", parent_dir.full_name);
-
-    //     parent_dir.is_directory = true;
-    // }
-
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
         if info.is_directory {
             // @Temporary @Todo Put this to a project config file
@@ -105,6 +91,7 @@ file_browser_scan :: () {
     //     // if ends_with(it.full_name, ".jai") open_file_or_create_empty_buffer(active_editor, it.full_name);
     // }
 
+    scan_requested = false;
 }
 
 file_browser: File_Browser;
@@ -116,4 +103,6 @@ File_Browser :: struct {
     current_dir: string;
 
     items: [..] File_Visit_Info;
+
+    scan_requested := true;
 }

@@ -1,6 +1,7 @@
 // [Core]
 
 Quit :: () {
+
     should_open_dialog := false;
     for buffers {
         if it.unsaved {
@@ -9,7 +10,10 @@ Quit :: () {
         }
     }
 
-    if !should_open_dialog return;
+    if !should_open_dialog {
+        should_quit = true;
+        return;
+    }
 
     // @Todo: Linux
     #if OS == .WINDOWS {

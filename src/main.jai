@@ -128,8 +128,21 @@ main :: () {
         editor2.active_buffer = active_editor.active_buffer;
     }
 
+    watch_working_directory();
+
     while !should_quit {
-        if !redraw_requested then wait_for_event();
+        if !redraw_requested {
+            wait_for_event();
+        }
+
+        {
+            // @Decide: Do we want to do this on the main thread?
+            // File watcher
+            changed, needs_wait, wait_seconds := process_changes(*watcher);
+            if changed {
+                file_browser.scan_requested = true;
+            }
+        }
 
         update_window_events();
         clear_widget_events();
@@ -245,7 +258,6 @@ main :: () {
 
         array_reset(*debug_infos);
     }
-
 }
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
@@ -584,6 +596,45 @@ wait_for_event :: () {
     }
 }
 
+// @Cleanup
+watcher: File_Watcher(void);
+watch_working_directory :: () {
+
+    VERBOSE_WATCHER :: false;//DEBUG;
+    RECURSIVE_WATCH :: true;
+    EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.MODIFIED|.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
+
+    file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
+        ll("Change for path %: %", change.full_path, change.events);
+    }
+
+    if !init(
+        *watcher, 
+        file_change_callback, 
+        null, 
+        events_to_watch = EVENTS_TO_WATCH,
+        merge_window_seconds = 1.0, 
+        verbose = VERBOSE_WATCHER, 
+        watch_recursively = RECURSIVE_WATCH
+    ) {
+        log_error("Could not initialize watcher");
+        exit(3);
+    }
+
+    dirs_to_watch := string.[get_working_directory()];
+    assert(dirs_to_watch.count > 0);
+
+    ll("Adding folders: %", dirs_to_watch);
+    if !add_directories(*watcher, ..dirs_to_watch) {
+        log_error("Could not watch directories %", dirs_to_watch);
+        exit(4);
+    }
+
+    ll("Starting to check % for changes in % directories.", ifx RECURSIVE_WATCH then "recursively" else "", dirs_to_watch);
+
+    // deinit(watcher); // Those handlers are released during shutdown, right?
+}
+
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -646,6 +697,7 @@ Code_get_identifier_name :: (name: Code) -> string {
 #import "Random";
 #import "Input";
 #import "Keymap";
+#import "File_Watcher";
 
 File      :: #import "File";
 Simp      :: #import "Simp";

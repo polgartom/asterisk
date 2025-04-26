@@ -432,15 +432,25 @@ draw_buffer_browser :: () {
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
-    theme.bg_color = #run hex_to_vec4(0x502129ff);// #run hex_to_vec4(0x1c2d29ff);
+    theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    h := cast(float)font.character_height * 2.0;
-    b := cast(float, window_height);
+    w := 400.0; // @Tempoary
+    k := window_height * .1;
+
+    h := cast(float, font.character_height * 2.0);
+    b := cast(float, window_height - k*.1);
     r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
-    tinp := text_input(r, xx #location(), font, placeholder="Switch to buffer", theme=theme);
+    r.x = window_width*.5 - w;
+    r.w = w * 2.0;
+    r.y += 5.0; 
+
+    tinp := buffer_browser.bb_text_input;
+    update_text_input(tinp, r, font, placeholder="Switch to buffer", theme=theme);
+    r.y -= 5.0; 
 
     options: [..] List_Input.Option(*Buffer);
     options.allocator = temp;
@@ -472,10 +482,13 @@ draw_buffer_browser :: () {
     }
 
     list_rect := r;
-    k := ed_r.h * .1;
     list_rect.h = 1.5*k;
-    linp := list_input(list_rect, xx #location(), options, font);
-    
+
+    linp_theme := List_Input.DEFAULT_THEME;
+    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
+
     if tinp.typed then linp.scroll_value = 0.0;
     if linp.selected_index == -1 then linp.selected_index = 0;
 
