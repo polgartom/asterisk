@@ -247,7 +247,7 @@ cursor_shape: block             # block, line, underscore
 cursor_line_indicator: filled   # none, filled, bordered
 
 [Color]
-background:                 fc_1a_21_ff
+background:                 0c1a21ff
 layout_separator:           dddddd1b
 text_default:               c2c2c2ff
 text_dimmed:                bbbbbbff
