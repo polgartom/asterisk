@@ -179,7 +179,7 @@ main :: () {
             register_widget_event(event);
 
             if event.type == .QUIT {
-                should_quit = true;
+                Quit();
                 break;
             }
 
@@ -638,13 +638,14 @@ Code_get_identifier_name :: (name: Code) -> string {
 #import "String";
 #import "Math";
 #import "Window_Creation";
-#import "Input";
 #import "Unicode";
 #import "GetRect";
 #import "Command_Line";
 #import "Hash_Table";
 #import "Sort";
 #import "Random";
+#import "Input";
+#import "Keymap";
 
 File      :: #import "File";
 Simp      :: #import "Simp";

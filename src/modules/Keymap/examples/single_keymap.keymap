@@ -1,0 +1,75 @@
+[1]         # Version number; do not delete!
+
+#
+# Lines starting with '#' in keymap files are comments.
+#
+# The general format is:
+#
+#    Key CommandBoundToKey
+#
+# CommandBoundToKey is some procedure inside your program that you want to happen
+# when a key is pressed.
+#
+#
+
+#
+# For a list of all strings that can be in the 'Key' slot, for now you will
+# have to read the source: look for map_key_string() in modules/Keymap/module.jai.
+#
+
+1  BackgroundColor1
+2  BackgroundColor2
+3  BackgroundColor3
+
+ESC   Quit
+
+ArrowRight   RotateMoreClockwise
+ArrowLeft    RotateMoreCounterClockwise
+ArrowDown    StopRotation
+
+Gamepad_RShoulder    RotateMoreClockwise
+Gamepad_LShoulder    RotateMoreCounterClockwise
+Gamepad_A            StopRotation
+
+#
+# Most of the keymap routines we have used so far just perform an action
+# when a key is pressed. You can also perform an action when a key is held down.
+# The way this works is, there are two different kinds of procedures that you can
+# bind into the keymap. One is a Key_Press_Proc, which just gets called on key press.
+# The other is Key_Hold_Proc, which gets called on key press and release,
+# with a boolean parameter telling you which of these is happening.
+#
+# Here, PrintHelloSailorWhileHeld is a Key_Hold_Proc. (It's only in the code
+# that this is determined; the keymap file doesn't indicate or care which kind
+# of procedure it is.)
+#
+Shift   GrowSquareWhileHeld
+
+#
+# Keymaps allow you to put modifiers in front of a key.
+# The modifiers are:
+#
+#    S: Shift
+#    C: Control
+#    A: Alt
+#
+# You can put these in any order.
+# 
+
+G       PrintFrobozz
+S-G     PrintCapitalFrobozz
+S-C-G   PrintExtremeFrobozz
+S-C-A-G PrintCrazyFrobozz
+
+
+#
+# You can also register a command handler with the Keymap; you can use this to
+# process arbitrary commands passed as strings (including spaces, etc). In the Keymap
+# file you designate a command as starting with a ':'. Keymap doesn't interpret
+# these commands in any way; it is up to you what they mean.
+#
+
+Space   :show me the barley
+S-Space :show me the(BARLEY!!)
+
+Return  :12345 snickerdoodle

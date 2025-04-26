@@ -15,6 +15,11 @@
     options := get_build_options(w);
     copy_commonly_propagated_fields(get_build_options(), *options);
 
+    import_path: [..] string;
+    array_add(*import_path, "src/modules");
+    array_add(*import_path, ..options.import_path);
+    options.import_path = import_path;
+
     options.array_bounds_check = .ON;
     options.null_pointer_check = .ON;
 

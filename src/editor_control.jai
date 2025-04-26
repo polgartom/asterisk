@@ -1,6 +1,35 @@
 // [Core]
 
 Quit :: () {
+    should_open_dialog := false;
+    for buffers {
+        if it.unsaved {
+            should_open_dialog = true;
+            break;
+        }
+    }
+
+    if !should_open_dialog return;
+
+    // @Todo: Linux
+    #if OS == .WINDOWS {
+        Win :: #import "Windows";
+        U :: #import "Windows_Utf8";
+        
+        modal_text := U.utf8_to_wide("Some buffers are unsaved, do you want to save them?"); // @Cleanup: Can we do this at compile-time?
+        
+        result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
+        if result == {
+            case Win.IDYES;
+                    for buffers {
+                        if it.unsaved then save_buffer(it);
+                    }
+            case Win.IDNO;      // We don't want to save the buffer so close it!
+            case Win.IDCANCEL; 
+                return;         // We don't want to close the buffer!
+        };
+    }
+
     should_quit = true;
 }
 
@@ -42,29 +71,7 @@ CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
-    if !buffer.unsaved {
-        close_buffer(buffer);
-        return;
-    }
-
-    // @Todo: Linux
-    #if OS == .WINDOWS {
-        Win :: #import "Windows";
-        U :: #import "Windows_Utf8";
-        
-        modal_text := U.utf8_to_wide("The buffer unsaved, do you want to save it?"); // @Cleanup: Can we do this at compile-time?
-        
-        result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
-        if result == {
-            case Win.IDYES;
-                Save();          // @Cleanup: WE should use a platform procedure for this, because this proc "reserved" for the keymap-action thing.
-            case Win.IDNO;      // We don't want to save the buffer so close it!
-            case Win.IDCANCEL; 
-                return;         // We don't want to close the buffer!
-        };
-    }
-
-    close_buffer(buffer);
+    close_buffer_with_confirmation(buffer);
 }
 
 PrevBuffer :: () {
@@ -137,63 +144,7 @@ Save :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if filepath {
-        exists_on_disk = file_exists(filepath);
-        if !exists_on_disk {
-            dir := path_strip_filename(filepath);
-            assert(!!dir);
-            File.make_directory_if_it_does_not_exist(dir);
-        }
-
-        s := to_string(buffer);
-        File.write_entire_file(filepath, to_string(buffer));
-        
-        exists_on_disk = file_exists(filepath);
-        unsaved = false;
-        
-    } else {
-        #if OS == .WINDOWS {
-            Win :: #import "Windows";
-
-            OFN_FILEMUSTEXIST   :: 0x00001000;
-            OFN_PATHMUSTEXIST   :: 0x00000800;
-            OFN_OVERWRITEPROMPT :: 0x00000002;
-
-            ofn: Win.OPENFILENAMEA;
-            szFile: [Win.MAX_PATH] u8;
-
-            zero_memory(*ofn, size_of(Win.OPENFILENAMEA));
-            ofn.lpstrInitialDir = temp_c_string(get_working_directory());
-            ofn.lStructSize = size_of(Win.OPENFILENAMEA);
-            ofn.hwndOwner = window;
-            ofn.lpstrFile = *szFile[0];
-            ofn.nMaxFile = size_of(type_of(szFile));
-            // ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.TXT\0";
-            ofn.lpstrFilter = "All Files\0*.*\0\0"; // A buffer containing pairs of null-terminated filter strings. The last string in the buffer must be terminated by two NULL characters.
-            ofn.nFilterIndex = 1;
-            ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-            if (Win.GetSaveFileNameA(*ofn)) {
-                at := 0;
-                while ofn.lpstrFile[at] at+=1;
-
-                modify_string(*filepath, string.{at,ofn.lpstrFile});
-                assert(!!filepath);
-
-                // ll("% ; %\n", ofn, filepath);
-
-                File.write_entire_file(filepath, to_string(buffer));
-                
-                exists_on_disk = file_exists(filepath);
-                unsaved = false;
-            }
-
-        } else {
-            // @Todo: Linux
-            log_error("[TODO]: File save modal is not implemented yet!\n");
-        }
-
-    }
+    save_buffer(buffer);
 }
 
 ToggleDevInfo :: () {
@@ -1320,5 +1271,3 @@ C-y Redo
 C-e WordCompletion
 
 DONE;
-
-#import "Keymap";

@@ -1,0 +1,28 @@
+[1]         # Version number; do not delete!
+
+# 
+# See single_keymap.keymap and single_keymap.jai for the introduction,
+# to help you see more possibilities of what could go into this file.
+#
+# Here, we are just demonstrating the Keymap_Set with multiple sections.
+#
+
+[Main]
+
+1  GoToModeMain
+2  GoToModeEditor
+3  GoToModeProfiling
+
+Enter   PumpSquareSize
+ESC     Quit
+
+# Below, we have bindings in the other modes that will overshadow
+# this Enter binding in Main (if one of those modes is active).
+
+[Editor]
+
+Enter   EnterPressed    # Note that this has the same name as the EnterPressed binding in Profiling... but that's okay, it is bound separately in the program!
+
+[Profiling]
+
+Enter   EnterPressed    # Note that this has the same name as the EnterPressed binding in Editor... but that's okay, it is bound separately in the program!
