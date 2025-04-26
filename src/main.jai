@@ -174,7 +174,7 @@ main :: () {
         }
 
         {
-            c := map_color_to_vec4(.BACKGROUND);
+            c :: #run map_color_to_vec4(.BACKGROUND);
             Simp.clear_render_target(c.x, c.y, c.z, c.w);
         }
 
@@ -250,8 +250,7 @@ main :: () {
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
         }
 
-        draw_frame(last_time);
-        swap_buffers(window);
+        draw_frame();
 
         // sleep_milliseconds(6); // @Temporary
         reset_temporary_storage();

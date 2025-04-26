@@ -1,8 +1,8 @@
-draw_frame :: (current_time: float64) {
+draw_frame :: () {
     Simp.set_shader_for_color(true);
 
     x, y, width, height := get_dimensions(window, true);
-    ui_per_frame_update(window, width, height, current_time); // GetRect
+    ui_per_frame_update(window, width, height, last_time); // GetRect
 
     rect := get_rect(0.0, 0.0, xx width, xx height);
 
@@ -30,24 +30,7 @@ draw_frame :: (current_time: float64) {
         draw_global_debug_info(active_editor.rect_for_draw);
     }
 
-    // @Todo: Draw this by pressing a hotkey designated for this. We could use Ctrl + F1-F12 or something.
-    // {
-    //     // Draw current editor's history
-
-    //     edi, buf := get_active_editor_and_buffer();
-    //     r := get_rect(window_width/2.0 , window_height-10.0, window_width/2.1, 200.0);
-
-    //     options: [..] List_Input.Option;
-    //     options.allocator = temp;
-    //     array_reserve(*options, buf.history.count);
-    //     for h, i: buf.history {
-    //         o := array_add(*options);
-    //         o.label = tprint("% % % %", i, h.type, h.text, ifx buf.history_index==i then " <<" else "");
-    //     }
-
-    //     list_input(r, xx #location(), options, primary_font_xs);
-    // }
-
+    Simp.swap_buffers(window);
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
@@ -62,6 +45,37 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     // Simp.immediate_quad(pad_r.x, pad_r.y, pad_r.x + pad_r.w, pad_r.h + pad_r.y, PURPLE_COLOR);
 
     buffer := editor.active_buffer;
+
+    if editor.y_scroll_anim.active {
+        using editor.y_scroll_anim;
+
+        t := (current_time - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        // v := start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+        v := start + cast(float)(distance * t);                          // lerp
+
+        if t == 1.0 then active = false;
+
+        editor.top_offset = v;
+
+        redraw_requested = true;
+    }
+
+    if editor.x_scroll_anim.active {
+        using editor.x_scroll_anim;
+
+        t := (current_time - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        v := start + cast(float)(distance * t);
+
+        if t == 1.0 then active = false;
+
+        editor.left_offset = v;
+
+        redraw_requested = true;
+    }
 
     if editor.cursor.moved {
         editor.cursor.moved = false;
@@ -117,36 +131,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
             editor.x_scroll_anim = anim_x;
         }
-
-    }
-
-    if editor.y_scroll_anim.active {
-        using editor.y_scroll_anim;
-
-        t := (current_time - started_at) / duration;
-        t = clamp(t, 0.0, 1.0);
-        distance := (target - start);
-        // v := start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
-        v := start + cast(float)(distance * t);                          // lerp
-
-        if t == 1.0 then active = false;
-
-        editor.top_offset = v;
-
-        redraw_requested = true;
-    }
-
-    if editor.x_scroll_anim.active {
-        using editor.x_scroll_anim;
-
-        t := (current_time - started_at) / duration;
-        t = clamp(t, 0.0, 1.0);
-        distance := (target - start);
-        v := start + cast(float)(distance * t);
-
-        if t == 1.0 then active = false;
-
-        editor.left_offset = v;
 
         redraw_requested = true;
     }
@@ -315,6 +299,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         Simp.prepare_text(primary_font, character);
         Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
     }
+
+    Simp.immediate_flush();
 }
 
 // @Todo: This thing is not doing draws properly. Also we should create an array of selections, because
@@ -324,6 +310,8 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     if !has_selection(c) return;
 
     Simp.set_shader_for_color(true);
+    Simp.immediate_begin();
+
     selection_color := map_color_to_vec4(.TEXT_SELECTION);
 
     left_pad := cast(float32) primary_font.em_width;
@@ -415,6 +403,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         }
     }
 
+    Simp.immediate_flush();
 }
 
 draw_widgets :: () {
@@ -809,6 +798,7 @@ draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     width := Simp.prepare_text(font, text, 0);
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
     
+    Simp.set_shader_for_text();
     draw_generated_quads_for_code(buffer, text, font);
 
     return width;
@@ -822,13 +812,12 @@ draw_generated_quads_for_code :: (buffer: *Buffer, text: string, font: *Simp.Dyn
 
     if state.current_shader Simp.immediate_flush();
 
-    Simp.set_shader_for_text();
     Simp.immediate_begin();
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
 
-    draw_letter_quad :: (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
+    draw_letter_quad :: inline (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
         page := quad.glyph.page;
 
         if page.bitmap_data.width  <= 1 return;
@@ -939,21 +928,6 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
             }
         }
     }
-}
-
-swap_buffers :: inline (window: Window_Type) {
-    Simp.swap_buffers(window, vsync=false);
-    
-    glFinish();
-    
-    // {
-    //     // https://community.khronos.org/t/swapbuffers-and-synchronization/107667/5
-    //     BOOST_THE_FPS_MAGICALLY :: true;
-    //     #if BOOST_THE_FPS_MAGICALLY {
-    //         glFinish :: () #foreign;
-    //         glFinish();
-    //     }
-    // }
 }
 
 redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
