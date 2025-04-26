@@ -98,3 +98,8 @@ Color :: enum u8 {
     FOOTER_BACKGROUND_DARKEN;
     FOOTER_TEXT;
 }
+
+/*** NICE COLORS ***/
+/* 
+    0xc2c2_ff_ff - purple-ish
+*/
