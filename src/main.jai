@@ -44,8 +44,20 @@ Args :: struct {
     workdir: string;
 }
 
+executable_dir: string;
+config_filepath: string;
+
 main :: () {
     print("\n\n");
+
+    {
+        path := get_path_of_running_executable();
+        executable_dir = copy_string(path_strip_filename(path));
+        path_unify_sepa(executable_dir);
+        assert(executable_dir.count > 0);
+
+        config_filepath = join(executable_dir, "config.cfg", separator="");
+    }
 
     {
         format := *context.print_style.default_format_struct;
@@ -174,7 +186,7 @@ main :: () {
         }
 
         {
-            c :: #run map_color_to_vec4(.BACKGROUND);
+            c := map_color_to_vec4(.BACKGROUND);
             Simp.clear_render_target(c.x, c.y, c.z, c.w);
         }
 
@@ -189,6 +201,8 @@ main :: () {
         ctrl_released := false;
 
         for event : events_this_frame {
+            // ll("%\n", event);
+
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -670,6 +684,7 @@ Code_get_identifier_name :: (name: Code) -> string {
     return ident.name;
 }
 
+#load "ui.jai";
 #load "editor.jai";
 #load "editor_control.jai";
 #load "cursor.jai";

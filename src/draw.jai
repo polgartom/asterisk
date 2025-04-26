@@ -95,6 +95,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if target < 0 then target = 0;
         }
 
+        // editor.top_offset = target;
+
         if target != editor.top_offset {
             anim_y: Anim;
             anim_y.active = true;
@@ -174,7 +176,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         }
     }
 
-    draw_cursor(editor, buffer, r);
+    draw_cursor(editor, buffer, r, ui.cursor_shape, ui.cursor_line_indicator);
 
     {
         // Draw footer
@@ -245,9 +247,11 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
 }
 
-draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
+draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Shape.BLOCK, line_indicator := UI.Cursor_Line_Indicator.FILLED) {
     push_scissor(r);
     defer pop_scissor();
+
+    Simp.set_shader_for_color(true);
 
     c  := *editor.cursor;
 
@@ -262,8 +266,6 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
     bottom := (r.h + r.y) - get_line_height(row_index + 1) + editor.top_offset;
 
-    Simp.set_shader_for_color(true);
-
     bg_color := map_color_to_vec4(.CURSOR);
     fg_color := map_color_to_vec4(.TEXT_UNDER_CURSOR);
 
@@ -272,32 +274,40 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         fg_color = map_color_to_vec4(.TEXT_UNDER_INACTIVE_CURSOR);
     }
 
-    // @Todo: Current line indicator frame shape
-    // #if CURRENT_LINE_INDICATOR_STYLE == .FRAME {
-    //     p1 := bottom + (ch-ch*0.1);
-    //     p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+    if #complete line_indicator == {
+        case .NONE;
+        case .FILLED;
+            // Current line indicator shape
+            p1 := bottom + (ch-ch*0.1);
+            p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
 
-    //     Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // top
-    //     Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + CURRENT_LINE_INDICATOR_FRAME_WIDTH, CURRENT_LINE_INDICATOR_COLOR); // bottom
-    // }
+            color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
+            Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
+        case .BORDERED;
+            p1 := bottom + (ch-ch*0.1);
+            p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
 
-    {
-        // Current line indicator shape
-        p1 := bottom + (ch-ch*0.1);
-        p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
+            THICKNESS :: 2; // @Todo: Add to config
+            border_color := #run hex_to_vec4(0xcccccc_1a); // map_color_to_vec4(.CURSOR_LINE_BACKGROUND); // @Todo: Add to config
 
-        color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
-        Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
+            Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + THICKNESS, border_color); // top
+            Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + THICKNESS, border_color); // bottom
     }
 
-    // Cursor shape
-    Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
-
-    // Change character's color under the cursor
-    if buffer.count {
-        character := get_character_as_string_at(buffer, xx c.pos);
-        Simp.prepare_text(primary_font, character);
-        Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
+    if #complete shape == {
+        case .BLOCK;
+            Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
+            // Change character's color under the cursor
+            if buffer.count {
+                character := get_character_as_string_at(buffer, xx c.pos);
+                Simp.prepare_text(primary_font, character);
+                Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
+            }
+        case .LINE;
+            // @Todo:
+            assert(false, "TODO!\n");
+        case .UNDERSCORE;
+            Simp.immediate_quad(cast(float32)cx, bottom, cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
     }
 
     Simp.immediate_flush();

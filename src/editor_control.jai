@@ -1165,7 +1165,6 @@ init_keymaps :: () {
     // success := load_from_file(*keymap_set, "default", "default.keymap", false);
 
     success := load_from_memory(*keymap_set, DEFAULT_KEYMAP_CONFIG, "default");
-    
     assert(success, "Failed to load the 'default.keymap'");
 }
 
@@ -1188,7 +1187,7 @@ ShiftHeld :: () -> bool #expand {
 }
 
 DEFAULT_KEYMAP_CONFIG :: #string DONE 
-[1]
+[1] # Version number; do not delete!
 
 [Core]
 
