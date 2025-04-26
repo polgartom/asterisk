@@ -42,6 +42,28 @@ CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
+    if !buffer.unsaved {
+        close_buffer(buffer);
+        return;
+    }
+
+    // @Todo: Linux
+    #if OS == .WINDOWS {
+        Win :: #import "Windows";
+        U :: #import "Windows_Utf8";
+        
+        modal_text := U.utf8_to_wide("The buffer unsaved, do you want to save it?"); // @Cleanup: Can we do this at compile-time?
+        
+        result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
+        if result == {
+            case Win.IDYES;
+                Save();          // @Cleanup: WE should use a platform procedure for this, because this proc "reserved" for the keymap-action thing.
+            case Win.IDNO;      // We don't want to save the buffer so close it!
+            case Win.IDCANCEL; 
+                return;         // We don't want to close the buffer!
+        };
+    }
+
     close_buffer(buffer);
 }
 
@@ -167,6 +189,7 @@ Save :: () {
             }
 
         } else {
+            // @Todo: Linux
             log_error("[TODO]: File save modal is not implemented yet!\n");
         }
 
