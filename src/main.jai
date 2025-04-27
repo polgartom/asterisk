@@ -186,11 +186,6 @@ main :: () {
         }
 
         {
-            c := map_color_to_vec4(.BACKGROUND);
-            Simp.clear_render_target(c.x, c.y, c.z, c.w);
-        }
-
-        {
             // @Cleanup: Remove it!!
             enable(*keymap_set, editor_keymap, mode == .EDITOR);
             enable(*keymap_set, widget_keymap, mode == .WIDGET);
@@ -485,6 +480,7 @@ count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s6
     return count;
 }
 
+// @Cleanup: Shorter name
 seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
     point := _point - 1;
     while point > 0 {
@@ -496,6 +492,7 @@ seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
     return 0;
 }
 
+// @Cleanup: Shorter name
 seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
     if point == s.count {
         return point;
@@ -503,6 +500,7 @@ seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
     return point + 1 + trailingBytesForUTF8[s[point]];
 }
 
+// @Cleanup: Naming
 seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alphanum_char := true) -> int {
     while point {
         point = seek_left_one_utf8_character_byte_pos(s, point);
@@ -512,24 +510,6 @@ seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alpha
             }
             break;
         }
-    }
-
-    return point;
-}
-
-seek_left_utf8_until_separator :: (s: string, point: int) -> int {
-    while point {
-        point = seek_left_one_utf8_character_byte_pos(s, point);
-        if !is_separator(s[point]) break;
-    }
-
-    return point;
-}
-
-seek_right_utf8_for_separator :: (s: string, point: int) -> int {
-    while point {
-        point = seek_left_one_utf8_character_byte_pos(s, point);
-        if is_separator(s[point]) break;
     }
 
     return point;

@@ -1014,7 +1014,6 @@ IndentRight :: () {
     c.col = byte_pos_to_row_col_index(buffer, c.pos);
 }
 
-// @Incomplete !!!
 ExtendSelectionByToken :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -1034,6 +1033,12 @@ ExtendSelectionByToken :: () {
         }
 
         advance(*t, 1 + trailingBytesForUTF8[t[0]]);
+    }
+
+    // In this case, no separator was found, so we use "eof" as a separator to select the last alphanumeric word in the buffer.
+    if t.data == buffer.data + buffer.count {
+        ident := slice(buffer, editor.cursor.pos, t.data - s.data);
+        set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + ident.count, horizontal=true, with_selection=false);
     }
 
     // @Incomplete: Currently, we are working with one cursor instance per buffer

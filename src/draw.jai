@@ -1,4 +1,7 @@
 draw_frame :: () {
+    c := map_color_to_vec4(.BACKGROUND);
+    Simp.clear_render_target(c.x, c.y, c.z, c.w);
+
     Simp.set_shader_for_color(true);
 
     x, y, width, height := get_dimensions(window, true);
