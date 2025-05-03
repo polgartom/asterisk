@@ -541,12 +541,23 @@ modify_string :: (target: *string, new_value: string) {
     target.* = copy_string(new_value);
 }
 
-advance :: (arr: *[]$T, steps := 1) {
+advance :: (arr: *[] $T, steps := 1) {
     assert(arr.count - steps > -1 && steps > -1);
 
     arr.data  += steps;
     arr.count -= steps;
 }
+
+advance :: (arr: [] $T, steps := 1) -> [] T {
+    assert(arr.count - steps > -1 && steps > -1);
+
+    r: [] T;
+    r.data  = arr.data  + steps;
+    r.count = arr.count - steps;
+
+    return r;
+}
+
 
 get_range_as_string :: (s: string, range: Range) -> string {
     return slice(s, range.start, range.end - range.start);

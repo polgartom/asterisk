@@ -377,167 +377,212 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
     // buffer.* = new_buffer;
 }
 
+batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
+    assert(history_index >= 0);
+    assert(history_index < history.count);
+    
+    h := history[history_index];
+
+    batch: [] Buffer_History;
+    batch.data = history.data + history_index;
+    batch.count = 1;
+
+    // @Incomplete
+    // We want to batch up the .DELETE history items too but it's not so easy because we can't simply determinate where is the "separation" between delete actions.
+    // We need to separate them by "it was an alphanum or separator (like in .INSERT)", "it was a multi-char deletion or not (required to check if that is not simply an utf8 character)",
+
+    if h.type == .INSERT {
+        start_index := history_index;
+
+        list := array_view(history, 0, history_index);
+        if is_alphanum(h.text[0]) {
+            for #v2 < list {
+                if it.type != h.type break;
+                if !is_alphanum(it.text[0]) break;
+
+                start_index = it_index;
+            }
+        } else {
+            for #v2 < list {
+                if it.type != h.type break;
+                if is_alphanum(it.text[0]) break;
+
+                start_index = it_index;
+            }
+        }
+
+        batch = array_view(history, start_index, (history_index+1) - start_index);
+    }
+
+    return batch;
+}
+
+batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
+    assert(history_index >= 0);
+    assert(history_index < history.count);
+    
+    h := history[history_index];
+
+    batch: [] Buffer_History;
+    batch.data = history.data + history_index;
+    batch.count = 1;
+
+    // @Incomplete
+    // We want to batch up the .DELETE history items too but it's not so easy because we can't simply determinate where is the "separation" between delete actions.
+    // We need to separate them by "it was an alphanum or separator (like in .INSERT)", "it was a multi-char deletion or not (required to check if that is not simply an utf8 character)",
+
+    if h.type == .INSERT {
+        end_index := history_index;
+
+        list := advance(history, history_index);
+        if is_alphanum(h.text[0]) {
+            for list {
+                if it.type != h.type break;
+                if !is_alphanum(it.text[0]) break;
+
+                end_index += 1;
+            }
+        } else {
+            for list {
+                if it.type != h.type break;
+                if is_alphanum(it.text[0]) break;
+
+                end_index += 1;
+            }
+        }
+
+        batch = array_view(history, history_index, end_index-history_index);
+    }
+
+    return batch;
+}
+
 undo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
-    h := *history[history_index];
-    // print("[%] t: % ; range: % ; bufmax: %\n", #procedure_name(), h.type, h.range, buffer.count);
+    undos := batch_up_undos(history, history_index);
+    for #v2 < h: undos { // We perform undos so we have to go backward
+        if #complete h.type == {
+            case .INSERT;
+                to   := h.range.start;
+                from := h.range.end;
+                if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
+                    log_error("Unable to revert (undo) the % due to the invalid start and end point of the text. %", h.type, h);
+                    reset_history(buffer);
+                    return;
+                }
 
-    is_similar_undo :: (prev: *Buffer_History) -> bool #expand {
-        if prev.type != `h.type return false;
-        
-        issepa      := is_separator(`h.text[0], include_underscore=false);
-        next_issepa := is_separator(prev.text[0], include_underscore=false);
-        
-        return !(issepa ^ next_issepa); // return true if both true or both false
-    }
+                shift_left(buffer, to, from);
 
-    if #complete h.type == {
-        case .INSERT;
-            to   := h.range.start;
-            from := h.range.end;
-            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
-                log_error("Unable to revert (undo) the % due to the invalid start and end point of the text. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
+                editor.cursor = h.cursor;
+                set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
 
-            shift_left(buffer, to, from);
+                history_index -= 1;
 
-            editor.cursor = h.cursor;
-            set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
+            case .DELETE;
+                to := h.range.start;
+                if to < 0 || to > buffer.count {
+                    log_error("Unable to revert (undo) the % due to the invalid insertion point. %", h.type, h);
+                    reset_history(buffer);
+                    return;
+                }
 
-            history_index -= 1;
 
-            if history_index > -1 && is_similar_undo(*history[history_index]) {
-                undo(editor, buffer);
-            }
+                insert_text_at(editor, buffer, to, h.text, history=false);
+                
+                editor.cursor = h.cursor;
+                set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
 
-        case .DELETE;
-            to := h.range.start;
-            if to < 0 || to > buffer.count {
-                log_error("Unable to revert (undo) the % due to the invalid insertion point. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
+                history_index -= 1;
 
-            // Use the insert_text_at_cursor()! @Cleanup
+            case .REPLACE;
+                start := h.range.start;
+                end   := h.range.start + h.text.count;
+                if start >= end || start < 0 || start > buffer.count || end < 0 || end > buffer.count {
+                    log_error("Unable to revert (undo) the % due to the invalid range given for the replacement. %", h.type, h);
+                    reset_history(buffer);
+                    return;
+                }
 
-            insert_text_at(editor, buffer, to, h.text, history=false);
-            
-            editor.cursor = h.cursor;
-            set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
+                replace_text_at(editor, buffer, Range.{start, end}, h.old_text, history=false);
+                
+                editor.cursor = h.cursor;
+                clamp_cursor(*editor.cursor, buffer.count);
+                editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 
-            history_index -= 1;
+                history_index -= 1;
 
-            if history_index > -1 && is_similar_undo(*history[history_index]) {
-                undo(editor, buffer);
-            }
+                // We don't want to change these type of undos
 
-        case .REPLACE;
-            start := h.range.start;
-            end   := h.range.start + h.text.count;
-            if start >= end || start < 0 || start > buffer.count-1 || end < 0 || end > buffer.count-1 {
-                log_error("Unable to revert (undo) the % due to the invalid range given for the replacement. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
-
-            replace_text_at(editor, buffer, Range.{start, end}, h.old_text, history=false);
-            
-            editor.cursor = h.cursor;
-            clamp_cursor(*editor.cursor, buffer.count);
-            editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
-
-            history_index -= 1;
-
-            // We don't want to change these type of undos
-
-        case .UNDEFINED;
-            assert(false);
+            case .UNDEFINED;
+                assert(false);
+        }
     }
 }
 
 redo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == history.count-1 return;
 
-    h := *history[history_index+1];
+    redos := batch_up_redos(history, history_index+1);
+    for #v2 h: redos {
+        if h.type == {
+            case .INSERT;
+                to := h.range.start;
+                if to < 0 || to > buffer.count {
+                    log_error("Unable to revert (redo) the % due to the invalid insertion point. %", h.type, h);
+                    reset_history(buffer);
+                    return;
+                }
 
-    is_similar_redo :: (next: *Buffer_History) -> bool #expand {
-        if next.type != `h.type return false;
-        
-        issepa      := is_separator(`h.text[0], include_underscore=false);
-        next_issepa := is_separator(next.text[0], include_underscore=false);
-        
-        return !(issepa ^ next_issepa); // return true if both true or both false
-    }
+                insert_text_at(editor, buffer, to, h.text, history=false);
 
-    if h.type == {
-        case .INSERT;
-            to := h.range.start;
-            if to < 0 || to > buffer.count {
-                log_error("Unable to revert (redo) the % due to the invalid insertion point. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
+                editor.cursor = h.cursor;
+                set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
+                Clamp(*editor.cursor.pos, 0, buffer.count);
 
-            // Use the insert_text_at_cursor()! @Cleanup
+                history_index += 1;
 
-            insert_text_at(editor, buffer, to, h.text, history=false);
+            case .DELETE;
+                // @BUG: We'll get invalid range!!!
+                to   := h.range.start;
+                from := h.range.end;
+                if to >= from || to < 0 || to > buffer.count || from < 0 || from > buffer.count {
+                    log_error("Unable to revert (redo) the % due to the invalid start and end point of the text. % | to: % ; from: % ; bufcount: %\n", h.type, h, to, from, buffer.count);
+                    reset_history(buffer);
+                    return;
+                }
 
-            editor.cursor = h.cursor;
-            set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
-            Clamp(*editor.cursor.pos, 0, buffer.count);
+                shift_left(buffer, to, from);
 
-            history_index += 1;
+                editor.cursor = h.cursor;
+                set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
+                Clamp(*editor.cursor.pos, 0, buffer.count);
 
-            if history_index < history.count && is_similar_redo(*history[history_index]) {
-                redo(editor, buffer);
-            }
+                history_index += 1;
 
-        case .DELETE;
-            to   := h.range.start;
-            from := h.range.end;
-            if to >= from || to < 0 || to > buffer.count-1 || from < 0 || from > buffer.count {
-                log_error("Unable to revert (redo) the % due to the invalid start and end point of the text. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
+            case .REPLACE;
+                // @INCOMPLETE @XXX
+                start := h.range.start;
+                end   := h.range.start + h.old_text.count;
+                if start >= end || start < 0 || start > buffer.count || end < 0 || end > buffer.count {
+                    log_error("Unable to revert (redo) the % due to the invalid range given for the replacement. %", h.type, h);
+                    reset_history(buffer);
+                    return;
+                }
 
-            shift_left(buffer, to, from);
+                replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
+                
+                editor.cursor = h.cursor;
+                clamp_cursor(*editor.cursor, buffer.count);
+                editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 
-            editor.cursor = h.cursor;
-            set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
-            Clamp(*editor.cursor.pos, 0, buffer.count);
+                history_index += 1;
 
-            history_index += 1;
+                // We don't want to change these type of redos
 
-            if history_index < history.count && is_similar_redo(*history[history_index]) {
-                redo(editor, buffer);
-            }
-
-        case .REPLACE;
-            // @INCOMPLETE @XXX
-            start := h.range.start;
-            end   := h.range.start + h.old_text.count;
-            if start >= end || start < 0 || start > buffer.count-1 || end < 0 || end > buffer.count-1 {
-                log_error("Unable to revert (undo) the % due to the invalid range given for the replacement. %", h.type, h.*);
-                reset_history(buffer);
-                return;
-            }
-
-            replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
-            
-            editor.cursor = h.cursor;
-            clamp_cursor(*editor.cursor, buffer.count);
-            editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
-
-            history_index += 1;
-
-            // We don't want to change these type of redos
-
-        case .UNDEFINED;
-            assert(false);
+            case .UNDEFINED;
+                assert(false);
+        }
     }
 }
 
