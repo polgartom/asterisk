@@ -831,13 +831,93 @@ create_buffer :: () -> *Buffer {
 }
 
 change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
+    if editor.active_buffer == buffer return;
+
+    editor.active_buffer.cursor_backup = editor.cursor; // Backing up the current cursor
+
     editor.active_buffer = buffer;
     
-    clamp_cursor(*editor.cursor, buffer.count);
-
-    // @Todo: Restore the viewport and the cursors
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
+    
+    editor.cursor = buffer.cursor_backup;
+    // editor.cursor.moved = true; // so we recalc the left_offset and top_offset because of this
+    clamp_cursor(*editor.cursor, buffer.count);
+
+    scroll_to_cursor(editor, editor.cursor, animation_duration=0.0);
+}
+
+scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float = 0.08) {
+    assert(editor.active_buffer != null);
+
+    buffer := editor.active_buffer;
+    r := editor.rect_for_draw;
+    
+    // Viewport (X)
+
+    x_threshold := em(1.0, primary_font) * 2;
+
+    mx := get_cursor_x(buffer, *editor.cursor);
+    mx = cast(s64)(mx - editor.left_offset - r.w);
+
+    target := editor.left_offset;
+    if mx + x_threshold > 0 {
+        target += abs(mx + x_threshold);
+    } else if abs(mx) > xx r.w {
+        target -= abs(mx) - r.w;
+        if target < 0 then target = 0;
+    }
+
+    if target != editor.left_offset {
+        if animation_duration {
+            anim_x: Anim;
+            anim_x.active = true;
+            anim_x.start  = editor.left_offset;
+            anim_x.target = target;
+            anim_x.duration = animation_duration;
+            anim_x.started_at = cast(float) current_time;
+
+            editor.x_scroll_anim = anim_x;        
+        } else {
+            editor.left_offset = target;
+        
+            editor.x_scroll_anim.active = false;
+        }
+    }
+
+    // Viewport (Y)
+
+    y_threshold := get_line_height() * 6;
+
+    my := get_line_height(find_row_index(buffer, editor.cursor.pos));
+    my = r.h - my + editor.top_offset;
+
+    target = editor.top_offset;
+    if my - y_threshold < 0 {
+        target += abs(my - y_threshold);
+    } else if my + y_threshold > r.h + r.y {
+        target -= (my + y_threshold) - (r.h + r.y);
+        if target < 0 then target = 0;
+    }
+
+    if target != editor.top_offset {
+        if animation_duration {
+            anim_y: Anim;
+            anim_y.active = true;
+            anim_y.start  = editor.top_offset;
+            anim_y.target = target;
+            anim_y.duration = animation_duration;
+            anim_y.started_at = cast(float)current_time;
+
+            editor.y_scroll_anim = anim_y;
+        } else {
+            editor.top_offset = target;
+
+            editor.y_scroll_anim.active = false;
+        }
+    }
+
+    redraw_requested = true;
 }
 
 replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, occurrences: int) {
@@ -888,6 +968,7 @@ Buffer :: struct {
     history: [..] Buffer_History;
     history_index: s64 = -1;
 
+    cursor_backup: Cursor;
     colors: [] Color;
 
     dirty := false;
