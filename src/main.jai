@@ -15,10 +15,7 @@ mode := Program_Mode.EDITOR;
 
 DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
 
-font_width: s64;
 line_height :: 0.0;
-font_size       :: 14;
-font_size_small :: 13; // @Incomplete: scale this by the window's ratio
 
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
@@ -403,7 +400,7 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 }
 
 init_fonts :: () {
-    pixel_height := font_size;
+    pixel_height := ui.font_size;
 
     #if USE_BAKED_FONT {
         #import "Compiler";
@@ -416,11 +413,11 @@ init_fonts :: () {
             return result;
         }
 
-        primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, pixel_height);
-        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, xx font_xs_size);
+        primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
+        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
     } else {
-        primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", pixel_height);
-        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, font_xs_size);
+        primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", ui.font_size);
+        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
     }
 
     assert(primary_font != null && primary_font_xs != null);
@@ -428,7 +425,6 @@ init_fonts :: () {
 
 primary_font: *Simp.Dynamic_Font;
 primary_font_xs: *Simp.Dynamic_Font;
-font_xs_size := 13;
 
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     line_height := get_line_height();

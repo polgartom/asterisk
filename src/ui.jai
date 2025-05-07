@@ -23,6 +23,9 @@ map_name_to_ui_enum :: ($t: Type, name: string) -> (_enum: t, success: bool) {
 ui: UI;
 
 UI :: struct {
+    font_size:    u8 = 14; // default 14
+    font_xs_size: u8 = 13; // default 13
+
     cursor_shape := Cursor_Shape.BLOCK;
     cursor_line_indicator := Cursor_Line_Indicator.FILLED;
 

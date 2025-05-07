@@ -131,11 +131,28 @@ parse_ui_config :: (config_data: string) {
     get_section_lines(*handler, "UI", *lines);
     if failed return;
 
-    // @Cleanup: Set values dynamically!
+    // @Cleanup: Set values dynamically?
     for line: lines {
         key, rhs := break_by_colon(line);
 
         if key == {
+            case "font_size";
+                val, success, rem := string_to_int(rhs, base=10, u8);
+                if !success || rem {
+                    error(handler, "Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                    continue;
+                }
+
+                ui.font_size = val;
+            case "font_xs_size";
+                val, success, rem := string_to_int(rhs, base=10, u8);
+                if !success || rem {
+                    error(handler, "Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                    continue;
+                }
+
+                ui.font_xs_size = val;
+
             case "cursor_shape";
                 val, ok := map_name_to_ui_enum(UI.Cursor_Shape, rhs);
                 if !ok {
@@ -159,12 +176,6 @@ parse_ui_config :: (config_data: string) {
         };
     }
 }
-
-// parse_project_config :: () {
-//     if !file_exists("./.asterisk/config") {
-//         return;    
-//     }
-// }
 
 check_config :: (data: string) -> bool {
     str := data;
@@ -243,6 +254,8 @@ _DEFAULT_CONFIG_STRING :: #string CONFIG
 [%] # Version number; do not delete!
 
 [UI]
+font_size: 14
+font_xs_size: 13
 cursor_shape: block             # block, line, underscore
 cursor_line_indicator: filled   # none, filled, bordered
 
