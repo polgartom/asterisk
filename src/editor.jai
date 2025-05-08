@@ -56,16 +56,33 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
     // We don't need to commit the buffer changes
     // the byte_pos_to_row_col_index() will work because we apply deletion not insertion therefore that procedure won't mess up anything
 
+    // @Incomplete: Can be better
     for *e : editors {
         if e != editor {
-            steps := (from-to);
             c0, c1 := get_cursor_min_max_indecies_as_pointers(*e.cursor);
-            if c0.* > to {
-                c0.* -= steps;
+
+            steps := from - to;
+
+            if is_overlap(.{c0.*, c1.*}, .{to, from}) {
+                if c1.* <= from {
+                    c1.* = to;
+                } else {
+                    c1.* -= steps;
+                }
+
+                if c0.* >= to {
+                    c0.* = to;
+                }
+
+            } else {
+                if c0.* > to {
+                    c0.* -= steps;
+                }
+                if c1.* > from {
+                    c1.* -= steps;
+                }
             }
-            if c1.* > from {
-                c1.* -= steps;
-            }
+
             clamp_cursor(*e.cursor, buffer.count);
         }
     }

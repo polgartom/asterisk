@@ -644,7 +644,21 @@ Program_Mode :: enum u8 {
 Range :: struct {
     start: s64;
     end:   s64;
+
+#place start; 
+    a: s64; b: s64;
 }
+
+is_overlap :: (r1: Range, r2: Range) -> bool {
+    if r1.a > r2.b || r2.a > r1.a return false;
+    return true;
+}
+
+get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
+    if !is_overlap(r1, r2) return false, .{0,0};
+
+    return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
+} 
 
 Anim :: struct {
     active: bool;
