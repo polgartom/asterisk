@@ -1,3 +1,76 @@
+insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+    maybe_grow(buffer, text.count);
+
+    insert_at      := buffer.data  + at;
+    new_right      := insert_at    + text.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
+    right_rem_size  = max(0, right_rem_size);
+
+    if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
+    memmove(insert_at, text.data, text.count);
+
+    buffer.count += text.count;
+    buffer.dirty = true;
+    buffer.unsaved = true;
+
+    #if history {
+        add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
+    }
+
+    // @Temporary? 
+    // We must rescan the lines right after text insertion because the byte_pos_to_row_col_index() works on the buffer's "row_table" that is dirty at that point so
+    // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
+    // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
+    commit_buffer_changes(buffer);
+
+    for *e : editors {
+        if e != editor {
+            steps := text.count;
+            if e.cursor.pos >= at {
+                e.cursor.pos += steps;
+            }
+            if e.cursor.sel >= at {
+                e.cursor.sel += steps;
+            }
+            clamp_cursor(*e.cursor, buffer.count);
+        }
+    }
+}
+
+// Shift the entire *used* buffer memory to the left, typically for "deleting" characters from the right
+shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
+    if to == from return;
+    assert(to < from);
+
+    dest   := data  + to;
+    source := data  + from;
+    size   := count - from;
+
+    c_memmove(dest, source, xx size);
+    count -= (from - to);
+
+    dirty = true;
+    unsaved = true;
+
+    // @Todo: Better explanation
+    // We don't need to commit the buffer changes
+    // the byte_pos_to_row_col_index() will work because we apply deletion not insertion therefore that procedure won't mess up anything
+
+    for *e : editors {
+        if e != editor {
+            steps := (from-to);
+            c0, c1 := get_cursor_min_max_indecies_as_pointers(*e.cursor);
+            if c0.* > to {
+                c0.* -= steps;
+            }
+            if c1.* > from {
+                c1.* -= steps;
+            }
+            clamp_cursor(*e.cursor, buffer.count);
+        }
+    }
+}
+
 is_valid_line :: inline (buffer: *Buffer, line: s64) -> bool {
     if line < 0 || line - 1 >= buffer.row_table.count return false;
 
@@ -74,32 +147,6 @@ insert_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, tex
     set_cursor_pos(buffer, cursor, cursor.pos + text.count, horizontal=true);
 }
 
-insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
-    maybe_grow(buffer, text.count);
-
-    insert_at      := buffer.data  + at;
-    new_right      := insert_at    + text.count;
-    right_rem_size := buffer.count - (insert_at - buffer.data);
-    right_rem_size  = max(0, right_rem_size);
-
-    if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
-    memmove(insert_at, text.data, text.count);
-
-    buffer.count += text.count;
-    buffer.dirty = true;
-    buffer.unsaved = true;
-
-    #if history {
-        add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
-    }
-
-    // @Temporary? 
-    // We must rescan the lines right after text insertion because the byte_pos_to_row_col_index() works on the buffer's "row_table" that is dirty at that point so
-    // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
-    // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
-    commit_buffer_changes(buffer);
-}
-
 remove_text_from_right_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
     remove_text_from_right(editor, buffer, cursor.pos, bytes_to_del, history);
     
@@ -124,7 +171,7 @@ remove_text_from_left :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_de
         add_history(editor, buffer, .DELETE, deleted_text, Range.{pos1, pos2});
     }
 
-    shift_left(buffer, pos1, pos2);
+    shift_left(editor, buffer, pos1, pos2);
 }
 
 delete_selected_range_if_has_any :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
@@ -295,22 +342,6 @@ to_string :: inline (buffer: *Buffer) -> string {
     return s;
 }
 
-// Shift the entire *used* buffer memory to the left, typically for "deleting" characters from the right
-shift_left :: (using buffer: *Buffer, to: s64, from: s64) { // @Cleanup Naming?!
-    if to == from return;
-    assert(to < from);
-
-    dest   := data  + to;
-    source := data  + from;
-    size   := count - from;
-
-    c_memmove(dest, source, xx size);
-    count -= (from - to);
-
-    dirty = true;
-    unsaved = true;
-}
-
 maybe_grow :: (buffer: *Buffer, size: s64) {
     assert(size > -1);
 
@@ -472,7 +503,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                     return;
                 }
 
-                shift_left(buffer, to, from);
+                shift_left(editor, buffer, to, from);
 
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
@@ -486,7 +517,6 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                     reset_history(buffer);
                     return;
                 }
-
 
                 insert_text_at(editor, buffer, to, h.text, history=false);
                 
@@ -552,7 +582,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                     return;
                 }
 
-                shift_left(buffer, to, from);
+                shift_left(editor, buffer, to, from);
 
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 

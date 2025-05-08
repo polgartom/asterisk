@@ -22,7 +22,7 @@ draw_frame :: () {
         draw_editor(*editors[0], rect);
     }
 
-    // draw_debug_mouse_character_selection();
+    // draw_debug_mouse_character_selection(active_editor, rect);
 
     // Widgets
     if mode == .WIDGET {
@@ -30,10 +30,10 @@ draw_frame :: () {
     }
 
     if show_debug_info {
-        b := active_editor.active_buffer;
-        for b.history {
-            PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
-        }
+        // b := active_editor.active_buffer;
+        // for b.history {
+        //     PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
+        // }
 
         draw_global_debug_info(active_editor.rect_for_draw);
     }
@@ -843,6 +843,8 @@ draw_generated_quads_for_code :: (buffer: *Buffer, text: string, font: *Simp.Dyn
 }
 
 draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
+    Simp.set_shader_for_color(true);
+    
     buffer := editor.active_buffer;
 
     mx, my, ok := get_mouse_pointer_position(right_handed=false);
