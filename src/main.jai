@@ -141,7 +141,7 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested {
-            // wait_for_event();
+            wait_for_event();
         }
 
         {
@@ -263,7 +263,7 @@ main :: () {
 
         array_reset(*debug_infos);
     }
-}
+} @NoProfile
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     assert(buffer.initialized, "buffer: %\n", buffer.*);
@@ -594,7 +594,7 @@ wait_for_event :: () {
         xevent: X11.XEvent;
         while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
     }
-}
+} @NoProfile
 
 // @Cleanup
 watcher: File_Watcher(void);

@@ -800,7 +800,7 @@ close_buffer_with_confirmation :: (buffer: *Buffer) {
     }
 
     close_buffer(buffer);
-}
+} @NoProfile
 
 close_buffer :: (buffer: *Buffer) {
     found, index := find_buffer_index(buffer);

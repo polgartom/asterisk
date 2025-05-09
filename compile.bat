@@ -1,5 +1,7 @@
 @echo off
 
-del .\build\asterisk_devbuild.exe .\build\asterisk_devbuild.pdb > NUL 2> NUL
+call _compilation_setup.bat %*
 
-jai .\build.jai -natvis - bake_font
+@echo on
+
+jai .\build.jai %ARGS% - bake_font

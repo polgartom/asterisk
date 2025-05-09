@@ -184,7 +184,7 @@ message :: (p: *Metaprogram_Plugin, message: *Message) {
             for h.notes {
                 if it.text == "NoProfile" {
                     log("[Iprof] Skipping '%' due to NoProfile note.\n", h.name);
-                    continue;
+                    continue tc;
                 }
             }
         }
