@@ -141,7 +141,7 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested {
-            wait_for_event();
+            // wait_for_event();
         }
 
         {
@@ -257,8 +257,8 @@ main :: () {
         }
 
         draw_frame();
-
-        // sleep_milliseconds(6); // @Temporary
+        sleep_milliseconds(6); // @Temporary
+        
         reset_temporary_storage();
 
         array_reset(*debug_infos);

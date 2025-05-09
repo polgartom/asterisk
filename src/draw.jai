@@ -769,6 +769,7 @@ draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
 }
 
 draw_generated_quads_for_code :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
+    // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
     Simp.CheckInit();

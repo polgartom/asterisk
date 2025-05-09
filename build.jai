@@ -1,3 +1,8 @@
+ll :: (fmt: string, args: .. Any) #expand {
+    s := tprint(fmt, ..args);
+    log("[%] %", #procedure_name(), s);
+} @PrintLike
+
 #run {
     has_argument :: (argument: string) -> bool #expand {
         for arg: `args  if arg == argument return true;
@@ -16,7 +21,6 @@
     copy_commonly_propagated_fields(get_build_options(), *options);
 
     import_path: [..] string;
-    array_add(*import_path, "src/modules");
     array_add(*import_path, ..options.import_path);
     options.import_path = import_path;
 
