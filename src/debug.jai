@@ -16,4 +16,4 @@ MeasureProc :: () #expand {
     `defer {
         print("[%/time] %ms\n", #procedure_name(), (seconds_since_init() - time) * 1000);
     };
-} @PrintLike
+}

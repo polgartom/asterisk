@@ -257,7 +257,7 @@ main :: () {
         }
 
         draw_frame();
-        sleep_milliseconds(6); // @Temporary
+        // sleep_milliseconds(6); // @Temporary
         
         reset_temporary_storage();
 

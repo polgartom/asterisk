@@ -440,8 +440,13 @@ build :: () {
         print("Run strings: %\n", run_strings);
         print("Plugins:     %\n", plugins);
     }
-
-    for plugins      if it.add_source it.add_source(it);
+// assert(false);
+    for plugins {
+        if it.add_source {
+            it.add_source(it);
+            // print("add source: %\n", it.*);
+        }
+    }
 
     for absolute_files {
         add_build_file(it, w);

@@ -7,7 +7,6 @@
 
 // get_plugin() tells the metaprogram what the various hooks are:
 get_plugin :: () -> *Metaprogram_Plugin {
-    #assert false, "xxx\n";
     p := New(My_Plugin);  // We are making this on the heap so you could have more than one instance of this plugin running.
 
     p.before_intercept = before_intercept;
@@ -37,6 +36,9 @@ get_plugin :: () -> *Metaprogram_Plugin {
     p.prepend_guarded_call = cast(*Code_Procedure_Call) compiler_get_nodes(prepend_guarded);
     assert(p.prepend_guarded_call.kind == .PROCEDURE_CALL);
 */
+
+    // print("[%] %\n", #procedure_name(), p.*);
+
     return p;
 }
 
@@ -55,8 +57,6 @@ add_source :: (p: *Metaprogram_Plugin) {
 }
 
 message :: (p: *Metaprogram_Plugin, message: *Message) {
-    print(">> %\n", message.*);
-    
     if injected_final_profiling_code  return;
 
     my := cast(*My_Plugin) p;
