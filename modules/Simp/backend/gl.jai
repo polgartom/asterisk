@@ -146,8 +146,14 @@ swap_buffers :: (window: Window_Type, vsync := true) {  // @Incomplete: Have som
     if state.current_shader immediate_flush();
 
     #if OS == .WINDOWS {
-        dc := GetDC(window);
-        SwapBuffers(dc);
+        hdc := wglGetCurrentDC();
+        // info := find_window_info(window);
+        // assert(info.specific.hdc == hdc);
+        SwapBuffers(hdc);
+        
+        // For VSync (requires WGL_EXT_swap_control)
+        // wglSwapIntervalEXT(1);
+
     } else #if OS == .LINUX {
         info := find_window_info(window);
         if (!info) || !info.specific.glx_window {
