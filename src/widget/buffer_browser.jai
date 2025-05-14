@@ -9,7 +9,8 @@ open_buffer_browser :: () {
 
     switch_editor_mode(.WIDGET);
     active_widget = Buffer_Browser;
-}
+
+} @EditorCommandUnlisted(editor_keymap)
 
 buffer_browser: Buffer_Browser;
 

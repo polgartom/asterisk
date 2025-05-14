@@ -1081,6 +1081,8 @@ register_keymap_procedures :: () {
         add_proc(k, #run Code_get_identifier_name(ident), #insert ident);
     }
 
+    _Add_Noted_Editor_Commands();
+
     // Core
     
     Add(core_keymap, Quit);
@@ -1088,11 +1090,6 @@ register_keymap_procedures :: () {
     // Widget
 
     Add(widget_keymap, CloseCurrentWidget);
-    
-    Add(editor_keymap, open_find_text_dialog);
-    Add(editor_keymap, open_file_browser);
-    Add(editor_keymap, open_buffer_browser);
-    Add(editor_keymap, open_goto_line_dialog);
 
     // Editor
 
@@ -1189,6 +1186,11 @@ last_input_event: Event = ---;
 // @Cleanup
 ShiftHeld :: () -> bool #expand {
     return last_input_event.shift_pressed;
+}
+
+Editor_Command :: struct {
+    proc_name: string;
+    keymap_name: string;
 }
 
 DEFAULT_KEYMAP_CONFIG :: #string DONE 

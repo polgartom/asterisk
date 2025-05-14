@@ -1,3 +1,19 @@
+open_find_text_dialog :: () {
+    using find_text_dialog;
+    
+    if !input then input = create_text_input(cast(u64, #location()));
+    
+    if input.text {
+        select_all(input);
+
+        // The occurrences locations may changed since we last opened this dialog, so we need to find the new position of them.
+        find_occurences(input.text);
+    }
+
+    switch_editor_mode(.WIDGET);
+    active_widget = Find_Text_Dialog;
+} @EditorCommandUnlisted(editor_keymap)
+
 find_occurences :: (_text: string) {
     using find_text_dialog;
 
@@ -78,22 +94,6 @@ previous_occurrence :: () {
 
     pos := occurences[current_occurrence];
     set_cursor_pos(buffer, *editor.cursor, pos, horizontal=true, with_selection=true);
-}
-
-open_find_text_dialog :: () {
-    using find_text_dialog;
-    
-    if !input then input = create_text_input(cast(u64, #location()));
-    
-    if input.text {
-        select_all(input);
-
-        // The occurrences locations may changed since we last opened this dialog, so we need to find the new position of them.
-        find_occurences(input.text);
-    }
-
-    switch_editor_mode(.WIDGET);
-    active_widget = Find_Text_Dialog;
 }
 
 update_find_text_dialog :: () {

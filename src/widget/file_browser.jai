@@ -11,7 +11,8 @@ open_file_browser :: () {
     if scan_requested {
         file_browser_scan();
     }
-}
+
+} @EditorCommandUnlisted(editor_keymap)
 
 file_browser_change_dir :: (path: string) -> (success: bool) {
     using file_browser;

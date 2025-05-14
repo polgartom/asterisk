@@ -230,11 +230,52 @@ build :: () {
         for plugins if it.message it.message(it, message);
 
         if message.kind == {
-            case .PHASE;
-                phase := cast(*Message_Phase) message;
-                if phase.phase == .POST_WRITE_EXECUTABLE {
-                    set_icon(message);
+            case .FILE;
+                msg := cast(*Message_File) message;
+
+            case .TYPECHECKED;
+                tc_message := cast(*Message_Typechecked) message;
+
+                for tc_message.declarations {
+                    decl := it.expression;
+
+                    // if decl.flags & .SCOPE_FILE                  continue; // Skip declarations in file scope.
+                    if !decl.name continue; // For now we ignore anonymous declarations, but maybe we should not!
+                    
+                    if !register_keymap_procedures_body && decl.name == "register_keymap_procedures" {
+                        register_keymap_procedures_body = decl;
+                    }
+
+                    for decl.notes {
+                        maybe_add_editor_command(decl, it);
+                    }
                 }
+
+            case .PHASE;
+                msg_phase := cast(*Message_Phase) message;
+                phase := msg_phase.phase;
+                if phase == {
+                    case .TYPECHECKED_ALL_WE_CAN;
+                        if !injected_editor_commands {
+                            injected_editor_commands = true;
+
+                            b: String_Builder;
+                            print_to_builder(*b, "_Add_Noted_Editor_Commands :: () #expand {\n");
+                            for editor_commands {
+                                if it.keymap_name {
+                                    print_to_builder(*b, "add_proc(%, \"%\", %);\n", it.keymap_name, it.proc_name, it.proc_name);
+                                }
+                            }
+                            print_to_builder(*b, "\n}\n");
+
+                            s := builder_to_string(*b);
+                            add_build_string(s, message.workspace);
+                        }
+
+                    case .POST_WRITE_EXECUTABLE;
+                        set_icon(message);
+                }
+
             case .COMPLETE;
                 break; // Exit from the compiler's message loop
         }
@@ -247,10 +288,35 @@ build :: () {
 
     for plugins if it.finish   it.finish  (it);
     for plugins if it.shutdown it.shutdown(it);
-
 }
 
 #run,stallable build();
+
+maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
+    if String.begins_with(note.text, "EditorCommand") {
+        cmd: Editor_Command;
+        cmd.proc_name = decl.name;
+
+        s := note.text;
+        advance(*s, "EditorCommand".count);
+
+        if String.begins_with(s, "Unlisted(") { // @EditorCommandUnlisted(
+            advance(*s, "Unlisted".count);
+
+            cmd.listed = false;
+        }
+
+        advance(*s, "(".count);
+
+        assert(s.count > 1 && s[s.count-1], "The note text must end with a ')' character. '%'", note.text);
+        s.count -= 1;
+
+        cmd.keymap_name = s;
+
+        array_add(*editor_commands, cmd);
+        // ll("command added -> %\n", cmd);
+    }
+}
 
 set_icon :: (message: *Message) {
     // Wait for a post_write_executable message. Then we
@@ -271,12 +337,27 @@ set_icon :: (message: *Message) {
     }
 }
 
+ll :: (fmt: string, args: .. Any) #expand {
+    s := tprint(fmt, ..args);
+    log("[%] %", #procedure_name(), s);
+} @PrintLike
+
 plugins: [..] *Metaprogram_Plugin;
 verbose := false;
 
+Editor_Command :: struct {
+    proc_name: string;
+    keymap_name: string;
+    listed := true;
+}
+
+register_keymap_procedures_body: *Code_Declaration;
+editor_commands: [..] Editor_Command;
+injected_editor_commands: bool;
+
 ICON_FILEPATH :: "data/icon/icon.ico";
 
-// #import "Project_Generator";
+String :: #import "String";
 #import "Compiler";
 #import "Basic";
 #import "Metaprogram_Plugins";

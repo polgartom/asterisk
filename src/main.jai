@@ -41,8 +41,12 @@ Args :: struct {
     workdir: string;
 }
 
+args: Args;
+
 executable_dir: string;
 config_filepath: string;
+
+workspace: Workspace;
 
 main :: () {
     print("\n\n");
@@ -76,28 +80,15 @@ main :: () {
         Windows.timeBeginPeriod(1);
     }
 
-    args_success, args, is_set, files_from_cmdline := parse_arguments(Args);
+    args_success, args=, is_set, files_from_cmdline := parse_arguments(Args);
     if !args_success {
         exit(1);
     }
 
-    {
-        workdir := get_working_directory();
-        if args.workdir {
-            dir := File.get_absolute_path(args.workdir);
-            if is_directory(dir) {
-                workdir = dir;
-            } else {
-                log_error("Unable to locate the given directory's absolute location specified with the '-workdir %' argument!\n", dir);
-            }
-        }
-
-        set_working_directory(workdir);
-        print("Working directory: '%'\n", workdir);
-    }
-
     load_global_config();
     init_keymaps();
+
+    init_workspace(*workspace, args.workdir);
 
     init_fonts();
 
@@ -137,7 +128,10 @@ main :: () {
         editor2.active_buffer = active_editor.active_buffer;
     }
 
-    watch_working_directory();
+    // watcher: File_Watcher(void);
+    // watch_working_directory(*watcher);
+
+
 
     while !should_quit {
         if !redraw_requested {
@@ -147,10 +141,11 @@ main :: () {
         {
             // @Decide: Do we want to do this on the main thread?
             // File watcher
-            changed, needs_wait, wait_seconds := process_changes(*watcher);
-            if changed {
-                file_browser.scan_requested = true;
-            }
+            // changed, needs_wait, wait_seconds := process_changes(*watcher);
+            // process_changes(*watcher);
+            // if changed {
+            //     file_browser.scan_requested = true;
+            // }
         }
 
         update_window_events();
@@ -596,16 +591,17 @@ wait_for_event :: () {
     }
 } @NoProfile
 
-// @Cleanup
-watcher: File_Watcher(void);
-watch_working_directory :: () {
+watch_working_directory :: (watcher: File_Watcher(void)) {
 
     VERBOSE_WATCHER :: false;//DEBUG;
     RECURSIVE_WATCH :: true;
-    EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.MODIFIED|.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
+    // EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.MODIFIED|.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
+    EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
 
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
         ll("Change for path %: %", change.full_path, change.events);
+
+        file_browser.scan_requested = true;
     }
 
     if !init(
@@ -635,6 +631,18 @@ watch_working_directory :: () {
     // deinit(watcher); // Those handlers are released during shutdown, right?
 }
 
+get_workdir :: () -> string {
+    dir := get_working_directory();
+    path_unify_sepa(dir);
+    return dir;
+}
+
+set_workdir :: (dir_: string) {
+    dir := copy_temporary_string(dir_);
+    path_unify_sepa(dir);
+    set_working_directory(dir);
+}
+
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -645,7 +653,7 @@ Range :: struct {
     start: s64;
     end:   s64;
 
-#place start; 
+    #place start; 
     a: s64; b: s64;
 }
 
@@ -697,6 +705,8 @@ Code_get_identifier_name :: (name: Code) -> string {
 #load "lang.jai";
 #load "debug.jai";
 #load "word_completion.jai";
+#load "workspace.jai";
+#load "project.jai";
 
 #import "System";
 #import "Basic";
@@ -714,6 +724,7 @@ Code_get_identifier_name :: (name: Code) -> string {
 #import "Keymap";
 #import "File_Watcher";
 
+Thread    :: #import "Thread";
 File      :: #import "File";
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";

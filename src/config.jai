@@ -237,8 +237,10 @@ load_global_config :: () {
 
     parse_color_config(config_data);
     parse_ui_config(config_data);
+}
 
-    // parse_project_config();
+load_project_config :: () {
+    
 }
 
 #scope_file

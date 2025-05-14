@@ -34,6 +34,8 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
 #load "widget/list_input.jai";
 
 #load "widget/find_text_dialog.jai";
+#load "widget/goto_line_dialog.jai";
+
 #load "widget/file_browser.jai";
 #load "widget/buffer_browser.jai";
-#load "widget/goto_line_dialog.jai";
+#load "widget/command_browser.jai";
