@@ -1072,33 +1072,14 @@ TransformSelectionToSnakeCase :: () {
     editor, buffer := get_active_editor_and_buffer();
     if !buffer return;
 
-    if has_selection(editor.cursor) {
-        s := get_selection_as_string(buffer, *editor.cursor);
-        b: String_Builder;
-        init_string_builder(*b,, temp);
+    if !has_selection(editor.cursor) return;
+    
+    s := get_selection_as_string(buffer, *editor.cursor);
+    result := to_snake_case_copy(s);
+    defer free(result);
 
-        for s {
-            c := it;
-
-            if !is_alphanum(c) {
-                append(*b, "_");
-                continue;
-            }
-
-            if is_upper(c) {
-                c = to_lower(c);
-                if it_index != 0 && s[it_index-1] != #char "_" {
-                    append(*b, "_");
-                }                
-            }
-
-            append(*b, c);
-        }
-
-        result := builder_to_string(*b, do_reset=true); // @Speed!
-        if s != result {
-            replace_selection(editor, buffer, *editor.cursor, result);
-        }
+    if s != result {
+        replace_selection(editor, buffer, *editor.cursor, result);
     }
 
 } @EditorCommand(name=Transform_to_Snake_Case)

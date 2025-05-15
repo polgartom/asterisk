@@ -53,6 +53,31 @@ is_upper :: inline (char: u8) -> bool {
     return char >= #char "A" && char <= #char "Z";
 }
 
+to_snake_case_copy :: (s: string) -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    for s {
+        c := it;
+
+        if !is_alphanum(c) {
+            append(*b, "_");
+            continue;
+        }
+
+        if is_upper(c) {
+            c = to_lower(c);
+            if it_index != 0 && s[it_index-1] != #char "_" {
+                append(*b, "_");
+            }                
+        }
+
+        append(*b, c);
+    }
+
+    return builder_to_string(*b, do_reset=true);
+}
+
 key_to_user_friendly_string :: (s: string, $camelcase := false) -> string {
     #import "Basic";
 
