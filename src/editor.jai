@@ -420,9 +420,6 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
             break;
         }
     }
-
-    // new_buffer: Buffer;
-    // buffer.* = new_buffer;
 }
 
 batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
@@ -800,16 +797,17 @@ close_buffer_with_confirmation :: (buffer: *Buffer) {
     }
 
     close_buffer(buffer);
+
 } @NoProfile
 
 close_buffer :: (buffer: *Buffer) {
     found, index := find_buffer_index(buffer);
     assert(found && index != -1);
 
-    buffer_reset_keeping_memory(buffer);
-
     FindNewBuffer :: (e: *Editor) -> *Buffer {
         for b: buffers {
+            if b == e.active_buffer continue;
+
             if b.initialized {
                 if b.exists_on_disk {
                     return b;
@@ -833,11 +831,12 @@ close_buffer :: (buffer: *Buffer) {
         if e.active_buffer == buffer {
             b := FindNewBuffer(e);
             commit_buffer_changes(b, force=true);
-
+            
             change_active_buffer(e, b);
         }
     }
 
+    buffer_reset_keeping_memory(buffer);
 }
 
 get_buffer_index :: (buffer: *Buffer) -> s64 {

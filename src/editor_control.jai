@@ -56,27 +56,28 @@ SwitchOrSplitEditorPanel :: () {
 
     if      *editors[0] == active_editor then active_editor = *editors[1];
     else if *editors[1] == active_editor then active_editor = *editors[0];
-}
+} @EditorCommand(editor_keymap)
 
 HideSecondEditorPanel :: () {
     active_editor = *editors[0];
     
     editors[1].visible = false;
-}
+} @EditorCommand(editor_keymap)
 
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
     
     buffer := create_or_find_empty_buffer(editor);
     change_active_buffer(editor, buffer);
-}
+    
+} @EditorCommand(editor_keymap)
 
 CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
     close_buffer_with_confirmation(buffer);
-}
+} @EditorCommand(editor_keymap)
 
 PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
@@ -1100,22 +1101,14 @@ register_keymap_procedures :: () {
     _Add_Noted_Editor_Commands();
 
     // Core
-    
     Add(core_keymap, Quit);
 
     // Widget
-
     Add(widget_keymap, CloseCurrentWidget);
 
     // Editor
-
-    Add(editor_keymap, SwitchOrSplitEditorPanel);
-    Add(editor_keymap, HideSecondEditorPanel);
-
     Add(editor_keymap, ToggleDevInfo);
 
-    Add(editor_keymap, CreateBuffer);
-    Add(editor_keymap, CloseCurrentBuffer);
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);
 
@@ -1176,20 +1169,9 @@ register_keymap_procedures :: () {
 init_keymaps :: () {
     register_keymap_procedures();
 
-    // @Incomplete
-    // if !file_exists("default.keymap") {
-    //     write_entire_file("default.keymap", DEFAULT_KEYMAP_CONFIG);
-    // }
-    // success := load_from_file(*keymap_set, "default", "default.keymap", false);
-
     success := load_from_memory(*keymap_set, DEFAULT_KEYMAP_CONFIG, "default");
     assert(success, "Failed to load the 'default.keymap'");
 }
-
-// handle_keymaps_event :: (event: Event) -> (handled: bool) {
-//     current_keymap_event = *event;
-//     return keymap_handle_event(default_keymap, event);
-// }
 
 keymap_set: Keymap_Set;
 

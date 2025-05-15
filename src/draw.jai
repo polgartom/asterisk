@@ -185,6 +185,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             left += width;
         }
 
+        assert(editor.cursor.pos <= buffer.count, "buffer: % ; cursor: %\n", buffer.*, editor.cursor);
+
         row := find_row_index(buffer, editor.cursor.pos) + 1;
         col := byte_pos_to_row_col_index(buffer, editor.cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);

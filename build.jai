@@ -271,7 +271,7 @@ build :: () {
                             print_to_builder(*b, "_EDITOR_COMMANDS :: Editor_Command.[\n");
                             for editor_commands {
                                 if it.listed {
-                                    print_to_builder(*b, ".{proc=%, name=\"%\",keymap_name=\"%\"}\n", it.proc_name, it.name, it.keymap_name);
+                                    print_to_builder(*b, ".{proc=%, name=\"%\",keymap_name=\"%\"},\n", it.proc_name, it.name, it.keymap_name);
                                 }
                             }
                             print_to_builder(*b, "\n];\n");
