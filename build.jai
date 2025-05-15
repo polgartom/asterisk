@@ -305,37 +305,6 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
         cmd: Editor_Command;
         cmd.proc_name = decl.name;
 
-        // name: [..] u8;
-        // name.allocator = temp;
-        // array_reserve(*name, decl.name.count*2);
-
-        // for decl.name {
-        //     c := it;
-
-        //     if is_separator(c, include_underscore=true) {
-        //         if it_index != 0 && decl.name[it_index-1] != #char " " {
-        //             array_add(*name, #char " ");
-        //         }
-        //         continue;
-        //     }
-
-        //     if is_upper(c) {
-        //         if it_index != 0 && decl.name[it_index-1] != #char " " {
-        //             array_add(*name, #char " ");
-        //         }
-
-        //         c = to_lower(c);
-        //     }
-
-        //     if it_index == 0 {
-        //         c = to_upper(c);
-        //     }
-
-        //     array_add(*name, c);
-        // }
-
-        // cmd.name = tprint("$ %", string.{name.count, name.data});
-
         s := note.text;
         advance(*s, "EditorCommand".count);
 
@@ -364,8 +333,6 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
         if !cmd.name cmd.name = cmd.proc_name;
         cmd.name = key_to_user_friendly_string(cmd.name, camelcase=true,, temp);
         cmd.name = tprint("$ %", cmd.name);
-
-        // ll("> %\n", cmd);
 
         array_add(*editor_commands, cmd);
     }
@@ -417,4 +384,3 @@ String :: #import "String";
 #import "Compiler";
 #import "Basic";
 #import "Metaprogram_Plugins";
-// print("comment: |%|", slice(buffer, start, steps));
