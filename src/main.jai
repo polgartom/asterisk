@@ -412,7 +412,7 @@ init_fonts :: () {
         primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
     } else {
         primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", ui.font_size);
-        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
+        primary_font_xs    = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", ui.font_xs_size);
     }
 
     assert(primary_font != null && primary_font_xs != null);
