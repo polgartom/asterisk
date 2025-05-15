@@ -390,7 +390,7 @@ draw_command_browser :: () {
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
-    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    theme.border_color = #run hex_to_vec4(0x30_25_5a_ff);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
@@ -410,31 +410,36 @@ draw_command_browser :: () {
 
     options: [..] List_Input.Option(*Editor_Command);
     options.allocator = temp;
-    array_reserve(*options, buffers.count);
+    array_reserve(*options, command_browser.options.count);
 
-    for * cmd: _EDITOR_COMMANDS {
+    for option: command_browser.options {
         if tinp.text {
-            found, rem := contains_nocase(cmd.name, tinp.text);
+            found, rem := contains_nocase(option.label_for_search, tinp.text);
             if !found continue;
         }
 
-        array_add(*options, .{label=cmd.name, ref=cmd});
+        array_add(*options, option);
     }
 
     list_rect := r;
     list_rect.h = 1.5*k;
 
     linp_theme := List_Input.DEFAULT_THEME;
-    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
-    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.border_color = #run hex_to_vec4(0x30_25_5a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_5a_ff);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
 
-    if tinp.typed then linp.scroll_value = 0.0;
+    if tinp.typed {
+        linp.scroll_value = 0.0;
+        linp.selected_index = -1;
+    }
+
     if linp.selected_index == -1 then linp.selected_index = 0;
 
     if linp.entered && options.count {
         if linp.selected_index >= options.count || linp.selected_index < 0 {
-            assert(false, "Invalid index: % ; options: %\n", linp.selected_index, options);
+            log_error("Invalid index: % ; options: %\n", linp.selected_index, options);
+            linp.selected_index = -1;
             return;                
         }
         

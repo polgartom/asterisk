@@ -1173,6 +1173,38 @@ init_keymaps :: () {
     assert(success, "Failed to load the 'default.keymap'");
 }
 
+// @Todo:
+keymap_mapping_as_string :: (k: *Keymap, proc: $T) -> string, bool {
+    #assert T == Key_Press_Proc || T == Key_Hold_Proc;
+
+    for editor_keymap.procs {
+        if it.press_proc == proc {
+            mapping := editor_keymap.mappings[it_index];
+            flags := mapping.modifier_flags;
+
+            mk: [..] string;
+            mk.allocator = temp;
+
+            array_add(*mk, character_utf32_to_utf8(mapping.utf32,, temp));
+
+            if flags.shift_pressed {
+                array_add(*mk, "Shift");
+            }
+            if flags.ctrl_pressed {
+                array_add(*mk, "Ctrl");
+            }
+            if flags.alt_pressed {
+                array_add(*mk, "Alt");
+            }
+
+            r := join(..mk, separator="+",, temp);
+            return r, true;
+        }
+    }
+
+    return "", false;
+}
+
 keymap_set: Keymap_Set;
 
 core_keymap:   *Keymap;
@@ -1205,7 +1237,7 @@ A-w HideSecondEditorPanel
 C-f open_find_text_dialog
 C-g open_goto_line_dialog
 C-o open_file_browser
-A-p open_buffer_browser
+C-p open_buffer_browser
 A-x open_command_browser
 
 F1 ToggleDevInfo

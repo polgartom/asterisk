@@ -161,6 +161,7 @@ List_Input :: struct {
 
     Option :: struct ($T: Type = void) {
         label: string;
+        label_for_search: string;
         ref: T;
     }
 
