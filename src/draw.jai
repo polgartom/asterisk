@@ -38,8 +38,36 @@ draw_frame :: () {
         draw_global_debug_info(active_editor.rect_for_draw);
     }
 
+    Iprof.update(true);
+    
+    mx, my, ok := get_mouse_pointer_position(right_handed=false);
+    Iprof.set_cursor_screen_coordinates(xx mx, xx my);
+    Iprof.draw(40, 40.0, window_width*.5, window_height*.7, *Iprof_Config);
+
     Simp.swap_buffers(window);
 }
+
+graph_select_sample :: () {
+    Iprof.graph_select_sample();
+} @EditorCommand
+
+Iprof_Config :: Iprof.Config.{
+    line_spacing = 20,
+    font_character_height = 40,
+
+    draw_text = (x: float, y: float, str: string, color: Vector4) {
+        draw_text(str, xx x, xx (window_height-y), color);
+    },
+    text_width = (s: string) -> float {
+        return xx measure_text_width(primary_font, s);
+    },
+    draw_rectangle = (x0: float, y0: float, x1: float, y1: float, color: Vector4) {
+        Simp.immediate_quad(x0, xx (window_height-y1), x1, xx (window_height-y0), color);
+    },
+    // draw_line = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Vector4) {
+
+    // }
+};
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
     // left_pad := cast(float32) primary_font.em_width;

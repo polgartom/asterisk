@@ -135,7 +135,7 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested {
-            wait_for_event();
+            // wait_for_event();
         }
 
         {
@@ -724,6 +724,8 @@ Code_get_identifier_name :: (name: Code) -> string {
 #import "Input";
 #import "Keymap";
 #import "File_Watcher";
+
+Iprof :: __Iprof;
 
 Thread    :: #import "Thread";
 File      :: #import "File";

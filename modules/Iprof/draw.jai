@@ -457,8 +457,8 @@ graph_select_sample :: () {
         if zone_under_cursor {
             expanded_zone = zone_under_cursor;
             update_cursor = true;
-            // displayed_quantity = .CALL_GRAPH;
         }
+        // kacsa
     }
 }
 
