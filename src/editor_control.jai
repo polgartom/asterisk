@@ -1068,6 +1068,41 @@ WordCompletion :: () {
     word_completion();
 }
 
+TransformSelectionToSnakeCase :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    if !buffer return;
+
+    if has_selection(editor.cursor) {
+        s := get_selection_as_string(buffer, *editor.cursor);
+        b: String_Builder;
+        init_string_builder(*b,, temp);
+
+        for s {
+            c := it;
+
+            if !is_alphanum(c) {
+                append(*b, "_");
+                continue;
+            }
+
+            if is_upper(c) {
+                c = to_lower(c);
+                if it_index != 0 && s[it_index-1] != #char "_" {
+                    append(*b, "_");
+                }                
+            }
+
+            append(*b, c);
+        }
+
+        result := builder_to_string(*b, do_reset=true); // @Speed!
+        if s != result {
+            replace_selection(editor, buffer, *editor.cursor, result);
+        }
+    }
+
+} @EditorCommand(name=Transform_to_Snake_Case)
+
 ////////////////////////////////////
 //
 
@@ -1188,11 +1223,6 @@ ShiftHeld :: () -> bool #expand {
     return last_input_event.shift_pressed;
 }
 
-Editor_Command :: struct {
-    proc_name: string;
-    keymap_name: string;
-}
-
 DEFAULT_KEYMAP_CONFIG :: #string DONE 
 [1] # Version number; do not delete!
 
@@ -1210,9 +1240,10 @@ C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
 C-f open_find_text_dialog
-C-o open_file_browser
-A-x open_buffer_browser
 C-g open_goto_line_dialog
+C-o open_file_browser
+A-p open_buffer_browser
+A-x open_command_browser
 
 F1 ToggleDevInfo
 

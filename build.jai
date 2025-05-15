@@ -268,6 +268,14 @@ build :: () {
                             }
                             print_to_builder(*b, "\n}\n");
 
+                            print_to_builder(*b, "_EDITOR_COMMANDS :: Editor_Command.[\n");
+                            for editor_commands {
+                                if it.listed {
+                                    print_to_builder(*b, ".{proc=%, name=\"%\",keymap_name=\"%\"}\n", it.proc_name, it.name, it.keymap_name);
+                                }
+                            }
+                            print_to_builder(*b, "\n];\n");
+
                             s := builder_to_string(*b);
                             add_build_string(s, message.workspace);
                         }
@@ -297,6 +305,37 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
         cmd: Editor_Command;
         cmd.proc_name = decl.name;
 
+        // name: [..] u8;
+        // name.allocator = temp;
+        // array_reserve(*name, decl.name.count*2);
+
+        // for decl.name {
+        //     c := it;
+
+        //     if is_separator(c, include_underscore=true) {
+        //         if it_index != 0 && decl.name[it_index-1] != #char " " {
+        //             array_add(*name, #char " ");
+        //         }
+        //         continue;
+        //     }
+
+        //     if is_upper(c) {
+        //         if it_index != 0 && decl.name[it_index-1] != #char " " {
+        //             array_add(*name, #char " ");
+        //         }
+
+        //         c = to_lower(c);
+        //     }
+
+        //     if it_index == 0 {
+        //         c = to_upper(c);
+        //     }
+
+        //     array_add(*name, c);
+        // }
+
+        // cmd.name = tprint("$ %", string.{name.count, name.data});
+
         s := note.text;
         advance(*s, "EditorCommand".count);
 
@@ -306,15 +345,29 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
             cmd.listed = false;
         }
 
-        advance(*s, "(".count);
+        // @Incomplete: Parse argument list
+        if String.begins_with(s, "(") {
+            advance(*s, "(".count);
 
-        assert(s.count > 1 && s[s.count-1], "The note text must end with a ')' character. '%'", note.text);
-        s.count -= 1;
+            assert(s.count > 1 && s[s.count-1], "The note text must end with a ')' character. '%'", note.text);
+            s.count -= 1;
 
-        cmd.keymap_name = s;
+            if String.begins_with(s, "name=") {
+                advance(*s, "name=".count);
+                cmd.name = s;
+
+            } else {
+                cmd.keymap_name = s;
+            }
+        }
+
+        if !cmd.name cmd.name = cmd.proc_name;
+        cmd.name = key_to_user_friendly_string(cmd.name, camelcase=true,, temp);
+        cmd.name = tprint("$ %", cmd.name);
+
+        // ll("> %\n", cmd);
 
         array_add(*editor_commands, cmd);
-        // ll("command added -> %\n", cmd);
     }
 }
 
@@ -346,6 +399,7 @@ plugins: [..] *Metaprogram_Plugin;
 verbose := false;
 
 Editor_Command :: struct {
+    name: string;
     proc_name: string;
     keymap_name: string;
     listed := true;
@@ -356,6 +410,8 @@ editor_commands: [..] Editor_Command;
 injected_editor_commands: bool;
 
 ICON_FILEPATH :: "data/icon/icon.ico";
+
+#import,file "src/utils.jai";
 
 String :: #import "String";
 #import "Compiler";

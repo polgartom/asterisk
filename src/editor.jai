@@ -1056,3 +1056,11 @@ Row_Info :: struct {
     end:   s64;
     size:  s64;
 }
+
+Editor_Command_Proc :: #type ();
+
+Editor_Command :: struct {
+    proc: Editor_Command_Proc;
+    name: string;
+    keymap_name: string;
+}

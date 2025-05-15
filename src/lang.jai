@@ -252,61 +252,6 @@ is_multibyte_char :: inline (c: *u8) -> bool {
 
 #scope_export
 
-is_separator :: inline (c: u8, $include_underscore := true) -> bool {
-    #if include_underscore {
-        if c == #char "_" return true;
-    }
-
-    return c == #char " " || c == #char "\n" ||
-           c == #char "{" || c == #char "}"  ||
-           c == #char "." || c == #char ";"  ||
-           c == #char ">" || c == #char "<"  ||
-           c == #char "=" || c == #char "!"  ||
-           c == #char "[" || c == #char "]"  ||
-           c == #char "(" || c == #char ")"  ||
-           c == #char "#" || c == #char "?"  ||
-           c == #char "/" || c == #char "*"  ||
-           c == #char "-" || c == #char "+"  ||
-           c == #char "&" || c == #char "@"  ||
-           c == #char "$" || c == #char ","  ||
-           c == #char ":" || c == #char "|"  ||
-           c == #char "^" || c == #char "%"  ||
-           c == #char "~" || c == #char "\\" ||
-           c == #char "\"" || c == #char "'" ||
-           c == #char "`"
-           ;
-}
-
-is_alpha :: inline (c: u32) -> bool{
-    return (c >= #char "a" && c <= #char "z") || (c >= #char "A" && c <= #char "Z");
-}
-
-is_digit :: inline (c: u32) -> bool{
-    return (c >= #char "0" && c <= #char "9");
-}
-
-is_alphanum :: inline (c: u32) -> bool {
-    return is_alpha(c) || is_digit(c) || c == #char "_";
-}
-
-is_whitespace :: inline (c: u32) -> bool {
-    assert(c != #char "\t", "We should convert all of the tabs to spaces");
-    return c == #char " " || c == #char "\n";
-}
-
-is_line_end :: inline (c: u32) -> bool {
-    assert(c != #char "\r", "We should convert all of the \\r (CRs) to \\n (LRs)");
-    return c == #char "\n";
-}
-
-is_hex_digit :: (c: u32) -> bool {
-    return (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F") || (c >= #char "0" && c <= #char "9");
-}
-
-is_upper :: inline (char: u8) -> bool {
-    return char >= #char "A" && char <= #char "Z";
-}
-
 Token_Type :: enum {
     UNKNOWN             :: 0;
     IDENTIFIER          :: 1;

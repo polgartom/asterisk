@@ -9,7 +9,8 @@ open_command_browser :: () {
 
     switch_editor_mode(.WIDGET);
     active_widget = Command_Browser;
-} @EditorCommandUnlisted(widget_keymap)
+
+} @EditorCommandUnlisted(editor_keymap)
 
 command_browser: Command_Browser;
 

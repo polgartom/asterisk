@@ -707,6 +707,7 @@ Code_get_identifier_name :: (name: Code) -> string {
 #load "word_completion.jai";
 #load "workspace.jai";
 #load "project.jai";
+#load "utils.jai";
 
 #import "System";
 #import "Basic";
