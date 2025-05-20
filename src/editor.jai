@@ -693,12 +693,13 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
     if buffer.exists_on_disk {
         input := File.read_entire_file(filepath);
         if input {
-            input = sanitize_and_free_input_data(input);
-            if input.count {
-                maybe_grow(buffer, input.count);
-                memmove(buffer.data, input.data, input.count);
-                buffer.count = input.count;
-            }
+            _input := input;
+            defer free(_input);
+
+            normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
+            insert_text_at(editor, buffer, 0, _input, history=true);
+
+            buffer.unsaved = false;
         }
 
         commit_buffer_changes(buffer, force=true);
@@ -707,14 +708,24 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
     return buffer;
 }
 
-sanitize_and_free_input_data :: (data: string) -> string {
-    assert(data.count > 0);
-    
-    s := data;
-    s = replace_crlf_to_lf(s, autofree=true);
-    s = replace_tabs_with_spaces(s, autofree=true);
+buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
+    if !exists_on_disk return false;
 
-    return s;
+    input := File.read_entire_file(filepath);
+    if input {
+        _input := input;
+        defer free(_input);
+
+        normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
+        
+        replace_text_at(editor, buffer, .{start=0, end=buffer.count}, _input, history=true);
+        
+        unsaved = false;
+    }
+
+    commit_buffer_changes(buffer, force=true);
+
+    return true;
 }
 
 save_buffer :: (using buffer: *Buffer) {
@@ -776,23 +787,14 @@ save_buffer :: (using buffer: *Buffer) {
     }
 }
 
+// @Todo: Linux
 close_buffer_with_confirmation :: (buffer: *Buffer) {
     if buffer.unsaved {
-        // @Todo: Linux
-        #if OS == .WINDOWS {
-            Win :: #import "Windows";
-            U :: #import "Windows_Utf8";
-            
-            modal_text := U.utf8_to_wide("The buffer unsaved, do you want to save it?"); // @Cleanup: Can we do this at compile-time?
-            
-            result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
-            if result == {
-                case Win.IDYES;
-                    save_buffer(buffer);
-                case Win.IDNO;      // We don't want to save the buffer so close it!
-                case Win.IDCANCEL; 
-                    return;         // We don't want to close the buffer!
-            };
+        
+        answer := dialog_yes_no_cancel("The buffer unsaved, do you want to save it?");
+        if answer == {
+            case .YES;    save_buffer(buffer);
+            case .CANCEL; return;
         }
     }
 

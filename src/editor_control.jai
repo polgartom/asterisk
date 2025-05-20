@@ -1085,6 +1085,21 @@ TransformSelectionToSnakeCase :: () {
 
 } @EditorCommand(name=Transform_to_Snake_Case)
 
+ReloadBufferFromDisk :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    if !buffer return;
+
+    if !buffer.exists_on_disk return;
+
+    if buffer.unsaved {
+        answer := dialog_yes_no_cancel("The buffer unsaved, do you want to reload it?");
+        if answer != .YES return;
+    }
+
+    buffer_reload_from_disk(editor, buffer);
+
+} @EditorCommand
+
 ////////////////////////////////////
 //
 

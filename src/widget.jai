@@ -28,6 +28,35 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
     return a;
 }
 
+// @Todo: Linux
+// @Temporary
+dialog_yes_no_cancel :: (text: string) -> Dialog_Answer {
+    #if OS == .WINDOWS {
+        Win :: #import "Windows";
+        U :: #import "Windows_Utf8";
+        
+        modal_text := U.utf8_to_wide(text);
+        result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
+        if result == {
+            case Win.IDYES;
+                return .YES;
+            case Win.IDNO;
+                return .NO;
+            case Win.IDCANCEL; 
+                return .CANCEL;
+        };
+    }
+
+    return .UNKNOWN;
+}
+
+// @Temporary
+Dialog_Answer :: enum u8 {
+    UNKNOWN :: 0;
+    YES     :: 1;
+    NO      :: 2;
+    CANCEL  :: 3;
+}
 
 #load "widget/label.jai";
 #load "widget/text_input.jai";

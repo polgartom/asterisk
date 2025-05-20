@@ -128,10 +128,8 @@ main :: () {
         editor2.active_buffer = active_editor.active_buffer;
     }
 
-    // watcher: File_Watcher(void);
-    // watch_working_directory(*watcher);
-
-
+    watcher: File_Watcher(void);
+    watch_working_directory(*watcher);
 
     while !should_quit {
         if !redraw_requested {
@@ -141,11 +139,8 @@ main :: () {
         {
             // @Decide: Do we want to do this on the main thread?
             // File watcher
-            // changed, needs_wait, wait_seconds := process_changes(*watcher);
-            // process_changes(*watcher);
-            // if changed {
-            //     file_browser.scan_requested = true;
-            // }
+            changed, needs_wait, wait_seconds := process_changes(*watcher);
+            process_changes(*watcher);
         }
 
         update_window_events();
@@ -591,7 +586,7 @@ wait_for_event :: () {
     }
 } @NoProfile
 
-watch_working_directory :: (watcher: File_Watcher(void)) {
+watch_working_directory :: (watcher: *File_Watcher(void)) {
 
     VERBOSE_WATCHER :: false;//DEBUG;
     RECURSIVE_WATCH :: true;
@@ -605,7 +600,7 @@ watch_working_directory :: (watcher: File_Watcher(void)) {
     }
 
     if !init(
-        *watcher, 
+        watcher, 
         file_change_callback, 
         null, 
         events_to_watch = EVENTS_TO_WATCH,
@@ -621,7 +616,7 @@ watch_working_directory :: (watcher: File_Watcher(void)) {
     assert(dirs_to_watch.count > 0);
 
     ll("Adding folders: %", dirs_to_watch);
-    if !add_directories(*watcher, ..dirs_to_watch) {
+    if !add_directories(watcher, ..dirs_to_watch) {
         log_error("Could not watch directories %", dirs_to_watch);
         exit(4);
     }

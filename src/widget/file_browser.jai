@@ -42,8 +42,6 @@ file_browser_change_dir :: (info: File_Visit_Info) -> (success: bool) {
 
 // @Speed: We don't want to run this on every file browser dialog open!
 file_browser_scan :: () {
-    MeasureProc();
-
     using file_browser;
 
     array_reset_keeping_memory(*items);
@@ -93,7 +91,7 @@ file_browser_scan :: () {
     // }
 
     scan_requested = false;
-}
+} @EditorCommand(name=Rescan_Working_Directory)
 
 file_browser: File_Browser;
 
