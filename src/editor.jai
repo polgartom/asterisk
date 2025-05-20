@@ -24,7 +24,7 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     commit_buffer_changes(buffer);
 
     for *e : editors {
-        if e != editor {
+        if e != editor && e.active_buffer == buffer {
             steps := text.count;
             if e.cursor.pos >= at {
                 e.cursor.pos += steps;
@@ -58,7 +58,7 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
 
     // @Incomplete: Can be better
     for *e : editors {
-        if e != editor {
+        if e != editor && e.active_buffer == buffer {
             c0, c1 := get_cursor_min_max_indecies_as_pointers(*e.cursor);
 
             steps := from - to;
