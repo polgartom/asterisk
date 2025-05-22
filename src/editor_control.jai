@@ -1092,7 +1092,7 @@ ReloadBufferFromDisk :: () {
     if !buffer.exists_on_disk return;
 
     if buffer.unsaved {
-        answer := dialog_yes_no_cancel("The buffer unsaved, do you want to reload it?");
+        answer := dialog_confirm("The buffer unsaved, do you want to reload it?");
         if answer != .YES return;
     }
 
@@ -1259,8 +1259,8 @@ F1 ToggleDevInfo
 
 C-n CreateBuffer
 C-w CloseCurrentBuffer
-C-PageUp NextBuffer
-C-PageDown PrevBuffer
+C-PageUp PrevBuffer
+C-PageDown NextBuffer
 C-s Save
 
 ArrowLeft MoveLeft

@@ -244,14 +244,31 @@ main :: () {
 
             editor.cursor.x_cache = -1; // Because the prepare text is very slow
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
+
+            b := editor.active_buffer;
+            if b.should_reload_from_disk {
+                if b.unsaved {
+                    answer := dialog_confirm(
+                        "This file has been modified by another program. Do you want to reload it?", 
+                        b.filepath,
+                        .YESNO | .ICONASTERISK
+                    );
+
+                    if answer == {
+                        case .YES; buffer_reload_from_disk(editor, b);
+                        case .NO;  b.should_reload_from_disk = false;
+                    }
+                }
+            }
         }
 
         draw_frame();
-        // sleep_milliseconds(6); // @Temporary
         
+        array_reset(*debug_infos);        
+
         reset_temporary_storage();
 
-        array_reset(*debug_infos);
+        // sleep_milliseconds(6); // @Temporary
     }
 } @NoProfile
 
@@ -594,8 +611,18 @@ watch_working_directory :: (watcher: *File_Watcher(void)) {
     EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
 
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-        ll("Change for path %: %", change.full_path, change.events);
+        if change.events == .MODIFIED {
+            buffer := find_buffer_by_filepath(change.full_path);
+            if buffer {
+                modtime_from_disk := file_modtime_and_size(change.full_path);
+                r := compare_apollo_times(modtime_from_disk, buffer.modtime);
+                
+                buffer.should_reload_from_disk = r != 0;
+            }
 
+            return;
+        }
+        
         file_browser.scan_requested = true;
     }
 
@@ -638,6 +665,32 @@ set_workdir :: (dir_: string) {
     set_working_directory(dir);
 }
 
+move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing := -1.0) -> float {
+    if a > b {
+        if amount_decreasing == -1  amount_decreasing = amount_increasing;
+
+        a -= amount_decreasing;
+
+        if a < b  a = b;
+    } else {
+        a += amount_increasing;
+        if a > b  a = b;
+    }
+
+    return a;
+}
+
+is_overlap :: (r1: Range, r2: Range) -> bool {
+    if r1.a > r2.b || r2.a > r1.a return false;
+    return true;
+}
+
+get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
+    if !is_overlap(r1, r2) return false, .{0,0};
+
+    return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
+}
+
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -651,17 +704,6 @@ Range :: struct {
     #place start; 
     a: s64; b: s64;
 }
-
-is_overlap :: (r1: Range, r2: Range) -> bool {
-    if r1.a > r2.b || r2.a > r1.a return false;
-    return true;
-}
-
-get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
-    if !is_overlap(r1, r2) return false, .{0,0};
-
-    return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
-} 
 
 Anim :: struct {
     active: bool;

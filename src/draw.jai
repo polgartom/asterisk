@@ -620,10 +620,9 @@ draw_file_browser :: () {
                 linp.scroll_value = 0.0;
                 linp.selected_index = 0;
 
-                index := find_buffer_index_by_filepath(item.full_name);
-                if index != -1 {
-                    buffer := buffers[index];
-                    change_active_buffer(active_editor, buffer); 
+                buffer := find_buffer_by_filepath(item.full_name);
+                if buffer != null {
+                    change_active_buffer(active_editor, buffer);
                 } else {
                     buffer := open_file_or_create_empty_buffer(active_editor, item.full_name);
                     change_active_buffer(active_editor, buffer);

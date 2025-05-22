@@ -238,12 +238,15 @@ find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
     return false, -1;
 }
 
-find_buffer_index_by_filepath :: (filepath: string) -> s64 {
+find_buffer_by_filepath :: (filepath: string, $os_native_sepa := false) -> *Buffer {
     for buffers {
-        if it.filepath == filepath return it_index;
+        if it.exists_on_disk {
+            #if os_native_sepa   if it.filepath_os_sepa == filepath return it;
+            #if !os_native_sepa  if it.filepath         == filepath return it;
+        }
     }
 
-    return -1;
+    return null;
 }
 
 // @Cleanup Use -1 if failed
@@ -713,18 +716,21 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
 }
 
 buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
+    should_reload_from_disk = false;
+    
     if !exists_on_disk return false;
 
-    input := File.read_entire_file(filepath);
-    if input {
-        _input := input;
-        defer free(_input);
+    input, ok := File.read_entire_file(filepath);
+    if !ok return false;
+    defer free(input);
 
-        normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
+    if input {
+        normalize_line_endings(*input); // Converts any \r\n into \n, overwriting the original data.
+        replace_text_at(editor, buffer, .{start=0, end=buffer.count}, input, history=true);
         
-        replace_text_at(editor, buffer, .{start=0, end=buffer.count}, _input, history=true);
-        
-        unsaved = false;
+        unsaved = false; // Because this is the up to date version of the buffer
+
+        modtime = file_modtime_and_size(filepath);
     }
 
     commit_buffer_changes(buffer, force=true);
@@ -732,70 +738,48 @@ buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
     return true;
 }
 
-save_buffer :: (using buffer: *Buffer) {
-    if filepath {
-        exists_on_disk = file_exists(filepath);
-        if !exists_on_disk {
-            dir := path_strip_filename(filepath);
-            assert(!!dir);
-            File.make_directory_if_it_does_not_exist(dir);
-        }
-
-        s := to_string(buffer);
-        File.write_entire_file(filepath, to_string(buffer));
-        
-        exists_on_disk = file_exists(filepath);
-        unsaved = false;
-        
-    } else {
-        #if OS == .WINDOWS {
-            Win :: #import "Windows";
-
-            OFN_FILEMUSTEXIST   :: 0x00001000;
-            OFN_PATHMUSTEXIST   :: 0x00000800;
-            OFN_OVERWRITEPROMPT :: 0x00000002;
-
-            ofn: Win.OPENFILENAMEA;
-            szFile: [Win.MAX_PATH] u8;
-
-            zero_memory(*ofn, size_of(Win.OPENFILENAMEA));
-            ofn.lpstrInitialDir = temp_c_string(get_working_directory());
-            ofn.lStructSize = size_of(Win.OPENFILENAMEA);
-            ofn.hwndOwner = window;
-            ofn.lpstrFile = *szFile[0];
-            ofn.nMaxFile = size_of(type_of(szFile));
-            // ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.TXT\0";
-            ofn.lpstrFilter = "All Files\0*.*\0\0"; // A buffer containing pairs of null-terminated filter strings. The last string in the buffer must be terminated by two NULL characters.
-            ofn.nFilterIndex = 1;
-            ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-            if (Win.GetSaveFileNameA(*ofn)) {
-                at := 0;
-                while ofn.lpstrFile[at] at+=1;
-
-                modify_string(*filepath, string.{at,ofn.lpstrFile});
-                assert(!!filepath);
-
-                // ll("% ; %\n", ofn, filepath);
-
-                File.write_entire_file(filepath, to_string(buffer));
-                
-                exists_on_disk = file_exists(filepath);
-                unsaved = false;
-            }
-
-        } else {
-            // @Todo: Linux
-            log_error("[TODO]: File save modal is not implemented yet!\n");
-        }
+buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
+    assert(!!filepath, "No filepath given! Buffer: %\n", buffer.*);
+    
+    exists := file_exists(filepath);
+    if !exists {
+        dir := path_strip_filename(filepath);
+        assert(!!dir);
+        File.make_directory_if_it_does_not_exist(dir);
     }
+
+    ok := File.write_entire_file(filepath, to_string(buffer));
+    if !ok {
+        log_error("Unable to write the buffer data to '%'!\n", filepath);
+        return false;
+    }
+
+    unsaved = false;
+
+    exists_on_disk = true;
+    modtime = file_modtime_and_size(filepath);
+
+    return true;
+}
+
+save_buffer :: (using buffer: *Buffer) -> bool {
+    if !filepath {
+        path, ok := dialog_select_file();
+        if !ok return false;
+
+        modify_string(*filepath, path);
+        path_unify_sepa(filepath);
+        
+        modify_string(*filepath_os_sepa, path);
+    }
+
+    return buffer_write_to_disk(buffer);
 }
 
 // @Todo: Linux
 close_buffer_with_confirmation :: (buffer: *Buffer) {
     if buffer.unsaved {
-        
-        answer := dialog_yes_no_cancel("The buffer unsaved, do you want to save it?");
+        answer := dialog_confirm("The buffer unsaved, do you want to save it?");
         if answer == {
             case .YES;    save_buffer(buffer);
             case .CANCEL; return;
@@ -1021,7 +1005,9 @@ Buffer :: struct {
     history_index: s64 = -1;
 
     cursor_backup: Cursor;
+
     colors: [] Color;
+    tokenization_time: float64 = 0.0;
 
     dirty := false;
     unsaved := false;
@@ -1030,9 +1016,11 @@ Buffer :: struct {
     row_table_recalc_time: float64 = 0.0;
 
     filepath: string;
+    filepath_os_sepa: string; // keep this for comparisons
     exists_on_disk: bool;
+    modtime: Apollo_Time;
 
-    tokenization_time: float64 = 0.0;
+    should_reload_from_disk: bool;
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     language: Language = .PLAIN_TEXT;
