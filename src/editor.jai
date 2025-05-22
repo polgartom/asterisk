@@ -130,9 +130,13 @@ cut_selection_and_copy_to_os_clipboard :: (editor: *Editor, buffer: *Buffer, cur
 }
 
 insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
-    // @Incomplete: Validate if the input data is valid utf8!
-    text := Clipboard.os_clipboard_get_text();
+    t := Clipboard.os_clipboard_get_text();
+    defer free(t);
+
+    text := normalize_line_endings(t);
     defer free(text);
+
+    // @Incomplete: Validate if the input data is valid utf8!
 
     insert_text_at_cursor(editor, buffer, cursor, text);
 }
