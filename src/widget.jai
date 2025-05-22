@@ -33,7 +33,7 @@ dialog_confirm :: (text: string, title: string = "", options: Dialog_Option = .Y
 
 // @Todo: Linux
 // @Temporary
-dialog_select_file :: () -> string, bool {
+dialog_get_save_file_name :: () -> string, bool {
     #if OS == .WINDOWS {
         Win :: #import "Windows";
         U :: #import "Windows_Utf8";

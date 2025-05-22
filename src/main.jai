@@ -85,6 +85,16 @@ main :: () {
         exit(1);
     }
 
+    WANTED_MSAA :: 0;
+    window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
+    msaa := Simp.prepare_window(window, wanted_msaa = WANTED_MSAA);
+    // log("Wanted MSAA: %\nChosen MSAA: %", WANTED_MSAA, msaa);
+
+    // Actual render size in pixels can be different from the window dimensions we specified above (for example on high-resolution displays on macOS/iOS).
+    window_width, window_height = Simp.get_render_dimensions(window);
+
+    Simp.set_render_target(window);
+
     load_global_config();
     init_keymaps();
 
@@ -92,12 +102,9 @@ main :: () {
 
     init_fonts();
 
-    window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
-    Simp.set_render_target(window);
-
     ui_init(); // GetRect
 
-    footer_height = primary_font.character_height*1.5;
+    footer_height = primary_font_xs.character_height*1.5; // @Cleanup !!!
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -136,13 +143,6 @@ main :: () {
             wait_for_event();
         }
 
-        {
-            // @Decide: Do we want to do this on the main thread?
-            // File watcher
-            changed, needs_wait, wait_seconds := process_changes(*watcher);
-            process_changes(*watcher);
-        }
-
         update_window_events();
         clear_widget_events();
 
@@ -170,6 +170,13 @@ main :: () {
                     init_fonts();
                 }
             }
+        }
+
+        {
+            // @Decide: Do we want to do this on the main thread?
+            // File watcher
+            changed, needs_wait, wait_seconds := process_changes(*watcher);
+            process_changes(*watcher);
         }
 
         {

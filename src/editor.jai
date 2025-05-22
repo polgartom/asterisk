@@ -764,7 +764,7 @@ buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
 
 save_buffer :: (using buffer: *Buffer) -> bool {
     if !filepath {
-        path, ok := dialog_select_file();
+        path, ok := dialog_get_save_file_name();
         if !ok return false;
 
         modify_string(*filepath, path);
@@ -775,20 +775,6 @@ save_buffer :: (using buffer: *Buffer) -> bool {
 
     return buffer_write_to_disk(buffer);
 }
-
-// @Todo: Linux
-close_buffer_with_confirmation :: (buffer: *Buffer) {
-    if buffer.unsaved {
-        answer := dialog_confirm("The buffer unsaved, do you want to save it?");
-        if answer == {
-            case .YES;    save_buffer(buffer);
-            case .CANCEL; return;
-        }
-    }
-
-    close_buffer(buffer);
-
-} @NoProfile
 
 close_buffer :: (buffer: *Buffer) {
     found, index := find_buffer_index(buffer);

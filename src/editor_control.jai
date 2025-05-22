@@ -76,7 +76,17 @@ CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
-    close_buffer_with_confirmation(buffer);
+    if buffer.unsaved {
+        // @Todo: Linux
+        answer := dialog_confirm("The buffer unsaved, do you want to save it?");
+        if answer == {
+            case .YES;    save_buffer(buffer);
+            case .CANCEL; return;
+        }
+    }
+
+    close_buffer(buffer);
+
 } @EditorCommand(editor_keymap)
 
 PrevBuffer :: () {

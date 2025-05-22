@@ -118,6 +118,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         push_scissor(r);
         defer pop_scissor();
 
+        // Draw lines
         for row_index: start_row..end_row {
             row := row_table[row_index];
             if row.size == 0 continue;
@@ -128,6 +129,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             line_text := slice(buffer, row.end - row.size, row.size);
             draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
         }
+        
     }
 
     draw_cursor(editor, buffer, r, ui.cursor_shape, ui.cursor_line_indicator);
@@ -839,12 +841,12 @@ draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
     
     Simp.set_shader_for_text();
-    draw_generated_quads_for_code(buffer, text, font);
+    draw_generated_quads(buffer, text, font);
 
     return width;
 }
 
-draw_generated_quads_for_code :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
+draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
