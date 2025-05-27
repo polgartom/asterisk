@@ -762,12 +762,13 @@ Code_get_identifier_name :: (name: Code) -> string {
 #import "Unicode";
 #import "GetRect";
 #import "Command_Line";
-#import "Hash_Table";
 #import "Sort";
 #import "Random";
 #import "Input";
 #import "Keymap";
 #import "File_Watcher";
+
+#import "Hash_Table";
 
 Thread    :: #import "Thread";
 File      :: #import "File";

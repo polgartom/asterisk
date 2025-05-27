@@ -2,7 +2,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
     // timer := seconds_since_init();
     // defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
-    input, found := table_find(*inputs, ui_id);
+    found, input := table_find_new(*inputs, ui_id);
     if !found {
         input = create_text_input(ui_id);
     }

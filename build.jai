@@ -48,35 +48,6 @@ build :: () {
     release_build  := false;
     use_baked_font := false;
     
-    check_bindings  := true;
-    do_check        := true;  // Import modules/Check if true.
-    
-    // log("args: %\n", args);
-    
-    index := 0;
-
-    while index < args.count {
-        defer index += 1;
-
-        it := args[index];
-        if it == {
-            case "-plugin"; #through;
-            case "-plug";
-                if index >= args.count-1 {
-                    break;  // Silent. We'll catch this the second time around.
-                }
-
-                index += 1;
-                array_add(*plugin_names, args[index]);
-                // We need to know about no_check bindings in pass 1 because that is how we determine if that plugin is in the set! Argh.
-            case "-no_check";           do_check = false;
-            case "-no_check_bindings";  check_bindings = false;
-            case "-verbose"; verbose = true;
-            case "-";  // Do not process anything after -!
-                break;
-        }
-    }
-
     if has_argument("release") {
         // Release build
         
@@ -106,82 +77,6 @@ build :: () {
         if verbose log("[BUILD] We will bake the font, see my_init_fonts() in main.jai\n");
     }
 
-    if do_check {
-        if check_bindings array_add(*plugin_names, "Check");
-        else              array_add(*plugin_names, "Check(CHECK_BINDINGS=false)");
-    }
-
-    init_plugins(plugin_names, *plugins, w);
-
-    //
-    // Pass 2: Handle all the various options, or delegate them to plugins
-    // if we do not handle them.
-    //
-    index = 0;  // Starting over!
-    got_user_arguments_delimiter := false;
-    got_error       := false;
-
-    while index < args.count {
-        defer index += 1;
-
-        it := args[index];
-
-        if got_user_arguments_delimiter {
-            array_add(*user_arguments, it);
-            continue;
-        }
-
-        if !it continue;  // @Temporary?
-
-        if it[0] == #char "-" {
-            if it == {                    
-                case "-";
-                    // Everything after this is user arguments.
-                    got_user_arguments_delimiter = true;
-                case "-plugin"; #through;
-                case "-plug";
-                    if index >= args.count-1 {
-                        log_error("Command line: Missing argument to %.\n", it);
-                        got_error = true;
-                        break;
-                    }
-
-                    index += 1;
-                case;
-                    handled := false;
-                    for p, plugin_index: plugins {
-                        if !p.handle_one_option continue;
-
-                        new_index := p.handle_one_option(p, args, index);
-                        if new_index > index {
-                            index = new_index - 1;  // -1 Because it will be incremented at the bottom of the loop.
-                            handled = true;
-                            break;
-                        } else if new_index < index {
-                            log_error("Plugin % decreased argument index. That is illegal!\n", plugin_names[plugin_index]);
-                            got_error = true;
-                            break;
-                        }
-                    }
-
-                    if handled continue;
-
-                    log_error("Unknown argument '%'.\nExiting.\n", it);
-                    got_error = true;
-                    break;
-            }
-
-            continue;
-        }
-
-        // If we got here, it's a plain file. Add it to the array.
-        // array_add(*files, it);
-    }
-
-    if got_error {
-        exit(1);
-    }
-
     log("\n");
 
     // log("options:\n%\n", options);
@@ -194,21 +89,7 @@ build :: () {
     }    
 
     intercept_flags: Intercept_Flags;
-
-    for plugins {
-        if it.before_intercept {
-            it.before_intercept(it, *intercept_flags);
-            // print("%\n", it.*);
-        }
-    }
-
     compiler_begin_intercept(w, intercept_flags);
-
-    for plugins {
-        if it.add_source {
-            it.add_source(it);
-        }
-    }
 
     add_build_file("src/main.jai", w);
     
@@ -288,14 +169,9 @@ build :: () {
                 break; // Exit from the compiler's message loop
         }
 
-        // Visual Studio
-        // Project_Generator.process_message(message);
     }
 
     compiler_end_intercept(w);
-
-    for plugins if it.finish   it.finish  (it);
-    for plugins if it.shutdown it.shutdown(it);
 }
 
 #run,stallable build();
