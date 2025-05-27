@@ -1,3 +1,5 @@
+
+window: Window_Type;
 window_width  := 1200;
 window_height := 1200;
 
@@ -6,6 +8,12 @@ should_quit := false;
 current_time: float64 = 0.0;
 last_time: float64 = 0.0;
 frame_dt: float64 = 0.0;
+second_elapsed := false;
+
+redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
+fps: float64;
+frametime: float64;
+frame := 0;
 
 last_simulation_time : float64;
 last_showed_sim_time : float64;
@@ -27,15 +35,7 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
-fps: float64;
-frametime: float64;
-
-window: Window_Type;
-
 footer_height: float;
-
-frame := 0;
-second_elapsed := false;
 
 Args :: struct {
     workdir: string;
@@ -568,7 +568,6 @@ advance :: (arr: [] $T, steps := 1) -> [] T {
     return r;
 }
 
-
 get_range_as_string :: (s: string, range: Range) -> string {
     return slice(s, range.start, range.end - range.start);
 }
@@ -698,12 +697,6 @@ get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
     return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
 }
 
-Program_Mode :: enum u8 {
-    // CORE;
-    EDITOR;
-    WIDGET;
-};
-
 Range :: struct {
     start: s64;
     end:   s64;
@@ -711,6 +704,12 @@ Range :: struct {
     #place start; 
     a: s64; b: s64;
 }
+
+Program_Mode :: enum u8 {
+    // CORE;
+    EDITOR;
+    WIDGET;
+};
 
 Anim :: struct {
     active: bool;
@@ -720,21 +719,6 @@ Anim :: struct {
     duration: float;
 
     elapsed: float64;
-}
-
-Code_get_identifier_name :: (name: Code) -> string {
-    #import "Compiler";
-
-    // This is just to help with the Add macro above.
-
-    node := compiler_get_nodes(name);
-    if node.kind != .IDENT {
-        compiler_report("Not an identifier.", make_location(node));
-        return "";
-    }
-
-    ident := cast(*Code_Ident) node;
-    return ident.name;
 }
 
 #load "ui.jai";

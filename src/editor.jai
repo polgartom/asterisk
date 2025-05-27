@@ -942,27 +942,11 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     redraw_requested = true;
 }
 
-replace_tabs_with_spaces :: inline (input: string, $autofree := false) -> (result: string, occurrences: int) {
-    #if autofree {
-        defer free(input);
-    }
-    
-    result, occurrences := replace(input, "\t", TAB_SPACE_CHARS);
-    return result, occurrences;
-}
-
-replace_crlf_to_lf :: inline (input: string, $autofree := false) -> (result: string, occurrences: int) {
-    #if autofree {
-        defer free(input);
-    }
-
-    result, occurrences := replace(input, "\r\n", "\n");
-    return result, occurrences;
-}
-
 active_editor: *Editor = null;
+
 editors: [..] Editor;
 buffers: [..] *Buffer;
+
 
 BUFFER_PAGE_SIZE :: 4096;
 

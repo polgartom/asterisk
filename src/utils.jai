@@ -126,13 +126,17 @@ key_to_user_friendly_string :: (s: string, $camelcase := false) -> string {
     return builder_to_string(*b, do_reset=true);
 }
 
-// @Cleanup: Remove this!
-sanitize_and_free_input_data :: (data: string) -> string {
-    assert(data.count > 0);
-    
-    s := data;
-    s = replace_crlf_to_lf(s, autofree=true);
-    s = replace_tabs_with_spaces(s, autofree=true);
+Code_get_identifier_name :: (name: Code) -> string {
+    #import "Compiler";
 
-    return s;
+    // This is just to help with the Add macro above.
+
+    node := compiler_get_nodes(name);
+    if node.kind != .IDENT {
+        compiler_report("Not an identifier.", make_location(node));
+        return "";
+    }
+
+    ident := cast(*Code_Ident) node;
+    return ident.name;
 }

@@ -974,5 +974,3 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
         }
     }
 }
-
-redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
