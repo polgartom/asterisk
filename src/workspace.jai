@@ -20,6 +20,13 @@ init_workspace :: (w: *Workspace, dir_: string) {
     print("[Workspace]: Working dir: '%'\n", w.dir);
 }
 
+reload_workspace :: () {
+    load_global_config();
+
+    // init_keymaps();
+    init_fonts();
+} @EditorCommand
+
 Workspace :: struct {
     dir: string;
 }

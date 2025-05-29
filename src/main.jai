@@ -95,12 +95,10 @@ main :: () {
 
     Simp.set_render_target(window);
 
-    load_global_config();
-    init_keymaps();
-
     init_workspace(*workspace, args.workdir);
+    reload_workspace();
 
-    init_fonts();
+    init_keymaps();
 
     ui_init(); // GetRect
 
@@ -617,6 +615,8 @@ watch_working_directory :: (watcher: *File_Watcher(void)) {
     EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
 
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
+        ll("Change for path %: %", change.full_path, change.events);
+
         if change.events == .MODIFIED {
             buffer := find_buffer_by_filepath(change.full_path);
             if buffer {

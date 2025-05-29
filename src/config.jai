@@ -231,8 +231,8 @@ load_global_config :: () {
         }
 
     } else {
-        File.write_entire_file(config_filepath, DEFAULT_CONFIG_STRING);
-        ll("Config file created as '%'\n", config_filepath);
+        // File.write_entire_file(config_filepath, DEFAULT_CONFIG_STRING);
+        // ll("Config file created as '%'\n", config_filepath);
     }
 
     parse_color_config(config_data);
@@ -261,6 +261,7 @@ font_xs_size: 13
 cursor_shape: block             # block, line, underscore
 cursor_line_indicator: filled   # none, filled, bordered
 
+# Default theme
 [Color]
 background:                 0c1a21ff
 layout_separator:           dddddd1b
@@ -275,6 +276,30 @@ cursor_line_background:     cccccc0a
 footer_background:          b0a070ff
 footer_background_darken:   8b7c4dff
 footer_text:                000000ff
+
+# JBLOW THEME
+# [Color]
+# background:                 122521ff
+# layout_separator:           dddddd1b
+# text_default:               BDB395ff
+# text_dimmed:                bbbbbbff
+# text_selection:             0000ffff
+# text_highlight:             e3_31_9f_6a
+# text_under_cursor:          0c1021ff
+# text_under_inactive_cursor: fbde2da0
+# cursor:                     86e08fff
+# cursor_inactive:            3a3a3aff
+# cursor_line_background:     cccccc0a
+# footer_background:          b0a070ff
+# footer_background_darken:   8b7c4dff
+# footer_text:                000000ff
+# lang_token_keyword: CCCCCCff
+# lang_token_directive: CCCCCCff
+# lang_token_numeric_value: B7CADDff
+# lang_token_comment: 31B72Cff
+# lang_token_string_literal: 2CA198ff
+# lang_token_procedure_call: BDB395ff
+# lang_token_escaped: CCCCCCff
 
 CONFIG;
 
