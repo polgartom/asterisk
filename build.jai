@@ -162,7 +162,7 @@ build :: () {
                         }
 
                     case .POST_WRITE_EXECUTABLE;
-                        set_icon(message);
+                        // set_icon(message);
                 }
 
             case .COMPLETE;

@@ -287,8 +287,8 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     return buffer;
 }
 
-commit_buffer_changes :: (buffer: *Buffer, $force := false) {
-    #if !force {
+commit_buffer_changes :: (buffer: *Buffer, force := false) {
+    if !force {
         if !buffer.dirty return;
     }
 
@@ -822,7 +822,16 @@ get_buffer_index :: (buffer: *Buffer) -> s64 {
         }
     }
 
-    assert(false); // @Temporary
+    assert(false);
+    return -1;
+}
+
+get_editor_index :: (editor: *Editor) -> s64 {
+    for * editors {
+        if editor == it return it_index;
+    }
+
+    assert(false);
     return -1;
 }
 
@@ -836,12 +845,6 @@ get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     return active_editor, active_editor.active_buffer;
 }
 
-create_editor :: () -> *Editor {
-    editor := array_add(*editors);
-
-    return editor;
-}
-
 create_buffer :: () -> *Buffer {
     // @Todo: Check id collisions
     buffer := New(Buffer);
@@ -852,20 +855,22 @@ create_buffer :: () -> *Buffer {
     return buffer;
 }
 
-change_active_buffer :: (editor: *Editor, buffer: *Buffer) {
-    if editor.active_buffer == buffer return;
+change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
+    current_buffer := editor.active_buffer;
+    if current_buffer == next_buffer return;
 
-    editor.active_buffer.cursor_backup = editor.cursor; // Backing up the current cursor
+    editor_index := get_editor_index(editor);
 
-    editor.active_buffer = buffer;
-    
+    if current_buffer {
+        current_buffer.cursor_backup[editor_index] = editor.cursor; // Backing up the current cursor
+    }
+
+    editor.active_buffer = next_buffer;
+    editor.cursor = next_buffer.cursor_backup[editor_index];
+    clamp_cursor(*editor.cursor, next_buffer.count);
+
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
-    
-    editor.cursor = buffer.cursor_backup;
-    // editor.cursor.moved = true; // so we recalc the left_offset and top_offset because of this
-    clamp_cursor(*editor.cursor, buffer.count);
-
     scroll_to_cursor(editor, editor.cursor, animation_duration=0.0);
 }
 
@@ -874,6 +879,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
 
     buffer := editor.active_buffer;
     r := editor.rect_for_draw;
+    if r.w == 0 || r.h == 0 return;
     
     // Viewport (X)
 
@@ -910,7 +916,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     // Viewport (Y)
 
     y_threshold := get_line_height() * 6;
-
+    
     my := get_line_height(find_row_index(buffer, editor.cursor.pos));
     my = r.h - my + editor.top_offset;
 
@@ -944,9 +950,8 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
 
 active_editor: *Editor = null;
 
-editors: [..] Editor;
+editors: [2] Editor;
 buffers: [..] *Buffer;
-
 
 BUFFER_PAGE_SIZE :: 4096;
 
@@ -961,7 +966,7 @@ Editor :: struct {
     x_scroll_anim: Anim;
 
     rect_for_draw: Rect;
-    visible := true;
+    visible := false;
 }
 
 Buffer :: struct {
@@ -974,7 +979,7 @@ Buffer :: struct {
     history: [..] Buffer_History;
     history_index: s64 = -1;
 
-    cursor_backup: Cursor;
+    cursor_backup: [editors.count] Cursor;
 
     colors: [] Color;
     tokenization_time: float64 = 0.0;

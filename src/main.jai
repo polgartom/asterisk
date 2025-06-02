@@ -109,11 +109,14 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4);
 
-    active_editor = create_editor();
+    for *e: editors {
+        b := create_or_find_empty_buffer(e);
+        change_active_buffer(e, b);
 
-    if !active_editor.active_buffer {
-        active_editor.active_buffer = create_or_find_empty_buffer(active_editor);
+        e.visible = true;
     }
+
+    active_editor = *editors[0];
 
     if files_from_cmdline.count == 2 {
         // @Temporary
@@ -124,13 +127,6 @@ main :: () {
         for filepath: files_from_cmdline {
             open_file_or_create_empty_buffer(active_editor, filepath);
         }
-    }
-
-    // @Temporary
-    editor2 := create_editor();
-    editor2.visible = false;
-    if !editor2.active_buffer {
-        editor2.active_buffer = active_editor.active_buffer;
     }
 
     watcher: File_Watcher(void);
@@ -243,6 +239,8 @@ main :: () {
         }
 
         for *editor: editors {
+            if !editor.visible continue;
+
             assert(editor.active_buffer != null);
             assert(editor.active_buffer.initialized);
 
