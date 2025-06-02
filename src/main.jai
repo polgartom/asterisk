@@ -137,9 +137,9 @@ main :: () {
     watch_working_directory(*watcher);
 
     while !should_quit {
-        // if !redraw_requested {
-        //     wait_for_event();
-        // }
+        if !redraw_requested {
+            wait_for_event();
+        }
 
         update_window_events();
         clear_widget_events();
