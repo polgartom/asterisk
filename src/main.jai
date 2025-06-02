@@ -49,6 +49,14 @@ config_filepath: string;
 workspace: Workspace;
 
 main :: () {
+    #if OS == .WINDOWS {
+        Windows :: #import "Windows";
+        Windows.SetProcessDPIAware();
+
+        // Windows is very bad at thread-switching by default unless you do this. Sad.
+        Windows.timeBeginPeriod(1);
+    }
+
     print("\n\n");
 
     {
@@ -70,14 +78,6 @@ main :: () {
         format := *context.print_style.default_format_int;
         format.digits_per_comma = 3;
         format.comma_string = ",";
-    }
-
-    #if OS == .WINDOWS {
-        Windows :: #import "Windows";
-        Windows.SetProcessDPIAware();
-
-        // Windows is very bad at thread-switching by default unless you do this. Sad.
-        Windows.timeBeginPeriod(1);
     }
 
     args_success, args=, is_set, files_from_cmdline := parse_arguments(Args);
@@ -137,9 +137,9 @@ main :: () {
     watch_working_directory(*watcher);
 
     while !should_quit {
-        if !redraw_requested {
-            wait_for_event();
-        }
+        // if !redraw_requested {
+        //     wait_for_event();
+        // }
 
         update_window_events();
         clear_widget_events();
@@ -174,7 +174,6 @@ main :: () {
             // @Decide: Do we want to do this on the main thread?
             // File watcher
             changed, needs_wait, wait_seconds := process_changes(*watcher);
-            process_changes(*watcher);
         }
 
         {
@@ -269,13 +268,20 @@ main :: () {
 
         draw_frame();
         
-        array_reset(*debug_infos);        
+        array_reset(*debug_infos);
 
         reset_temporary_storage();
 
         // sleep_milliseconds(6); // @Temporary
     }
 } @NoProfile
+
+// #run {
+//     #if OS == .WINDOWS {
+//         WR :: #import "Windows_Resources";
+//         WR.disable_runtime_console();
+//     }
+// }
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     assert(buffer.initialized, "buffer: %\n", buffer.*);

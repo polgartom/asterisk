@@ -38,7 +38,23 @@ draw_frame :: () {
         draw_global_debug_info(active_editor.rect_for_draw);
     }
 
-    Simp.swap_buffers(window);
+    swap_buffers();
+}
+
+swap_buffers :: () {
+    Simp.CheckInit();
+    if state.current_shader Simp.immediate_flush();
+
+    #if OS == .WINDOWS {
+        // @Todo: Explain
+
+        // Fix the Simp.swap_buffers() GetDC() leak
+        Win :: #import "Windows";
+        dc := Win.wglGetCurrentDC();
+        Win.SwapBuffers(dc);
+    } else {
+        Simp.swap_buffers(window);
+    }
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
