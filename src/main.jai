@@ -624,8 +624,8 @@ watch_working_directory :: (watcher: *File_Watcher(void)) {
         if change.events == .MODIFIED {
             buffer := find_buffer_by_filepath(change.full_path);
             if buffer {
-                modtime_from_disk := file_modtime_and_size(change.full_path);
-                r := compare_apollo_times(modtime_from_disk, buffer.modtime);
+                writetime_from_disk := file_modtime_and_size(change.full_path);
+                r := compare_apollo_times(writetime_from_disk, buffer.last_writetime);
                 
                 buffer.should_reload_from_disk = r != 0;
             }
@@ -688,6 +688,10 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
     }
 
     return a;
+}
+
+ms_since_init :: inline () -> float64 {
+    return seconds_since_init() * 1000;    
 }
 
 is_overlap :: (r1: Range, r2: Range) -> bool {

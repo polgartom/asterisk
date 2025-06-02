@@ -12,6 +12,7 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     buffer.count += text.count;
     buffer.dirty = true;
     buffer.unsaved = true;
+    buffer.modtime = ms_since_init();
 
     #if history {
         add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
@@ -51,6 +52,7 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
 
     dirty = true;
     unsaved = true;
+    modtime = ms_since_init();
 
     // @Todo: Better explanation
     // We don't need to commit the buffer changes
@@ -660,6 +662,15 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     history_index += 1;
 }
 
+last_history :: (using buffer: *Buffer) -> *Buffer_History {
+    if buffer.history_index > -1 && buffer.history_index < buffer.history.count {
+        return *buffer.history[buffer.history_index];
+    }
+
+    return null;
+}
+
+
 reset_history :: (using buffer: *Buffer) {
     history_index = -1;
     array_reset_keeping_memory(*history);
@@ -730,7 +741,7 @@ buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
         
         unsaved = false; // Because this is the up to date version of the buffer
 
-        modtime = file_modtime_and_size(filepath);
+        last_writetime = file_modtime_and_size(filepath);
     }
 
     commit_buffer_changes(buffer, force=true);
@@ -757,7 +768,7 @@ buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
     unsaved = false;
 
     exists_on_disk = true;
-    modtime = file_modtime_and_size(filepath);
+    last_writetime = file_modtime_and_size(filepath);
 
     return true;
 }
@@ -986,6 +997,7 @@ Buffer :: struct {
 
     dirty := false;
     unsaved := false;
+    modtime: float64;
 
     row_table: [..] Row_Info;
     row_table_recalc_time: float64 = 0.0;
@@ -993,7 +1005,7 @@ Buffer :: struct {
     filepath: string;
     filepath_os_sepa: string; // keep this for comparisons
     exists_on_disk: bool;
-    modtime: Apollo_Time;
+    last_writetime: Apollo_Time;
 
     should_reload_from_disk: bool;
 
@@ -1009,6 +1021,8 @@ Buffer_History :: struct {
     range: Range;
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
+    
+    modtime: float64;
 
     Type :: enum u8 {
         UNDEFINED :: 0;
