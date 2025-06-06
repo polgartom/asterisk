@@ -5,9 +5,8 @@ draw_frame :: () {
     Simp.set_shader_for_color(true);
 
     x, y, width, height := get_dimensions(window, true);
-    ui_per_frame_update(window, width, height, last_time); // GetRect
 
-    rect := get_rect(0.0, 0.0, xx width, xx height);
+    rect := make_rect(0.0, 0.0, xx width, xx height);
 
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
@@ -401,8 +400,8 @@ draw_widgets :: () {
 }
 
 draw_command_browser :: () {
-    font := primary_font_xs;
-    pad  := cast(float32) primary_font.em_width * .5;
+    font := primary_font;
+    pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
@@ -417,7 +416,7 @@ draw_command_browser :: () {
 
     h := cast(float, font.character_height * 2.0);
     b := cast(float, window_height - k*.1);
-    r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
@@ -475,8 +474,8 @@ draw_command_browser :: () {
 }
 
 draw_buffer_browser :: () {
-    font := primary_font_xs;
-    pad  := cast(float32) primary_font.em_width * .5;
+    font := primary_font;
+    pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
@@ -491,7 +490,7 @@ draw_buffer_browser :: () {
 
     h := cast(float, font.character_height * 2.0);
     b := cast(float, window_height - k*.1);
-    r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
@@ -558,8 +557,8 @@ draw_buffer_browser :: () {
 }
 
 draw_file_browser :: () {
-    font := primary_font_xs;
-    pad  := cast(float32) primary_font.em_width * .5;
+    font := primary_font;
+    pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
@@ -574,12 +573,12 @@ draw_file_browser :: () {
 
     h := cast(float, font.character_height * 2.0);
     b := cast(float, window_height - k*.1);
-    r := get_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
 
-    update_text_input(file_browser.fb_text_input, r, primary_font_xs, placeholder="Search files by name", theme=theme);
+    update_text_input(file_browser.fb_text_input, r, font, placeholder="Search files by name", theme=theme);
     r.y -= 5.0; 
 
     {
@@ -602,7 +601,7 @@ draw_file_browser :: () {
         list_rect := r;
         list_rect.w = w*2.0;
         list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), options, primary_font_xs);
+        linp := list_input(list_rect, xx #location(), options, font);
 
         if fb_text_input.typed then linp.scroll_value = 0.0;
         if linp.selected_index == -1 then linp.selected_index = 0;
@@ -672,7 +671,7 @@ draw_find_text_dialog :: () {
         height := em(2.0, font);
         pad    := cast(float32, primary_font.em_width);// * .5;
 
-        r := get_rect(
+        r := make_rect(
             ed_r.x + ed_r.w - width - pad,
             ed_r.h - footer_height,
             width,
@@ -765,7 +764,7 @@ draw_goto_line_dialog :: () {
     height := em(2.0, font);
     pad    := cast(float32, primary_font.em_width);// * .5;
 
-    r := get_rect(
+    r := make_rect(
         ed_r.x + ed_r.w - width - pad,
         ed_r.h - footer_height,
         width,

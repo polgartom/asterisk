@@ -63,7 +63,7 @@ list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp
         return input;
     }
 
-    rect := get_rect(r.x, b+5.0, r.w, t-b);
+    rect := make_rect(r.x, b+5.0, r.w, t-b);
     push_scissor(rect);
     defer pop_scissor();
 

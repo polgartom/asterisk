@@ -85,22 +85,15 @@ main :: () {
         exit(1);
     }
 
-    WANTED_MSAA :: 0;
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
-    msaa := Simp.prepare_window(window, wanted_msaa = WANTED_MSAA);
-    // log("Wanted MSAA: %\nChosen MSAA: %", WANTED_MSAA, msaa);
-
-    // Actual render size in pixels can be different from the window dimensions we specified above (for example on high-resolution displays on macOS/iOS).
-    window_width, window_height = Simp.get_render_dimensions(window);
-
     Simp.set_render_target(window);
+    window_width, window_height = Simp.get_render_dimensions(window);
 
     init_workspace(*workspace, args.workdir);
     reload_workspace();
 
+    init_fonts();
     init_keymaps();
-
-    ui_init(); // GetRect
 
     footer_height = primary_font_xs.character_height*1.5; // @Cleanup !!!
 
@@ -416,7 +409,7 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 }
 
 init_fonts :: () {
-    pixel_height := ui.font_size;
+    defer assert(primary_font != null && primary_font_xs != null);
 
     #if USE_BAKED_FONT {
         #import "Compiler";
@@ -429,14 +422,12 @@ init_fonts :: () {
             return result;
         }
 
-        primary_font       = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
-        primary_font_xs    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
-    } else {
-        primary_font       = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", ui.font_size);
-        primary_font_xs    = Simp.get_font_at_size("./../data", "firacode-retina/FiraCode-Retina.ttf", ui.font_xs_size);
+        primary_font    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
+        primary_font_xs = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
     }
 
-    assert(primary_font != null && primary_font_xs != null);
+
+    log("% %\n", primary_font.*, primary_font_xs.*);
 }
 
 primary_font: *Simp.Dynamic_Font;
@@ -744,6 +735,8 @@ Anim :: struct {
 #load "workspace.jai";
 #load "project.jai";
 #load "utils.jai";
+#load "view.jai";
+#load "font.jai";
 
 #import "System";
 #import "Basic";
@@ -752,14 +745,13 @@ Anim :: struct {
 #import "Math";
 #import "Window_Creation";
 #import "Unicode";
-#import "GetRect";
+// #import "GetRect";
 #import "Command_Line";
 #import "Sort";
 #import "Random";
 #import "Input";
 #import "Keymap";
 #import "File_Watcher";
-
 #import "Hash_Table";
 
 Thread    :: #import "Thread";

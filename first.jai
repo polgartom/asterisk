@@ -17,7 +17,7 @@ build :: () {
 
     metaprogram_workspace := get_current_workspace();
 
-    w := compiler_create_workspace();
+    w := compiler_create_workspace("Target Program");
     if !w {
         log_error("Workspace creation failed.\n");
         return;
@@ -72,10 +72,10 @@ build :: () {
         options.arithmetic_overflow_check = .FATAL;
     }
 
-    if has_argument("bake_font") {
+    // if has_argument("bake_font") {
         use_baked_font = true;
         if verbose log("[BUILD] We will bake the font, see my_init_fonts() in main.jai\n");
-    }
+    // }
 
     log("\n");
 
