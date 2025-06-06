@@ -14,6 +14,33 @@ insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
     memmove(insert_at, text.data, text.count);
 
     buffer.count += text.count;
+
+    for *c: buffer.cursor_backup {
+        steps := text.count;
+        
+        if c.pos > 0 && c.pos >= at {
+            c.pos += steps;
+        }
+        if c.sel > 0 && c.sel >= at {
+            c.sel += steps;
+        }
+        clamp_cursor(c, buffer.count);
+    }
+
+    for *e : editors {
+        if e.active_buffer == buffer {
+            steps := text.count;
+            c := *e.cursor;
+            if c.pos > 0 && c.pos >= at {
+                c.pos += steps;
+            }
+            if c.sel > 0 && c.sel >= at {
+                c.sel += steps;
+            }
+            clamp_cursor(c, buffer.count);
+        }
+    }
+
 }
 
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
@@ -32,34 +59,6 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
     // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
     commit_buffer_changes(buffer);
-
-    for *c, editor_index: buffer.cursor_backup {
-        steps := text.count;
-        
-        if c.pos > 0 && c.pos >= at {
-            c.pos += steps;
-        }
-        if c.sel > 0 && c.sel >= at {
-            c.sel += steps;
-        }
-        clamp_cursor(c, buffer.count);
-    }
-
-    for *e : editors {
-        if e == editor continue;
-
-        if e.active_buffer == buffer {
-            steps := text.count;
-            c := *e.cursor;
-            if c.pos > 0 && c.pos >= at {
-                c.pos += steps;
-            }
-            if c.sel > 0 && c.sel >= at {
-                c.sel += steps;
-            }
-            clamp_cursor(c, buffer.count);
-        }
-    }
 }
 
 // Shift the entire *used* buffer memory to the left, typically for "deleting" characters from the right
@@ -1005,37 +1004,31 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     redraw_requested = true;
 }
 
-logbuf :: (fmt: string, args: .. Any) {
+logbuf :: (text: string) {
     using buffer := log_buffer;
 
     assert(buffer && buffer.readonly);
     
-    s := sprint(fmt, ..args);
-    defer free(s);
-
     // @Todo: Handle binary and non-printable data
-    normalize_line_endings(*s);
+    normalize_line_endings(*text);
 
-    append_text_raw(buffer, s);
+    append_text_raw(buffer, text);
     buffer.dirty = true;
 
-} @PrintLike
+}
 
-logerrbuf :: (fmt: string, args: .. Any) {
+logerrbuf :: (text: string) {
     using buffer := logerr_buffer;
     
     assert(buffer && buffer.readonly);
 
-    s := sprint(fmt, ..args);
-    defer free(s);
-
     // @Todo: Handle binary and non-printable data
-    normalize_line_endings(*s);
+    normalize_line_endings(*text);
 
-    append_text_raw(buffer, s);
+    append_text_raw(buffer, text);
     buffer.dirty = true;
 
-} @PrintLike
+}
 
 active_editor: *Editor = null;
 
