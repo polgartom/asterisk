@@ -408,11 +408,12 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
 draw_widgets :: () {
     if active_widget == {
-        case Find_Text_Dialog;  draw_find_text_dialog();
-        case Goto_Line_Dialog;  draw_goto_line_dialog();
-        case File_Browser;      draw_file_browser();
-        case Buffer_Browser;    draw_buffer_browser();
-        case Command_Browser;   draw_command_browser();
+        case Find_Text_Dialog;         draw_find_text_dialog();
+        case Find_Global_Text_Dialog;  draw_find_global_text_dialog();
+        case Goto_Line_Dialog;         draw_goto_line_dialog();
+        case File_Browser;             draw_file_browser();
+        case Buffer_Browser;           draw_buffer_browser();
+        case Command_Browser;          draw_command_browser();
     }
 }
 
@@ -648,6 +649,68 @@ draw_file_browser :: () {
 
 }
 
+draw_find_global_text_dialog :: () {
+    using find_global_text_dialog;
+
+    font := primary_font;
+    pad  := cast(float32) font.em_width * .5;
+    ed_r := active_editor.rect_for_draw;
+    
+    theme := Text_Input.DEFAULT_THEME;
+    theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
+
+    w := 400.0; // @Tempoary
+    k := window_height * .2;
+
+    h := cast(float, font.character_height * 2.0);
+    b := cast(float, window_height - k*.1);
+    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r.x = window_width*.5 - w;
+    r.w = w * 2.0;
+    r.y += 5.0; 
+
+    tinp := fgt_input;
+    update_text_input(tinp, r, font, placeholder="Find str...", theme=theme);
+    r.y -= 5.0; 
+
+    list_rect := r;
+    list_rect.h = 1.5*k;
+
+    linp_theme := List_Input.DEFAULT_THEME;
+    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
+
+    update_find_global_text_dialog();
+
+    if linp.entered && options.count {
+        if linp.selected_index >= options.count || linp.selected_index < 0 {
+            assert(false, "Invalid index: % ; options: % ; buffers: %\n", linp.selected_index, options, buffers);
+            return;                
+        }
+        
+        selected_option := options[linp.selected_index];
+        target := selected_option.ref;
+        buffer := open_file_or_create_empty_buffer(active_editor, target.filepath);
+
+        change_active_buffer(active_editor, buffer);
+
+        if is_valid_line(buffer, target.line) {
+            row := buffer.row_table[target.line-1];
+            set_cursor_pos(buffer, *active_editor.cursor, row.start);
+        }
+
+        linp.selected_index = -1;
+
+        close_current_widget();
+    }
+
+}
+
 draw_find_text_dialog :: () {
     using find_text_dialog;
 
@@ -783,7 +846,6 @@ draw_goto_line_dialog :: () {
 
     if !input.text return;
 }
-
 
 draw_global_debug_info :: (r: Rect) {
     // Simp.immediate_flush();

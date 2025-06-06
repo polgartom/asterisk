@@ -134,6 +134,7 @@ Dialog_Option :: enum_flags u32 {
 #load "widget/list_input.jai";
 
 #load "widget/find_text_dialog.jai";
+#load "widget/find_global_text_dialog.jai";
 #load "widget/goto_line_dialog.jai";
 
 #load "widget/file_browser.jai";

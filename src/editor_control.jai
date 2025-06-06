@@ -1120,8 +1120,10 @@ BufferLogTest :: () {
     array_add(*command, "\"draw_\"");
     array_add(*command, "*.jai");
 
-    command_str := join(,, allocator=temp);
-    logbuf("[Running]: %\n\n", command_str);
+    log_buffer.count = 0;
+
+    command_str := join(..command, separator=" ",, allocator=temp);
+    logbuf(tprint("[Running]: %\n\n", command_str));
 
     result, out_str, err_str, timeout_reached := Process.run_command(
         ..command, 
@@ -1132,10 +1134,10 @@ BufferLogTest :: () {
         ,, allocator=temp
     );
 
-    defer free(out_str);
-
     logbuf(out_str);
-    logbuf("\n\n[Result]: %\n", );
+    logbuf(tprint("\n\n[Result]: %\n", result));
+
+    commit_buffer_changes(log_buffer, true);
 
 } @EditorCommand
 
@@ -1289,6 +1291,7 @@ C-, SwitchOrSplitEditorPanel
 A-w HideSecondEditorPanel
 
 C-f open_find_text_dialog
+C-S-f open_find_global_text_dialog
 C-g open_goto_line_dialog
 C-o open_file_browser
 C-p open_buffer_browser
