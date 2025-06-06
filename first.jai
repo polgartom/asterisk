@@ -29,7 +29,7 @@ build :: () {
     metaporgram_args := get_build_options(-1).compile_time_command_line;
     for arg: metaporgram_args {
         if arg == {
-            case "-release"; {
+            case "release"; {
                 release_build = true; 
             }
         }    

@@ -42,7 +42,7 @@ findstr :: (text: string) {
         ..command, 
         working_directory=get_workdir(), 
         capture_and_return_output=true, 
-        print_captured_output=false, 
+        print_captured_output=false,
         arg_quoting=.NEVER_QUOTE,
         timeout_ms=30*1000,
         ,, allocator=temp
@@ -52,7 +52,6 @@ findstr :: (text: string) {
         normalize_line_endings(*out_str);
         lines := split(out_str, "\n");
 
-        ll("LINES: %\n", lines.count);
         for lines {
             slices := split(it, ":");
             if slices.count < 3 continue;
