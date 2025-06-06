@@ -33,16 +33,31 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
     commit_buffer_changes(buffer);
 
+    for *c, editor_index: buffer.cursor_backup {
+        steps := text.count;
+        
+        if c.pos > 0 && c.pos >= at {
+            c.pos += steps;
+        }
+        if c.sel > 0 && c.sel >= at {
+            c.sel += steps;
+        }
+        clamp_cursor(c, buffer.count);
+    }
+
     for *e : editors {
-        if e != editor && e.active_buffer == buffer {
+        if e == editor continue;
+
+        if e.active_buffer == buffer {
             steps := text.count;
-            if e.cursor.pos >= at {
-                e.cursor.pos += steps;
+            c := *e.cursor;
+            if c.pos > 0 && c.pos >= at {
+                c.pos += steps;
             }
-            if e.cursor.sel >= at {
-                e.cursor.sel += steps;
+            if c.sel > 0 && c.sel >= at {
+                c.sel += steps;
             }
-            clamp_cursor(*e.cursor, buffer.count);
+            clamp_cursor(c, buffer.count);
         }
     }
 }
