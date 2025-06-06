@@ -70,6 +70,7 @@ main :: () {
 
     {
         format := *context.print_style.default_format_struct;
+        format.draw_type_name = true;
         format.use_newlines_if_long_form = true;
         format.indentation_width = 2;
     }
@@ -102,23 +103,37 @@ main :: () {
 
     string_for_utf32_to_utf8 := alloc_string(4);
 
-    for *e: editors {
-        b := create_or_find_empty_buffer(e);
-        change_active_buffer(e, b);
+    {
+        active_editor = *editors[0];
 
-        e.visible = true;
-    }
+        if files_from_cmdline.count == 2 {
+            // @Temporary
+            open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
+            open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
 
-    active_editor = *editors[0];
+            editors[0].visible = true;
+            editors[1].visible = true;
 
-    if files_from_cmdline.count == 2 {
-        // @Temporary
-        open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
-        open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
+        } else {
+            for filepath: files_from_cmdline {
+                e := *editors[it_index % editors.count];
+                open_file_or_create_empty_buffer(e, filepath);
+                e.visible = true;
+            }
+        }
 
-    } else {
-        for filepath: files_from_cmdline {
-            open_file_or_create_empty_buffer(active_editor, filepath);
+        log_buffer    = create_readonly_buffer("logs");
+        logerr_buffer = create_readonly_buffer("errors");
+
+        if !editors[0].active_buffer {
+            b := create_or_find_empty_buffer(*editors[0]);
+            change_active_buffer(*editors[0], b);
+            editors[0].visible = true;
+        }
+
+        if !editors[1].active_buffer {
+            change_active_buffer(*editors[1], log_buffer);
+            editors[1].visible = true;
         }
     }
 
@@ -210,12 +225,14 @@ main :: () {
 
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT && !event.ctrl_pressed {
+                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
+                    if buffer.readonly continue;
+
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
 
                     zero_memory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
-                    editor, buffer := get_active_editor_and_buffer(); // @Temporary
                     insert_text_at_cursor(editor, buffer, *editor.cursor, string_for_utf32_to_utf8);
                 }
             }
@@ -409,25 +426,20 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 }
 
 init_fonts :: () {
-    defer assert(primary_font != null && primary_font_xs != null);
-
-    #if USE_BAKED_FONT {
+    BAKED_FONT_DATA :: #run -> [] u8 {
         #import "Compiler";
-        _BAKED_FONT_DATA :: #run -> [] u8 {
-            filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
-            font_binary, success := File.read_entire_file(filename);
-            if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
+        filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
+        font_binary, success := File.read_entire_file(filename);
+        if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
 
-            result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
-            return result;
-        }
-
-        primary_font    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
-        primary_font_xs = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
+        result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
+        return result;
     }
 
+    primary_font    = Simp.get_font_at_size(BAKED_FONT_DATA, ui.font_size);
+    primary_font_xs = Simp.get_font_at_size(BAKED_FONT_DATA, ui.font_xs_size);
 
-    log("% %\n", primary_font.*, primary_font_xs.*);
+    assert(primary_font != null && primary_font_xs != null);
 }
 
 primary_font: *Simp.Dynamic_Font;
@@ -682,26 +694,7 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
 }
 
 ms_since_init :: inline () -> float64 {
-    return seconds_since_init() * 1000;    
-}
-
-is_overlap :: (r1: Range, r2: Range) -> bool {
-    if r1.a > r2.b || r2.a > r1.a return false;
-    return true;
-}
-
-get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
-    if !is_overlap(r1, r2) return false, .{0,0};
-
-    return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
-}
-
-Range :: struct {
-    start: s64;
-    end:   s64;
-
-    #place start; 
-    a: s64; b: s64;
+    return seconds_since_init() * 1000;
 }
 
 Program_Mode :: enum u8 {
@@ -745,7 +738,6 @@ Anim :: struct {
 #import "Math";
 #import "Window_Creation";
 #import "Unicode";
-// #import "GetRect";
 #import "Command_Line";
 #import "Sort";
 #import "Random";
@@ -754,6 +746,7 @@ Anim :: struct {
 #import "File_Watcher";
 #import "Hash_Table";
 
+Process   :: #import "Process";
 Thread    :: #import "Thread";
 File      :: #import "File";
 Simp      :: #import "Simp";

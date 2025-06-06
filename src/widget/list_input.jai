@@ -1,6 +1,6 @@
 
 // The r: Rect's h (height) param represents the maximum height of the list.
-list_input :: (r: Rect, ui_id: u64, options: [..] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
+list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
     
     found, input := table_find_new(*inputs, ui_id);
     if !found {
@@ -163,6 +163,8 @@ List_Input :: struct {
         label: string;
         label_for_search: string;
         ref: T;
+
+        priority: s64 = 0; // for sorting
     }
 
     DEFAULT_THEME :: Theme.{

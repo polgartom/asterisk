@@ -1,4 +1,8 @@
-insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+append_text_raw :: (buffer: *Buffer, text: string) {
+    insert_text_at_raw(buffer, at=buffer.count, text);
+}
+
+insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
     maybe_grow(buffer, text.count);
 
     insert_at      := buffer.data  + at;
@@ -10,6 +14,11 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     memmove(insert_at, text.data, text.count);
 
     buffer.count += text.count;
+}
+
+insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+    insert_text_at_raw(buffer, at, text);
+
     buffer.dirty = true;
     buffer.unsaved = true;
     buffer.modtime = ms_since_init();
@@ -670,7 +679,6 @@ last_history :: (using buffer: *Buffer) -> *Buffer_History {
     return null;
 }
 
-
 reset_history :: (using buffer: *Buffer) {
     history_index = -1;
     array_reset_keeping_memory(*history);
@@ -695,7 +703,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
 
     buffer: *Buffer;
     for buffers {
-        if it.initialized && !it.exists_on_disk && !it.dirty && !it.count {
+        if it.initialized && !it.readonly && !it.exists_on_disk && !it.dirty && !it.count {
             buffer = it;
             break;
         }
@@ -857,13 +865,36 @@ get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
 }
 
 create_buffer :: () -> *Buffer {
-    // @Todo: Check id collisions
+    id: u64;
+    retry := true;
+    while retry {
+        id = random_get();
+        retry = false;
+        for b: buffers if b.id == id { retry = true; ll("id collision: % %\n", id, b.id); break; }
+    }
+    
     buffer := New(Buffer);
-    buffer.id = random_get();
+    buffer.id = id;
     
     array_add(*buffers, buffer);
 
     return buffer;
+}
+
+create_readonly_buffer :: (name: string) -> *Buffer {
+    assert(!!name, "You should provide a name!\n");
+
+    b := create_buffer();
+    b.readonly = true;
+    b.initialized = true;
+
+    fmt_name := sprint("* % *", name);
+    defer free(fmt_name);
+    modify_string(*b.name, fmt_name);
+
+    commit_buffer_changes(b, true);
+
+    return b;
 }
 
 change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
@@ -959,10 +990,45 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     redraw_requested = true;
 }
 
+logbuf :: (fmt: string, args: .. Any) {
+    using buffer := log_buffer;
+
+    assert(buffer && buffer.readonly);
+    
+    s := sprint(fmt, ..args);
+    defer free(s);
+
+    // @Todo: Handle binary and non-printable data
+    normalize_line_endings(*s);
+
+    append_text_raw(buffer, s);
+    buffer.dirty = true;
+
+} @PrintLike
+
+logerrbuf :: (fmt: string, args: .. Any) {
+    using buffer := logerr_buffer;
+    
+    assert(buffer && buffer.readonly);
+
+    s := sprint(fmt, ..args);
+    defer free(s);
+
+    // @Todo: Handle binary and non-printable data
+    normalize_line_endings(*s);
+
+    append_text_raw(buffer, s);
+    buffer.dirty = true;
+
+} @PrintLike
+
 active_editor: *Editor = null;
 
 editors: [2] Editor;
 buffers: [..] *Buffer;
+
+log_buffer:    *Buffer;
+logerr_buffer: *Buffer;
 
 BUFFER_PAGE_SIZE :: 4096;
 
@@ -987,6 +1053,9 @@ Buffer :: struct {
     count:     s64;
     allocated: s64;
 
+    name: string;
+    readonly := false;
+
     history: [..] Buffer_History;
     history_index: s64 = -1;
 
@@ -1006,12 +1075,10 @@ Buffer :: struct {
     filepath_os_sepa: string; // keep this for comparisons
     exists_on_disk: bool;
     last_writetime: Apollo_Time;
-
     should_reload_from_disk: bool;
 
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     language: Language = .PLAIN_TEXT;
-    read_only := false;
     initialized := false;
 }
 

@@ -1,109 +1,76 @@
 build :: () {    
-    has_argument :: (argument: string) -> bool #expand {
-        for arg: `args  if arg == argument return true;
-        return false;
-    }
-
     format := *context.print_style.default_format_struct;
     format.use_newlines_if_long_form = true;
+    format.draw_type_name = true;
     format.indentation_width = 2;
+
+    //~
+
+    release_build := false;
+    window_name := "Asterisk";
+    
+    // User-processed options will give us entries for either 'files' (files to load)
+    // or 'run_strings' (strings to add to the build with #run in front.)
+    files:         [..] string;
+    add_strings:   [..] string;
+    modules_paths: [..] string;
 
     set_build_options_dc(.{do_output = false});
 
-    #if #run (get_current_workspace() != 2) {
-        log_error("The Default_Metaprogram should initiate the compilation!\n");
-        exit(1);
-    }
-
-    metaprogram_workspace := get_current_workspace();
-
     w := compiler_create_workspace("Target Program");
-    if !w {
-        log_error("Workspace creation failed.\n");
-        return;
-    }
-
-    args := get_build_options(w).compile_time_command_line;
-
-    options := get_build_options(metaprogram_workspace);
-    // copy_commonly_propagated_fields(get_build_options(), *options);
+    options := get_build_options(w);
+    copy_commonly_propagated_fields(get_build_options(), *options);
+    options.output_path = "build";
+    options.output_type = .EXECUTABLE;
 
     options.array_bounds_check = .ON;
     options.null_pointer_check = .ON;
 
-    // User-processed options will give us entries for either 'files' (files to load)
-    // or 'run_strings' (strings to add to the build with #run in front.)
-    import_path: [..] string;
-    files:         [..] string;
-    plugin_names: [..] string;
-    user_arguments: [..] string;
-
-    array_add(*import_path, ..options.import_path);
-    options.import_path = import_path;
-
-    options.output_type = .EXECUTABLE;
-    options.output_path = "build";
-    window_name         := "Asterisk"; // We can specify a version number
-
-    release_build  := false;
-    use_baked_font := false;
-    
-    if has_argument("release") {
-        // Release build
-        
-        options.output_executable_name = "asterisk";
-
-        release_build = true; 
-
-        options.backend = .LLVM;
-        options.llvm_options.enable_split_modules = false;
-        
-        set_optimization(*options, .VERY_OPTIMIZED);
-        options.arithmetic_overflow_check = .OFF;
-
-    } else {
-        // Development build
-        window_name = "Asterisk (devbuild)";
-        options.output_executable_name = "devbuild";
-         
-        options.backend = .X64;
-
-        set_optimization(*options, .VERY_DEBUG);
-        options.arithmetic_overflow_check = .FATAL;
+    metaporgram_args := get_build_options(-1).compile_time_command_line;
+    for arg: metaporgram_args {
+        if arg == {
+            case "-release"; {
+                release_build = true; 
+            }
+        }    
     }
 
-    // if has_argument("bake_font") {
-        use_baked_font = true;
-        if verbose log("[BUILD] We will bake the font, see my_init_fonts() in main.jai\n");
-    // }
+    if release_build {
+        options.backend = .LLVM;
+        options.llvm_options.enable_split_modules = false;
+        options.arithmetic_overflow_check = .OFF;
+        set_optimization(*options, .VERY_OPTIMIZED);
 
-    log("\n");
-
-    // log("options:\n%\n", options);
-    set_build_options(options, w);
-
-    if release_build  {
         #if OS == .WINDOWS {
+            // Prevent to run the console, we just want the window
             set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
         }
-    }    
 
-    intercept_flags: Intercept_Flags;
-    compiler_begin_intercept(w, intercept_flags);
+        options.output_executable_name = "asterisk";
 
-    add_build_file("src/main.jai", w);
+    } else {
+        options.backend = .X64;
+        options.arithmetic_overflow_check = .FATAL;
+        set_optimization(*options, .VERY_DEBUG);
+        options.output_executable_name = "devbuild";
+
+        window_name = "Asterisk (devbuild)";
+    }
+
+    set_build_options(options, w);
     
+    compiler_begin_intercept(w);
+
     build_constants := tprint(#string STRING
             DEBUG           :: %;
-            USE_BAKED_FONT  :: %;
             WINDOW_NAME     :: "%";
         STRING,
             ifx release_build then "false" else "true",
-            ifx use_baked_font  then "true"  else "false",
             window_name,
     );
     
     add_build_string(build_constants, w);
+    add_build_file("src/main.jai", w);
 
     while true {
         message := compiler_wait_for_message();

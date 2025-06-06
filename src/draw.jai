@@ -17,6 +17,7 @@ draw_frame :: () {
         Simp.set_shader_for_color(true);
         c := map_color_to_vec4(.LAYOUT_SEPARATOR);
         Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, c);
+        
     } else {
         draw_editor(*editors[0], rect);
     }
@@ -59,6 +60,11 @@ swap_buffers :: () {
 draw_editor :: (using editor: *Editor, rect: Rect) {
     // left_pad := cast(float32) primary_font.em_width;
     left_pad := 0.0;
+
+    bg_color := map_color_to_vec4(.BACKGROUND);
+    if editor.active_buffer.readonly then bg_color = darken(bg_color, .1);
+    // if editor != active_editor then bg_color = darken(bg_color, .1);
+    draw_quad(rect, bg_color);
 
     r, footer_r := cut_top(rect, window_height-footer_height);
     _, r=       := cut_left(r, left_pad);
@@ -171,32 +177,38 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         width := 0;
         left := footer.x + 10;
-        center := footer.y + footer.h / 2 - font.character_height / 2;
+        center := font_calc_y_center_insert_point(footer, font.character_height);
 
         {
             // Draw buffer's file info
             using buffer;
 
-            path := filepath;
-            if path {
-                workdir := get_working_directory();
-                path_overwrite_separators(workdir, #char "/");
-                if begins_with(path, workdir) {
-                    advance(*path, workdir.count + 1); // +1 for the path separator
-                    assert(path.count > 0);
-                }
+            info_text: string = ---;
+
+            if readonly { // scratch buffer
+                info_text = name;
+
             } else {
-                path = "Untitled";
+                path := filepath;
+                if !path path = "Untitled";
+                if filepath {
+                    path = filepath;
+                    workdir := get_workdir();
+                    if begins_with(path, workdir) {
+                        advance(*path, workdir.count + 1); // +1 for the path separator
+                        assert(path.count > 0);
+                    }
+                }
+
+                info_text = tprint(
+                    "%1%2%3",
+                    path,
+                    ifx !exists_on_disk then " <new>" else "",
+                    ifx unsaved         then "*"      else "",
+                );
             }
 
-            fileinfo := tprint(
-                "%1%2%3",
-                path,
-                ifx !exists_on_disk then " <new>" else "",
-                ifx unsaved         then "*"      else "",
-            );
-
-            width = Simp.prepare_text(font, fileinfo);
+            width = Simp.prepare_text(font, info_text);
             Simp.draw_prepared_text(font, xx left, xx center, fg_color);
 
             left += width;
@@ -247,6 +259,11 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Sh
         fg_color = map_color_to_vec4(.TEXT_UNDER_INACTIVE_CURSOR);
     }
 
+    if buffer.readonly {
+        shape = .LINE;
+        line_indicator = .NONE;
+    }
+
     if #complete line_indicator == {
         case .NONE;
         case .FILLED;
@@ -277,8 +294,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Sh
                 Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
             }
         case .LINE;
-            // @Todo:
-            assert(false, "TODO!\n");
+            Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + max(cw*.5, 3.0)), bottom - (ch/2-(ch*0.2)), bg_color);
+
         case .UNDERSCORE;
             Simp.immediate_quad(cast(float32)cx, bottom, cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
     }
@@ -391,10 +408,10 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
 draw_widgets :: () {
     if active_widget == {
-        case Find_Text_Dialog; draw_find_text_dialog();
-        case Goto_Line_Dialog; draw_goto_line_dialog();
-        case File_Browser;     draw_file_browser();
-        case Buffer_Browser;   draw_buffer_browser();
+        case Find_Text_Dialog;  draw_find_text_dialog();
+        case Goto_Line_Dialog;  draw_goto_line_dialog();
+        case File_Browser;      draw_file_browser();
+        case Buffer_Browser;    draw_buffer_browser();
         case Command_Browser;   draw_command_browser();
     }
 }
@@ -499,34 +516,8 @@ draw_buffer_browser :: () {
     update_text_input(tinp, r, font, placeholder="Switch to buffer", theme=theme);
     r.y -= 5.0; 
 
-    options: [..] List_Input.Option(*Buffer);
-    options.allocator = temp;
-    array_reserve(*options, buffers.count);
-
-    // @Speed: We are doing this on every frame!!!
-    wd := get_working_directory();
-    path_unify_sepa(wd);
-
-    for b: buffers {
-        if !b.initialized continue;
-
-        title := "* New *";
-        if b.exists_on_disk {
-            assert(!!b.filepath);
-
-            title = b.filepath;
-            if begins_with(title, wd) {
-                advance(*title, wd.count);
-            }
-        }
-
-        if tinp.text {
-            found, rem := contains_nocase(title, tinp.text);
-            if !found continue;
-        }
-
-        array_add(*options, .{label=copy_temporary_string(title), ref=b});
-    }
+    if tinp.typed update_visible_options(*buffer_browser);
+    options := buffer_browser.visible_options;
 
     list_rect := r;
     list_rect.h = 1.5*k;
@@ -988,4 +979,13 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
             }
         }
     }
+}
+
+draw_quad :: (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Vector4) {
+    Simp.immediate_quad(p0, p1, p2, p3, color);  //  @Speed
+}
+
+draw_quad :: (r: Rect, color: Vector4) {
+    p0, p1, p2, p3 := get_quad(r);
+    draw_quad(p0, p1, p2, p3, color);
 }

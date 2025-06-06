@@ -1110,6 +1110,35 @@ ReloadBufferFromDisk :: () {
 
 } @EditorCommand
 
+BufferLogTest :: () {
+
+    command: [..] string;
+    command.allocator = temp;
+
+    array_add(*command, "findstr.exe");
+    array_add(*command, "-rsinp");
+    array_add(*command, "\"draw_\"");
+    array_add(*command, "*.jai");
+
+    command_str := join(,, allocator=temp);
+    logbuf("[Running]: %\n\n", command_str);
+
+    result, out_str, err_str, timeout_reached := Process.run_command(
+        ..command, 
+        working_directory=get_workdir(), 
+        capture_and_return_output=true, 
+        print_captured_output=true, 
+        arg_quoting=.NEVER_QUOTE
+        ,, allocator=temp
+    );
+
+    defer free(out_str);
+
+    logbuf(out_str);
+    logbuf("\n\n[Result]: %\n", );
+
+} @EditorCommand
+
 ////////////////////////////////////
 //
 

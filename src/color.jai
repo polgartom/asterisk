@@ -25,6 +25,36 @@ map_name_to_color :: (name: string) -> Color {
     return .NONE;
 }
 
+darken :: (color: Vector4, amount: float) -> Vector4 {
+    result: Vector4;
+
+    result.x = lerp(color.x, 0, amount);
+    result.y = lerp(color.y, 0, amount);
+    result.z = lerp(color.z, 0, amount);
+    result.w = color.w;
+
+    return result;
+}
+
+whiten :: (color: Vector3, amount: float) -> Vector3 {
+    result: Vector3;
+
+    result.x = lerp(color.x, 1, amount);
+    result.y = lerp(color.y, 1, amount);
+    result.z = lerp(color.z, 1, amount);
+
+    return result;
+}
+
+whiten :: (color: Vector4, amount: float) -> Vector4 {
+    result: Vector4;
+
+    result.xyz = whiten(color.xyz, .5);
+    result.w = color.w;
+
+    return result;
+}
+
 COLOR_MAP_SIZE :: #run enum_highest_value(Color) + 1;
 COLOR_MAP: [COLOR_MAP_SIZE] Vector4 = #run -> [] Vector4 {
     colors: [..]Vector4;
@@ -51,6 +81,7 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
             case .LANG_TOKEN_ESCAPED;          Add(0x9c5d29ff);
 
             case .BACKGROUND;                  Add(0x0c1a21ff);
+            case .BACKGROUND2;                 Add(0x212121ff);
             case .LAYOUT_SEPARATOR;            Add(0xdddddd1B);
             case .TEXT_DEFAULT;                Add(0xd0d0d0ff);
             case .TEXT_DIMMED;                 Add(0xbbbbbbff);
@@ -83,6 +114,7 @@ Color :: enum u8 {
     LANG_TOKEN_ESCAPED;
 
     BACKGROUND;
+    BACKGROUND2;
     LAYOUT_SEPARATOR;
     TEXT_DEFAULT;
     TEXT_DIMMED;
