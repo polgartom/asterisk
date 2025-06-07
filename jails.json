@@ -1,0 +1,10 @@
+{
+    "local_modules": [],
+    "roots": [
+        "src/main.jai",
+        "first.jai"
+    ],
+    "build_root": "first.jai",
+    "intermediate_path": "tmp/",
+    "auto_insert_parentheses": false
+}

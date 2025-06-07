@@ -104,6 +104,9 @@ main :: () {
     string_for_utf32_to_utf8 := alloc_string(4);
 
     {
+        // log_buffer    = create_readonly_buffer("logs");
+        // logerr_buffer = create_readonly_buffer("errors");
+
         active_editor = *editors[0];
 
         if files_from_cmdline.count == 2 {
@@ -122,19 +125,15 @@ main :: () {
             }
         }
 
-        log_buffer    = create_readonly_buffer("logs");
-        logerr_buffer = create_readonly_buffer("errors");
-
-        if !editors[0].active_buffer {
-            b := create_or_find_empty_buffer(*editors[0]);
-            change_active_buffer(*editors[0], b);
-            editors[0].visible = true;
+        // @Todo: Don't draw the editor if no active buffer is assigned to
+        for *e: editors {
+            if !e.active_buffer {
+                b := create_or_find_empty_buffer(e);
+                change_active_buffer(e, b);
+                e.visible = true;
+            }
         }
 
-        if !editors[1].active_buffer {
-            change_active_buffer(*editors[1], log_buffer);
-            editors[1].visible = true;
-        }
     }
 
     watcher: File_Watcher(void);

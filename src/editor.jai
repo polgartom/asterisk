@@ -1004,39 +1004,39 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     redraw_requested = true;
 }
 
-logbuf :: (text: string) {
-    using buffer := log_buffer;
+// logbuf :: (text: string) {
+//     using buffer := log_buffer;
 
-    assert(buffer && buffer.readonly);
+//     assert(buffer && buffer.readonly);
     
-    // @Todo: Handle binary and non-printable data
-    normalize_line_endings(*text);
+//     // @Todo: Handle binary and non-printable data
+//     normalize_line_endings(*text);
 
-    append_text_raw(buffer, text);
-    buffer.dirty = true;
+//     append_text_raw(buffer, text);
+//     buffer.dirty = true;
 
-}
+// }
 
-logerrbuf :: (text: string) {
-    using buffer := logerr_buffer;
+// logerrbuf :: (text: string) {
+//     using buffer := logerr_buffer;
     
-    assert(buffer && buffer.readonly);
+//     assert(buffer && buffer.readonly);
 
-    // @Todo: Handle binary and non-printable data
-    normalize_line_endings(*text);
+//     // @Todo: Handle binary and non-printable data
+//     normalize_line_endings(*text);
 
-    append_text_raw(buffer, text);
-    buffer.dirty = true;
+//     append_text_raw(buffer, text);
+//     buffer.dirty = true;
 
-}
+// }
 
 active_editor: *Editor = null;
 
 editors: [2] Editor;
 buffers: [..] *Buffer;
 
-log_buffer:    *Buffer;
-logerr_buffer: *Buffer;
+// log_buffer:    *Buffer;
+// logerr_buffer: *Buffer;
 
 BUFFER_PAGE_SIZE :: 4096;
 

@@ -44,7 +44,7 @@ findstr :: (text: string) {
         capture_and_return_output=true, 
         print_captured_output=false,
         arg_quoting=.NEVER_QUOTE,
-        timeout_ms=30*1000,
+        timeout_ms=10*1000,
         ,, allocator=temp
     );
 

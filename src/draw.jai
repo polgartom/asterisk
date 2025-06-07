@@ -58,20 +58,9 @@ swap_buffers :: () {
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
-    // left_pad := cast(float32) primary_font.em_width;
-    left_pad := 0.0;
-
-    bg_color := map_color_to_vec4(.BACKGROUND);
-    if editor.active_buffer.readonly then bg_color = darken(bg_color, .1);
-    // if editor != active_editor then bg_color = darken(bg_color, .1);
-    draw_quad(rect, bg_color);
-
     r, footer_r := cut_top(rect, window_height-footer_height);
-    _, r=       := cut_left(r, left_pad);
 
     editor.rect_for_draw = r;
-
-    // Simp.immediate_quad(pad_r.x, pad_r.y, pad_r.x + pad_r.w, pad_r.h + pad_r.y, PURPLE_COLOR);
 
     buffer := editor.active_buffer;
 
@@ -418,7 +407,7 @@ draw_widgets :: () {
 }
 
 draw_command_browser :: () {
-    font := primary_font;
+    font := primary_font_xs;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -492,7 +481,7 @@ draw_command_browser :: () {
 }
 
 draw_buffer_browser :: () {
-    font := primary_font;
+    font := primary_font_xs;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -549,7 +538,7 @@ draw_buffer_browser :: () {
 }
 
 draw_file_browser :: () {
-    font := primary_font;
+    font := primary_font_xs;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -652,15 +641,15 @@ draw_file_browser :: () {
 draw_find_global_text_dialog :: () {
     using find_global_text_dialog;
 
-    font := primary_font;
+    font := primary_font_xs;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
-    theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
-    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
-    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
-    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.bg_color = #run hex_to_vec4(0x1a1a1a_ff);
+    theme.fg_color = #run hex_to_vec4(0xABABAB_ff);
+    theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
+    theme.placeholder_color = #run hex_to_vec4(0xABABAB_ff);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
     w := 400.0; // @Tempoary
@@ -681,8 +670,8 @@ draw_find_global_text_dialog :: () {
     list_rect.h = 1.5*k;
 
     linp_theme := List_Input.DEFAULT_THEME;
-    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
-    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
+    linp_theme.current_item_bg_color = #run whiten(hex_to_vec4(0x101520_ff), .05);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
 
     update_find_global_text_dialog();
@@ -693,6 +682,8 @@ draw_find_global_text_dialog :: () {
             return;                
         }
         
+        SwitchOrSplitEditorPanel(); // open the file on the opposite side
+
         selected_option := options[linp.selected_index];
         target := selected_option.ref;
         buffer := open_file_or_create_empty_buffer(active_editor, target.filepath);
@@ -717,7 +708,7 @@ draw_find_text_dialog :: () {
     ed_r := active_editor.rect_for_draw;
 
     {
-        font   := primary_font_xs;
+        font := primary_font_xs;
         ch := font.character_height;
         k      := ed_r.h * .1;
         kw     := ed_r.w * .15;
@@ -747,7 +738,6 @@ draw_find_text_dialog :: () {
             theme.border_color = #run hex_to_vec4(0xa9_22_22_a0);
         }
 
-        // prefix :=  // UGLY!
         update_text_input(input, r, font, placeholder="Find text", theme);
 
         weight :: 2; // border weight

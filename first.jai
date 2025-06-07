@@ -70,7 +70,7 @@ build :: () {
     );
     
     add_build_string(build_constants, w);
-    add_build_file("src/main.jai", w);
+    add_build_file("./src/main.jai", w);
 
     while true {
         message := compiler_wait_for_message();

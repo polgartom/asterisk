@@ -49,7 +49,7 @@ whiten :: (color: Vector3, amount: float) -> Vector3 {
 whiten :: (color: Vector4, amount: float) -> Vector4 {
     result: Vector4;
 
-    result.xyz = whiten(color.xyz, .5);
+    result.xyz = whiten(color.xyz, amount);
     result.w = color.w;
 
     return result;

@@ -74,20 +74,21 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     if selected_index != -1 {
         i := selected_index;
         target := y - (i*y_off);
-        bottom_threshold := b + ch * 2;
+        top_threshold := t - y_off * 2;
+        bottom_threshold := b + y_off * 2;
 
         if moved {
             if target < bottom_threshold {
                 _anim.active = true;
                 _anim.start  = scroll_value;
-                _anim.target = scroll_value + (bottom_threshold - target);
-                _anim.duration = 0.1;
+                _anim.target = scroll_value + (bottom_threshold - target + y_off);
+                _anim.duration = 0.07;
                 _anim.started_at = cast(float)current_time;
-            } else if target >= t - ch {
+            } else if target >= top_threshold {
                 _anim.active = true;
                 _anim.start  = scroll_value;
-                _anim.target = scroll_value - (target + y_off - t);
-                _anim.duration = 0.1;
+                _anim.target = scroll_value - (target - top_threshold + y_off);
+                _anim.duration = 0.07;
                 _anim.started_at = cast(float)current_time;
             }
         }
@@ -113,11 +114,12 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     for opt, i: options {
         defer y -= y_off;
         
-        outside := y < b || y >= t;
+        outside := y+y_off < b || y >= t;
         if outside continue;
 
         Simp.set_shader_for_color(true);
-        // Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
+        Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
+        
         color := theme.fg_color;
         if i == selected_index {
             Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, theme.current_item_bg_color);
