@@ -14,33 +14,6 @@ insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
     memmove(insert_at, text.data, text.count);
 
     buffer.count += text.count;
-
-    for *c: buffer.cursor_backup {
-        steps := text.count;
-        
-        if c.pos > 0 && c.pos >= at {
-            c.pos += steps;
-        }
-        if c.sel > 0 && c.sel >= at {
-            c.sel += steps;
-        }
-        clamp_cursor(c, buffer.count);
-    }
-
-    for *e : editors {
-        if e.active_buffer == buffer {
-            steps := text.count;
-            c := *e.cursor;
-            if c.pos > 0 && c.pos >= at {
-                c.pos += steps;
-            }
-            if c.sel > 0 && c.sel >= at {
-                c.sel += steps;
-            }
-            clamp_cursor(c, buffer.count);
-        }
-    }
-
 }
 
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
@@ -59,6 +32,34 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
     // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
     commit_buffer_changes(buffer);
+
+    for *c: buffer.cursor_backup {
+        steps := text.count;
+        
+        if c.pos > 0 && c.pos >= at {
+            c.pos += steps;
+        }
+        if c.sel > 0 && c.sel >= at {
+            c.sel += steps;
+        }
+        clamp_cursor(c, buffer.count);
+    }
+
+    for *e : editors {
+        if e == editor continue;
+        
+        if e.active_buffer == buffer {
+            steps := text.count;
+            c := *e.cursor;
+            if c.pos > 0 && c.pos >= at {
+                c.pos += steps;
+            }
+            if c.sel > 0 && c.sel >= at {
+                c.sel += steps;
+            }
+            clamp_cursor(c, buffer.count);
+        }
+    }
 }
 
 // Shift the entire *used* buffer memory to the left, typically for "deleting" characters from the right
@@ -737,7 +738,11 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             defer free(_input);
 
             normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
-            insert_text_at(editor, buffer, 0, _input, history=true);
+            
+            final_text := replace(_input, "\t", TAB_SPACE_CHARS);
+            defer free(final_text);
+
+            insert_text_at(editor, buffer, 0, final_text, history=true);
 
             buffer.unsaved = false;
         }

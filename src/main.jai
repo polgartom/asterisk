@@ -87,6 +87,7 @@ main :: () {
     }
 
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
+    msaa := Simp.prepare_window(window, wanted_msaa = 8);
     Simp.set_render_target(window);
     window_width, window_height = Simp.get_render_dimensions(window);
 
@@ -120,7 +121,9 @@ main :: () {
         } else {
             for filepath: files_from_cmdline {
                 e := *editors[it_index % editors.count];
-                open_file_or_create_empty_buffer(e, filepath);
+                b := open_file_or_create_empty_buffer(e, filepath);
+                change_active_buffer(e, b);
+                
                 e.visible = true;
             }
         }
@@ -130,7 +133,6 @@ main :: () {
             if !e.active_buffer {
                 b := create_or_find_empty_buffer(e);
                 change_active_buffer(e, b);
-                e.visible = true;
             }
         }
 
@@ -425,7 +427,7 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
 }
 
 init_fonts :: () {
-    BAKED_FONT_DATA :: #run -> [] u8 {
+    _BAKED_FONT_DATA :: #run -> [] u8 {
         #import "Compiler";
         filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
         font_binary, success := File.read_entire_file(filename);
@@ -435,8 +437,8 @@ init_fonts :: () {
         return result;
     }
 
-    primary_font    = Simp.get_font_at_size(BAKED_FONT_DATA, ui.font_size);
-    primary_font_xs = Simp.get_font_at_size(BAKED_FONT_DATA, ui.font_xs_size);
+    primary_font    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
+    primary_font_xs = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
 
     assert(primary_font != null && primary_font_xs != null);
 }
