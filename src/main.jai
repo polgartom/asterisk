@@ -732,6 +732,7 @@ Anim :: struct {
 #load "utils.jai";
 #load "view.jai";
 #load "font.jai";
+#load "async.jai";
 
 #import "System";
 #import "Basic";
@@ -747,8 +748,8 @@ Anim :: struct {
 #import "Keymap";
 #import "File_Watcher";
 #import "Hash_Table";
+#import "Process";
 
-Process   :: #import "Process";
 Thread    :: #import "Thread";
 File      :: #import "File";
 Simp      :: #import "Simp";
