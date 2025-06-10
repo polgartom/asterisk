@@ -48,6 +48,13 @@ config_filepath: string;
 
 workspace: Workspace;
 
+// #run {
+//     #if OS == .WINDOWS {
+//         WR :: #import "Windows_Resources";
+//         WR.disable_runtime_console();
+//     }
+// }
+
 main :: () {
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -109,6 +116,7 @@ main :: () {
         // logerr_buffer = create_readonly_buffer("errors");
 
         active_editor = *editors[0];
+        active_editor.visible = true;
 
         if files_from_cmdline.count == 2 {
             // @Temporary
@@ -284,13 +292,6 @@ main :: () {
         // sleep_milliseconds(6); // @Temporary
     }
 } @NoProfile
-
-// #run {
-//     #if OS == .WINDOWS {
-//         WR :: #import "Windows_Resources";
-//         WR.disable_runtime_console();
-//     }
-// }
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     assert(buffer.initialized, "buffer: %\n", buffer.*);

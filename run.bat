@@ -1,3 +1,3 @@
 @echo off
 
-call .\compile.bat %* && .\build\devbuild.exe
+call .\compile.bat && .\build\devbuild.exe %*

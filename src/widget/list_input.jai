@@ -63,25 +63,26 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
         return input;
     }
 
-    rect := make_rect(r.x, b+5.0, r.w, t-b);
+    bottom_padding := 5.0;
+
+    rect := make_rect(r.x, b + bottom_padding, r.w, t-b);
     push_scissor(rect);
     defer pop_scissor();
 
     y += scroll_value;
 
     max_scroll_value := options.count*y_off;
-
+    
     if selected_index != -1 {
         i := selected_index;
         target := y - (i*y_off);
         top_threshold := t - y_off * 2;
-        bottom_threshold := b + y_off * 2;
 
         if moved {
-            if target < bottom_threshold {
+            if target < b + y_off {
                 _anim.active = true;
                 _anim.start  = scroll_value;
-                _anim.target = scroll_value + (bottom_threshold - target + y_off);
+                _anim.target = scroll_value + ((b+y_off*2) - target + y_off);
                 _anim.duration = 0.07;
                 _anim.started_at = cast(float)current_time;
             } else if target >= top_threshold {
@@ -109,7 +110,9 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
         redraw_requested = true;
     }
 
-    scroll_value = clamp(scroll_value, 0.0, max_scroll_value);
+    k := max_scroll_value;
+    if k > rect.h then k-=rect.h;
+    scroll_value = clamp(scroll_value, 0.0, k + bottom_padding);
 
     for opt, i: options {
         defer y -= y_off;
