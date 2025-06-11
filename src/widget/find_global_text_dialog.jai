@@ -20,132 +20,176 @@ open_find_global_text_dialog :: () {
 update_find_global_text_dialog :: () {
     using find_global_text_dialog;
 
-    if process {
-        output_buffer := ensure_contiguous_space_and_return_available_range(*output_builder);
-        error_buffer := ensure_contiguous_space_and_return_available_range(*error_builder);
-
-        success, output_bytes, error_bytes := read_from_process(process, output_buffer, error_buffer, -1);
-
-        if output_bytes {
-            advance_through_ensured_space(*output_builder, output_bytes);
-        }
-        
-        if error_bytes {
-            advance_through_ensured_space(*error_builder, error_bytes);
-        }
-
-        output_string := builder_to_string(*output_builder,, temporary_allocator);
-        error_string  := builder_to_string(*error_builder,, temporary_allocator);
-
-        log("[read_from_process]: success: % ; out: % ; err: %\n", success, output_bytes, error_bytes);
-        log("[out]:\n\n|%|\n\n", output_string);
-        log("[err]:\n\n|%|\n\n", error_string);
-
-        if process.output.eof && process.error.eof {
-            success = kill_process(process);
-            if !success {
-                log_error("Failed to KILL the process!\n");
-                return;            
+    if fgt_input.typed {
+        start_find_process(fgt_input.text);
+    } else if process {
+        success, eof, output_string, error_string := read_find_process();
+        if success {
+            if (error_string.count) {
+                log_error("PROCESS STDERR:\n%\n", error_string);
             }
 
-            deinit(process);
-
-            free(process);
-            process = null;
+            output_string_to_options(output_string, eof);
         }
-
-        redraw_requested = true;
-    }
-
-    if fgt_input.typed {
-        findstr(fgt_input.text);
     }
 }
 
 #scope_file
-findstr :: (text: string) {
+
+output_string_to_options :: (out_str: string, eof: bool) {
+    using find_global_text_dialog;
+    
+    if !out_str.count return;
+    
+    remainder := join(parser_buffer, out_str, separator="",, temp);
+    while remainder {
+        found, left, right := split_from_left(remainder, #char "\n");
+
+        if found {
+            remainder = right;
+        } else {
+            if eof {
+                remainder = "";
+            } else {
+                break;
+            }
+        }
+
+        line := trim(left);
+        replace_chars(line, "\r\t", #char " ");
+        slices := split(line, ":",, temp);
+        if slices.count < 3 continue;
+
+        file := slices[0];
+        path_overwrite_separators(file, #char "/");
+
+        opt := array_add(*options);
+        modify_string(*opt.label, line);
+        modify_string(*opt.ref.filepath, file);
+        opt.ref.line_number = string_to_int(slices[1], base=10, u32);
+    }
+
+    if !eof {
+        if remainder {
+            modify_string(*parser_buffer, remainder);
+        }
+    }
+
+    #if DO_VERBOSE ll("options created from the output string!\n");
+}
+
+start_find_process :: (text: string) {
     using find_global_text_dialog;
 
     array_reset_keeping_memory(*options);
 
-    if !fgt_input.text return;
+    parser_buffer.count = 0;
+
+    if text.count < 3 return;
 
     command: [..] string;
     command.allocator = temp;
 
     array_add(*command, "findstr.exe");
-    array_add(*command, "-rsinp");
-    array_add(*command, tprint("\"%\"", text));
+    array_add(*command, "-N"); // Prints the line number before each line that matches.
+    array_add(*command, "-S"); // Searches for matching files in the current directory and all subdirectories.
+    array_add(*command, "-I"); // Specifies that the search is not to be case-sensitive.
+    array_add(*command, "-P"); // Skip files with non-printable characters.
+
+    array_add(*command, "-L"); // Uses search strings literally.
+    // array_add(*command, "-R"); // Uses search strings as regular expressions.
+    array_add(*command, tprint("-C:\"%\"", text));
+
     array_add(*command, "*.*");
 
-    success: bool;
-
     if process {
-        success = kill_process(process);
-        if !success {
-            log_error("Failed to KILL the process: %\n", command);
-            return;            
-        }
+        reset(*output_builder);
+        reset(*error_builder);
 
-        deinit(process);
-
-        free(process);
-        process = null;
+        assert(kill_find_process() == true);
     }
 
     process = New(Process);
-    success = create_process(process, ..command, get_workdir(), capture_and_return_output=true, .NEVER_QUOTE);
+    success := create_process(process, ..command, get_workdir(), capture_and_return_output=true, .NEVER_QUOTE);
     if !success {
         log_error("Failed to START the process: %\n", command);
         return;
     }
 
-    // result, out_str, err_str, timeout_reached := Process.run_command(
-    //     ..command, 
-    //     working_directory=get_workdir(), 
-    //     capture_and_return_output=true, 
-    //     print_captured_output=false,
-    //     arg_quoting=.NEVER_QUOTE,
-    //     timeout_ms=10*1000,
-    //     ,, allocator=temp
-    // );
-
-    // if !timeout_reached && result.type == .EXITED && result.exit_code == 0 {
-    //     normalize_line_endings(*out_str);
-    //     lines := split(out_str, "\n");
-
-    //     for lines {
-    //         slices := split(it, ":");
-    //         if slices.count < 3 continue;
-
-    //         file := slices[0];
-    //         path_overwrite_separators(file, #char "/");
-
-    //         line := string_to_int(slices[1], base=10, u32);
-
-    //         opt := array_add(*options);
-    //         modify_string(*opt.label, it);
-    //         modify_string(*opt.ref.filepath, file);
-    //         opt.ref.line = line;
-    //     }
-    // }
-
+    #if DO_VERBOSE ll("process created!\n");
 }
+
+read_find_process :: () -> success: bool, eof: bool, output_string: string, error_string: string {
+    using find_global_text_dialog;
+    assert(process != null);
+
+    redraw_requested = true;
+
+    output_buffer := ensure_contiguous_space_and_return_available_range(*output_builder);
+    error_buffer := ensure_contiguous_space_and_return_available_range(*error_builder);
+
+    INFINITE :: -1;
+    timeout_ms := 20;
+    success, output_bytes, error_bytes := read_from_process(process, output_buffer, error_buffer, timeout_ms);
+
+    if output_bytes {
+        advance_through_ensured_space(*output_builder, output_bytes);
+    }
+    
+    if error_bytes {
+        advance_through_ensured_space(*error_builder, error_bytes);
+    }
+
+    eof := process.output.eof && process.error.eof;
+    #if DO_VERBOSE ll("success: % ; out: % ; err: % ; eof: %\n", success, output_bytes, error_bytes, eof);
+    
+    if !success || eof kill_find_process();
+
+    output_string := builder_to_string(*output_builder, do_reset=true,, temp);
+    error_string  := builder_to_string(*error_builder, do_reset=true,, temp);
+
+    return success, eof, output_string, error_string;
+}
+
+kill_find_process :: () -> bool {
+    using find_global_text_dialog;
+    assert(process != null);
+
+    success := kill_process(process);
+    if !success {
+        log_error("Failed to KILL the process: %\n");
+        return false;
+    }
+
+    deinit(process);
+
+    free(process);
+    process = null;
+
+    #if DO_VERBOSE ll("killed!\n");
+
+    return true;
+}
+
+DO_VERBOSE :: false;
+
 #scope_export
 
 find_global_text_dialog: Find_Global_Text_Dialog;
 
 Find_Global_Text_Dialog :: struct {
     process: *Process;
+    
     output_builder: String_Builder;
     error_builder: String_Builder;
     
-    fgt_input: *Text_Input;
+    parser_buffer: string;
 
     Result :: struct {
         filepath: string;
-        line: u32;
+        line_number: u32;
     };
 
+    fgt_input: *Text_Input;
     options: [..] List_Input.Option(Result);
 }

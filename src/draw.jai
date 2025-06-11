@@ -663,7 +663,7 @@ draw_find_global_text_dialog :: () {
     r.y += 5.0; 
 
     tinp := fgt_input;
-    update_text_input(tinp, r, font, placeholder="Find str...", theme=theme);
+    update_text_input(tinp, r, font, placeholder="Search...", theme=theme);
     r.y -= 5.0; 
 
     list_rect := r;
@@ -674,6 +674,10 @@ draw_find_global_text_dialog :: () {
     linp_theme.current_item_bg_color = #run whiten(hex_to_vec4(0x101520_ff), .05);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
 
+    if fgt_input.typed {
+        linp.selected_index = 0;
+    }
+
     update_find_global_text_dialog();
 
     if linp.entered && options.count {
@@ -682,16 +686,16 @@ draw_find_global_text_dialog :: () {
             return;                
         }
         
-        SwitchOrSplitEditorPanel(); // open the file on the opposite side
+        // SwitchOrSplitEditorPanel(); // open the file on the opposite side
 
         selected_option := options[linp.selected_index];
         target := selected_option.ref;
+        
         buffer := open_file_or_create_empty_buffer(active_editor, target.filepath);
-
         change_active_buffer(active_editor, buffer);
 
-        if is_valid_line(buffer, target.line) {
-            row := buffer.row_table[target.line-1];
+        if is_valid_line(buffer, target.line_number) {
+            row := buffer.row_table[target.line_number-1];
             set_cursor_pos(buffer, *active_editor.cursor, row.start);
         }
 

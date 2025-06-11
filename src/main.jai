@@ -551,9 +551,9 @@ path_unify_sepa :: inline (path: string) {
     }
 }
 
-modify_string :: (target: *string, new_value: string) {
+modify_string :: (target: *string, new_value: string) {    
     assert(target != null);
-    // print("modify_string: '%' -> '%'\n", target.*, new_value);
+
     if target.count free(target.*);
     target.* = copy_string(new_value);
 }
@@ -732,7 +732,6 @@ Anim :: struct {
 #load "utils.jai";
 #load "view.jai";
 #load "font.jai";
-#load "async.jai";
 
 #import "System";
 #import "Basic";
