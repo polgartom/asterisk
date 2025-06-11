@@ -72,6 +72,8 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
         if #complete c == {
             case .NONE;                        Add(0x00000000);
 
+            case .COLOR_GREEN;                 Add(0x3f_7f_3fff);
+
             case .LANG_TOKEN_KEYWORD;          Add(0x9c9d29ff);
             case .LANG_TOKEN_DIRECTIVE;        Add(0xa8_6D_5A_ff);
             case .LANG_TOKEN_COMMENT;          Add(0x3f_7a_3fff);
@@ -104,6 +106,8 @@ DEFAULT_COLOR :: #run -> [] Vector4 {
 
 Color :: enum u8 {
     NONE :: 0;
+
+    COLOR_GREEN;
 
     LANG_TOKEN_KEYWORD;
     LANG_TOKEN_DIRECTIVE;

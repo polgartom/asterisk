@@ -65,6 +65,25 @@ output_string_to_options :: (out_str: string, eof: bool) {
 
         opt := array_add(*options);
         modify_string(*opt.label, line);
+        
+        {
+            using opt.label_styled;
+            
+            array_reset_keeping_memory(*colors);
+            array_reserve(*colors, line.count);
+            colors.count = line.count;
+            memset(colors.data, cast(u8)Color.TEXT_DEFAULT, colors.count);
+        
+            i := find_index_from_left_nocase(slices[2], fgt_input.text);
+            if i != -1 {
+                offset := slices[2].data - slices[0].data;
+                offset += i;
+                for offset..min(offset + fgt_input.text.count, colors.count)-1 {
+                    colors[it] = .COLOR_GREEN;
+                }
+            }
+        }
+        
         modify_string(*opt.ref.filepath, file);
         opt.ref.line_number = string_to_int(slices[1], base=10, u32);
     }
@@ -83,7 +102,10 @@ start_find_process :: (text: string) {
 
     array_reset_keeping_memory(*options);
 
-    parser_buffer.count = 0;
+    if parser_buffer {
+        free(parser_buffer);
+        parser_buffer.count = 0;
+    }
 
     if text.count < 3 return;
 
@@ -115,6 +137,8 @@ start_find_process :: (text: string) {
         log_error("Failed to START the process: %\n", command);
         return;
     }
+    
+    redraw_requested = true;
 
     #if DO_VERBOSE ll("process created!\n");
 }

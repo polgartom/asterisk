@@ -882,7 +882,104 @@ draw_global_debug_info :: (r: Rect) {
     }
 }
 
-/////////////////////
+////////////////////////////////
+//~ 
+
+Text_Style :: struct {
+    text: string;
+    colors: [..] Color;
+    default_colorv4: Vector4 = #run map_color_to_vec4(.TEXT_DEFAULT);
+}
+
+draw_text :: (x: s64, y: s64, ts: Text_Style) -> width: s64 {
+    font := primary_font;
+    
+    Simp.set_shader_for_text();
+    
+    width := Simp.prepare_text(font, ts.text, effect_flags=0);
+    Simp.generate_quads_for_prepared_text(font, x, y, effect_flags=0);
+    draw_generated_quads(ts, font);
+
+    return width;
+}
+
+draw_generated_quads :: (using styled_text: Text_Style, font: *Simp.Dynamic_Font) {
+    // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
+    #import "GL";
+
+    Simp.CheckInit();
+    quads := font.current_quads;
+
+    if state.current_shader Simp.immediate_flush();
+
+    Simp.immediate_begin();
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
+    draw_letter_quad :: inline (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
+        page := quad.glyph.page;
+
+        if page.bitmap_data.width  <= 1 return;
+        if page.bitmap_data.height <= 1 return;
+
+        using quad;
+        uv0 := Vector2.{u0, v0};
+        uv1 := Vector2.{u1, v0};
+        uv2 := Vector2.{u1, v1};
+
+        uv3 := Vector2.{u0, v1};
+
+        inline Simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
+    }
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    last_texture: s64 = -1;
+
+    t := text;
+    index := 0;
+
+    for quad, i: quads {
+        page := quad.glyph.page;
+        map  := *page.texture;
+
+        if page.dirty {
+            page.dirty = false;
+            Simp.texture_load_from_bitmap(map, page.bitmap_data);
+        }
+
+        if map.gl_handle != last_texture {
+            Simp.immediate_flush();
+            handle := map.gl_handle;
+            last_texture = handle;
+
+            shader := state.current_shader;
+            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            if loc < 0  log_error("Unable to find text_sampler in shader_text!");
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
+            glUniform1i(loc, 0);
+        }
+
+        color := default_colorv4;
+        if index < colors.count {
+            color = map_color_to_vec4(colors[index]);
+        }
+
+        inline draw_letter_quad(font, quad, color);
+
+        t.data += 1 + trailingBytesForUTF8[t[0]];
+        index += 1;
+    }
+
+    Simp.immediate_flush();
+
+    glDisable(GL_BLEND);
+}
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(primary_font, s);
@@ -1045,3 +1142,4 @@ draw_quad :: (r: Rect, color: Vector4) {
     p0, p1, p2, p3 := get_quad(r);
     draw_quad(p0, p1, p2, p3, color);
 }
+

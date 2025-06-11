@@ -129,7 +129,7 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
             color = theme.current_item_fg_color;
         }
         
-        label(xx x, xx (y+ch*.25), opt.label, font, color);
+        draw_text(xx x, xx (y+ch*.25), opt.label_styled);
     }
 
     return input;
@@ -165,11 +165,15 @@ List_Input :: struct {
     selected_index := -1;
 
     Option :: struct ($T: Type = void) {
-        label: string;
+        label_styled: Text_Style;
+        
         label_for_search: string;
         ref: T;
 
         priority: s64 = 0; // for sorting
+    
+        #place label_styled;
+            label: string;
     }
 
     DEFAULT_THEME :: Theme.{
