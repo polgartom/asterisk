@@ -301,6 +301,30 @@ footer_text:                000000ff
 # lang_token_procedure_call: BDB395ff
 # lang_token_escaped: CCCCCCff
 
+# DARK THEME 1
+# [Color]
+# background:                 1A1A1AFF
+# layout_separator:           0C1021FF
+# text_default:               C0B9B9FF
+# text_dimmed:                7C7C7CFF
+# text_selection:             263238FF
+# text_highlight:             FFEB3BFF
+# text_under_cursor:          00BCD4FF
+# text_under_inactive_cursor: 455A64FF
+# cursor:                     FFFFFFFF
+# cursor_inactive:            9E9E9EFF
+# cursor_line_background:     6a6a6a20
+# footer_background:          263238FF
+# footer_background_darken:   1C262BFF
+# footer_text:                FFFFFFFF
+# lang_token_keyword:         FF5252FF
+# lang_token_directive:       F48FB1FF
+# lang_token_numeric_value:   FF9800FF
+# lang_token_comment:         9E9E9EFF
+# lang_token_string_literal:  8BC34AFF
+# lang_token_procedure_call:  00BCD4FF
+# lang_token_escaped:         FF5722FF
+
 CONFIG;
 
 #import,file "file_handler.jai";
