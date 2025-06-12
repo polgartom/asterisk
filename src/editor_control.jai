@@ -1264,9 +1264,9 @@ C-S-f open_find_global_text_dialog
 C-g open_goto_line_dialog
 C-o open_file_browser
 C-p open_buffer_browser
-A-x open_command_browser
+F1 open_command_browser
 
-F1 ToggleDevInfo
+A-0 ToggleDevInfo
 
 C-n CreateBuffer
 C-w CloseCurrentBuffer

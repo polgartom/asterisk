@@ -159,6 +159,7 @@ main :: () {
 
         redraw_requested = false;
 
+        frame += 1;
         current_time = seconds_since_init();
         frame_dt = current_time - last_time;
         last_time = seconds_since_init();

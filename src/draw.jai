@@ -652,6 +652,10 @@ draw_find_global_text_dialog :: () {
     theme.placeholder_color = #run hex_to_vec4(0xABABAB_ff);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
+    //if process {
+        //theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
+    //}
+
     w := 400.0; // @Tempoary
     k := window_height * .2;
 
@@ -661,6 +665,28 @@ draw_find_global_text_dialog :: () {
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
+
+//    label(xx r.x, xx (r.y + r.h + font.character_height*.55), "Loading..", font, theme.fg_color);
+
+    update_find_global_text_dialog();
+
+    if process {
+        color := #run hex_to_vec4(0x6a2a2a_ff);
+        
+        t := .6;
+        blend_factor := sin(TAU * (xx current_time) * t);
+        blend_factor += 0.0;
+        blend_factor *= t;
+        Clamp(*blend_factor, 0, 1);
+                
+        result: Vector4;
+        result.x = lerp(cast(float)color.x, 0.0, blend_factor);
+        result.y = lerp(cast(float)color.y, 0.0, blend_factor);
+        result.z = lerp(cast(float)color.z, 0.0, blend_factor);
+        result.w = color.w;
+    
+        theme.border_color = result;
+    }
 
     tinp := fgt_input;
     update_text_input(tinp, r, font, placeholder="Search...", theme=theme);
@@ -677,8 +703,6 @@ draw_find_global_text_dialog :: () {
     if fgt_input.typed {
         linp.selected_index = 0;
     }
-
-    update_find_global_text_dialog();
 
     if linp.entered && options.count {
         if linp.selected_index >= options.count || linp.selected_index < 0 {

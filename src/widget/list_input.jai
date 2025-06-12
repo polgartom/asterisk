@@ -114,11 +114,15 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     if k > rect.h then k-=rect.h;
     scroll_value = clamp(scroll_value, 0.0, k + bottom_padding);
 
+    //rendered := 0;
+
     for opt, i: options {
         defer y -= y_off;
         
         outside := y+y_off < b || y >= t;
         if outside continue;
+
+        //rendered += 1;
 
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
@@ -131,6 +135,8 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
         
         draw_text(xx x, xx (y+ch*.25), opt.label_styled);
     }
+
+    //PrintDev("options rendered: %\n", rendered);
 
     return input;
 }

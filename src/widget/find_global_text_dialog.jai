@@ -17,6 +17,16 @@ open_find_global_text_dialog :: () {
 
 } @EditorCommandUnlisted(editor_keymap)
 
+close_find_global_text_dialog :: () {
+    using find_global_text_dialog;
+    
+    if process {
+        assert(kill_find_process(), "Failed to kill the find process!\n");
+    }
+    
+    switch_editor_mode(.EDITOR);
+}
+
 update_find_global_text_dialog :: () {
     using find_global_text_dialog;
 
