@@ -119,14 +119,16 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         end_row := last_visible_row_index(editor, buffer);
 
         color := map_color_to_vec4(.TEXT_DEFAULT);
-        if active_editor != editor {
-            color = map_color_to_vec4(.TEXT_DIMMED);
-        }
 
         left_pad := cast(float32) primary_font.em_width;
 
         push_scissor(r);
         defer pop_scissor();
+
+        if editor != active_editor {
+            color_base = darken(color_base_default, .1);
+        }
+        defer color_base = color_base_default;
 
         // Draw lines
         for row_index: start_row..end_row {

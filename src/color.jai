@@ -1,5 +1,8 @@
+color_base := Vector4.{1.0,1.0,1.0,1.0};
+color_base_default :: Vector4.{1.0,1.0,1.0,1.0};
+
 map_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return COLOR_MAP[cast(s64) color];
+    return COLOR_MAP[cast(s64) color] * color_base;
 }
 
 map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
