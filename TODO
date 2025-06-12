@@ -9,11 +9,14 @@
     
 ------------------------------------------------
 
-C:/jai/modules/String/module.jai:819,5: Assertion failed: index = -2,251,774,043,881,096
+/opt/jai/modules/String/module.jai:816,5: Assertion failed: index = -1
+
 Stack trace:
-C:/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
-C:/jai/modules/Basic/module.jai:87: assert_helper
-K:/Programming/asterisk/src/draw.jai:211: draw_editor
-K:/Programming/asterisk/src/draw.jai:13: draw_frame
-K:/Programming/asterisk/src/main.jai:291: main
-A breakpoint was hit, but no debugger is attached.
+/opt/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
+/opt/jai/modules/Basic/module.jai:87: assert_helper
+/home/polgar/Programming/asterisk/././src/editor.jai:217: remove_text_from_left
+/home/polgar/Programming/asterisk/././src/editor_control.jai:513: DeleteEverythingFromLeft
+/opt/jai/modules/Keymap/module.jai:412: keymap_handle_event
+/opt/jai/modules/Keymap/module.jai:40: handle_event
+/home/polgar/Programming/asterisk/././src/main.jai:225: main
+make: *** [Makefile:9: run] Error 1
