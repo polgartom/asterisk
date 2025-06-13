@@ -301,17 +301,17 @@ footer_text:                000000ff
 # lang_token_procedure_call: BDB395ff
 # lang_token_escaped: CCCCCCff
 
-# DARK THEME 1
+# MODERN THEME (DARK)
 # [Color]
 # background:                 1A1A1AFF
 # layout_separator:           0C1021FF
 # text_default:               C0B9B9FF
 # text_dimmed:                7C7C7CFF
 # text_selection:             263238FF
-# text_highlight:             FFEB3BFF
-# text_under_cursor:          00BCD4FF
+# text_highlight:             FFEB3B_ff
+# text_under_cursor:          455A64FF
 # text_under_inactive_cursor: 455A64FF
-# cursor:                     FFFFFFFF
+# cursor:                     00bbecFF
 # cursor_inactive:            9E9E9EFF
 # cursor_line_background:     6a6a6a20
 # footer_background:          263238FF

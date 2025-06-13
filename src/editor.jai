@@ -742,9 +742,11 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             final_text := replace(_input, "\t", TAB_SPACE_CHARS);
             defer free(final_text);
 
-            insert_text_at(editor, buffer, 0, final_text, history=true);
+            insert_text_at(editor, buffer, 0, final_text, history=false);
 
             buffer.unsaved = false;
+
+            buffer.last_writetime = file_modtime_and_size(filepath);
         }
 
         commit_buffer_changes(buffer, force=true);
@@ -851,6 +853,14 @@ close_buffer :: (buffer: *Buffer) {
     }
 
     buffer_reset_keeping_memory(buffer);
+}
+
+is_active :: inline (using e: *Editor) -> bool {
+    return e == active_editor;
+}
+
+is_active :: inline (using e: *Editor, using b: *Buffer) -> bool {
+    return e.active_buffer == b;
 }
 
 get_buffer_index :: (buffer: *Buffer) -> s64 {

@@ -1,12 +1,15 @@
-color_base := Vector4.{1.0,1.0,1.0,1.0};
-color_base_default :: Vector4.{1.0,1.0,1.0,1.0};
+#add_context color_intensity: Vector4 = #run v4(1.0);
+
+reset_color_intensity :: () {
+    context.color_intensity = v4(1.0);
+}
 
 map_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return COLOR_MAP[cast(s64) color] * color_base;
+    return COLOR_MAP[cast(s64) color] * context.color_intensity;
 }
 
 map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return DEFAULT_COLOR[cast(s64) color];
+    return DEFAULT_COLOR[cast(s64) color] * context.color_intensity;
 }
 
 map_name_to_color :: (name: string) -> Color {

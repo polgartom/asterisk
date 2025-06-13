@@ -58,6 +58,9 @@ swap_buffers :: () {
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
+    if !is_active(editor) context.color_intensity *= 0.90;
+    defer reset_color_intensity();
+    
     r, footer_r := cut_top(rect, window_height-footer_height);
 
     editor.rect_for_draw = r;
@@ -124,11 +127,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         push_scissor(r);
         defer pop_scissor();
-
-        if editor != active_editor {
-            color_base = darken(color_base_default, .1);
-        }
-        defer color_base = color_base_default;
 
         // Draw lines
         for row_index: start_row..end_row {
@@ -800,6 +798,23 @@ draw_find_text_dialog :: () {
     ch := primary_font.character_height;
     color := map_color_to_vec4(.TEXT_HIGHLIGHT);
 
+    #if 0 {
+        // @Todo: Guess if the highlight rects need white or black text  
+        // We can make the light text visible if we draw the light rects on the texts,
+        // so If our text is white-ish and our rects is brighter yellow then the text
+        // color become black. Basically we use the text color to make an inverse mask.
+        glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE);  // if the rect has darker color; the text color became white
+        // glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO); // if the rect has brighter color; the text color became dark
+        glEnable(GL_BLEND);
+        defer {
+            Simp.immediate_flush();
+            glDisable(GL_BLEND);
+            // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        }
+    } else {
+        Simp.set_shader_for_color(true);
+    }
+
     for pos: occurences {
         ri := find_row_index(buffer, pos);
         if ri < rs_i || ri > re_i continue;
@@ -817,9 +832,9 @@ draw_find_text_dialog :: () {
 
         bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
 
-        Simp.set_shader_for_color(true);
         Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), color);
     }
+
 
 }
 
