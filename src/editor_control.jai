@@ -1114,7 +1114,6 @@ ReloadBufferFromDisk :: () {
 //
 
 register_keymap_procedures :: () {
-
     core_keymap   = add_keymap(*keymap_set, "Core");
     widget_keymap = add_keymap(*keymap_set, "Widget");
     editor_keymap = add_keymap(*keymap_set, "Editor");
@@ -1192,8 +1191,6 @@ register_keymap_procedures :: () {
 }
 
 init_keymaps :: () {
-    register_keymap_procedures();
-
     success := load_from_memory(*keymap_set, DEFAULT_KEYMAP_CONFIG, "default");
     assert(success, "Failed to load the 'default.keymap'");
 }

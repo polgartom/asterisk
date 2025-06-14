@@ -215,37 +215,107 @@ check_config :: (data: string) -> bool {
     return true;
 }
 
+parse_project_config :: (data: string) {
+    using handler: Text_File_Handler;
+
+    start_from_memory(*handler, "Project", "(no path)", data);
+    if failed return;
+
+    defer deinit(*handler);
+
+    lines: [..] string;
+    lines.allocator = temporary_allocator;
+
+    get_section_lines(*handler, "Project", *lines);
+    if failed return;
+
+    for line: lines {
+        key, rhs := break_by_colon(line);
+
+        key = trim(key);
+        rhs = trim(rhs);
+
+        if key == {
+            case "files";
+                slices := split(rhs, ",",, temp);
+                for slices {
+                    pattern := trim(it, " \"");
+                    if !pattern continue;
+                    table_add(*workspace.files, copy_string(pattern), true);
+                }
+            case "paths";
+                slices := split(rhs, ",",, temp);
+                for slices {
+                    pattern := trim(it, " \"");
+                    if !pattern continue;
+                    table_add(*workspace.paths, copy_string(pattern), true);
+                }
+            case "exclude";
+                slices := split(rhs, ",",, temp);
+                for slices {
+                    pattern := trim(it, " \"");
+                    if !pattern continue;
+                    table_add(*workspace.exclude, copy_string(pattern), true);
+                }
+        }
+
+    }
+
+}
+
 #scope_export
 
 load_global_config :: () {
-    config_data := DEFAULT_CONFIG_STRING;
-    
-    if file_exists(config_filepath) {
-        data := File.read_entire_file(config_filepath);
-        ok := check_config(data);
-        if ok {
-            config_data = data;
-            ll("Config loaded from the '%' file\n", config_filepath);
-        } else {
-            ll("Using fallback config.\n");
-        }
-
-    } else {
-        // File.write_entire_file(config_filepath, DEFAULT_CONFIG_STRING);
-        // ll("Config file created as '%'\n", config_filepath);
+    if !file_exists(config_filepath) {
+        log_error("Unable to locate the global config file! '%'\n", config_filepath);
+        return;
     }
 
-    parse_color_config(config_data);
-    parse_ui_config(config_data);
+    data, ok := File.read_entire_file(config_filepath);
+    defer free_string(*data);
+    if !ok {
+        log_error("Unable to read the global config file! '%'\n", config_filepath);
+        return;
+    }
+
+    if !check_config(data) {
+        log_error("Failed to parse the global config file! '%'\n", config_filepath);
+        return;
+    }
+
+    parse_color_config(data);
+    parse_ui_config(data);
 }
 
 load_project_config :: () {
-    
+    path :: ".asterisk-project.cfg";
+
+    if !file_exists(path) return;
+
+    data := File.read_entire_file(path);
+    if !check_config(data) {
+        log_error("[%] failed to load the config '%'\n", #procedure_name(), path);
+        return;
+    }
+
+    log("[%] config loaded!\n", #procedure_name(), path);
+
+    parse_project_config(data);
 }
 
 #scope_file
 
 CONFIG_VERSION :: 1;
+
+_DEFAULT_PROJECT_CONFIG :: #string CONFIG
+[1]
+
+[Project]
+# files: "*.jai", "*.txt", "*.bat", "*.sh"
+# paths: "src", "modules"
+# exclude: ".git", ".build", ".vs", ".vscode", ".idea"
+
+CONFIG;
 
 DEFAULT_CONFIG_STRING :: #run tprint(
     _DEFAULT_CONFIG_STRING, 

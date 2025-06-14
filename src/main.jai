@@ -45,8 +45,6 @@ args: Args;
 executable_dir: string;
 config_filepath: string;
 
-workspace: Workspace;
-
 // #run {
 //     #if OS == .WINDOWS {
 //         WR :: #import "Windows_Resources";
@@ -97,11 +95,9 @@ main :: () {
     Simp.set_render_target(window);
     window_width, window_height = Simp.get_render_dimensions(window);
 
-    init_workspace(*workspace, args.workdir);
-    reload_workspace();
+    register_keymap_procedures();
 
-    init_fonts();
-    init_keymaps();
+    init_workspace(*workspace, args.workdir);
 
     footer_height = primary_font_xs.character_height*1.5; // @Cleanup !!!
 
@@ -145,9 +141,6 @@ main :: () {
 
     }
 
-    watcher: File_Watcher(void);
-    watch_working_directory(*watcher);
-
     while !should_quit {
         if !redraw_requested {
             wait_for_event();
@@ -183,11 +176,7 @@ main :: () {
             }
         }
 
-        {
-            // @Decide: Do we want to do this on the main thread?
-            // File watcher
-            changed, needs_wait, wait_seconds := process_changes(*watcher);
-        }
+        process_changes(workspace.watcher);
 
         {
             // @Cleanup: Remove it!!
@@ -268,7 +257,9 @@ main :: () {
 
             b := editor.active_buffer;
             if b.should_reload_from_disk {
-                if b.unsaved {
+                if !b.unsaved {
+                    buffer_reload_from_disk(editor, b);
+                } else {
                     answer := dialog_confirm(
                         "This file has been modified by another program. Do you want to reload it?", 
                         b.filepath,
@@ -551,9 +542,13 @@ path_unify_sepa :: inline (path: string) {
     }
 }
 
-modify_string :: (target: *string, new_value: string) {    
-    assert(target != null);
+free_string :: (target: *string) {
+    if target.count && target.data free(target.*);
+    target.data = null;
+    target.count = 0;
+}
 
+modify_string :: (target: *string, new_value: string) {    
     if target.count free(target.*);
     target.* = copy_string(new_value);
 }
@@ -616,8 +611,7 @@ wait_for_event :: () {
     }
 } @NoProfile
 
-watch_working_directory :: (watcher: *File_Watcher(void)) {
-
+start_file_watcher :: (watcher: *File_Watcher(void)) {
     VERBOSE_WATCHER :: false;//DEBUG;
     RECURSIVE_WATCH :: true;
     // EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.MODIFIED|.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
@@ -626,6 +620,14 @@ watch_working_directory :: (watcher: *File_Watcher(void)) {
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
         ll("Change for path %: %", change.full_path, change.events);
 
+        {
+            path := path_unify_sepa(change.full_path);
+            found, _, relative_path := split_from_left(change.full_path, workspace.dir);
+            if found {
+                relative_path = trim(relative_path, "/\\");
+            }
+        }
+        
         if change.events == .MODIFIED {
             buffer := find_buffer_by_filepath(change.full_path);
             if buffer {

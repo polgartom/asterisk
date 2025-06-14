@@ -132,7 +132,21 @@ start_find_process :: (text: string) {
     // array_add(*command, "-R"); // Uses search strings as regular expressions.
     array_add(*command, tprint("-C:\"%\"", text));
 
-    array_add(*command, "*.*");
+    // Specify the pattern based on the project config file.
+    // array_add(*command, "src/** modules/**");
+    // array_add(*command, "src/** *.jai *.bat *.txt *.md");
+    // array_add(*command, "app/**");
+    // array_add(*command, "resources/**");
+    
+    // array_add(*command, "-D:.");
+
+    if workspace.files.count {
+        for workspace.files {
+            array_add(*command, it_index);
+        }
+    } else {
+        array_add(*command, "*.*");
+    }
 
     if process {
         reset(*output_builder);
@@ -163,7 +177,7 @@ read_find_process :: () -> success: bool, eof: bool, output_string: string, erro
     error_buffer := ensure_contiguous_space_and_return_available_range(*error_builder);
 
     INFINITE :: -1;
-    timeout_ms := 20;
+    timeout_ms := 5;
     success, output_bytes, error_bytes := read_from_process(process, output_buffer, error_buffer, timeout_ms);
 
     if output_bytes {
