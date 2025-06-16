@@ -1,28 +1,24 @@
-init_workspace :: (w: *Workspace, dir_: string) {
-    dir := dir_;
-    if !dir {
-        dir = get_working_directory();
+init_workspace :: (using w: *Workspace, new_dir_: string) {
+    new_dir := new_dir_;
+
+    if !new_dir || !is_directory(new_dir) {
+        log_error("Unable to locate the given workspace directory's absolute location (%), so we use the current working direcoty.\n", new_dir);
+        new_dir = get_working_directory();
     }
 
-    if !is_directory(dir) {
-        log_error("Unable to locate the given workspace directory's absolute location (%), so we use the current working direcoty.\n", dir);
-        dir = get_working_directory();
-        assert(is_directory(dir), "%\n", dir);
-    }
-
-    dir = File.get_absolute_path(dir); // using temp alloc
+    new_dir = File.get_absolute_path(new_dir,, temp); // using temp alloc
+    modify_string(*dir_os, new_dir);
+    
+    modify_string(*dir, new_dir);
     path_unify_sepa(dir);
-    modify_string(*w.dir, dir);
 
-    set_working_directory(dir);
+    set_working_directory(dir_os);
 
-    print("[Workspace]: Working dir: '%'\n", w.dir);
+    print("[Workspace]: Working dir: '%'\n", dir);
 
     load_global_config();
 
     {
-        using w;
-    
         for files   free_string(*it_index);
         for paths   free_string(*it_index);
         for exclude free_string(*it_index);
@@ -41,25 +37,26 @@ init_workspace :: (w: *Workspace, dir_: string) {
     init_keymaps();
     init_fonts();
 
-    if w.watcher {
-        deinit(w.watcher);
-        free(w.watcher);
+    if watcher {
+        deinit(watcher);
+        free(watcher);
     }
 
-    w.watcher = New(File_Watcher(void));
+    watcher = New(File_Watcher(void));
     start_file_watcher(w.watcher);
 }
 
 ReloadWorkspace :: () {
     init_workspace(*workspace, workspace.dir);
 } @EditorCommand
- 
+
 workspace: Workspace;
 
 Workspace :: struct {
     watcher: *File_Watcher(void);
 
     dir: string;
+    dir_os: string;
 
     files: Table(string, bool);
     paths: Table(string, bool);

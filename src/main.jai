@@ -618,13 +618,22 @@ start_file_watcher :: (watcher: *File_Watcher(void)) {
     EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
 
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-        ll("Change for path %: %", change.full_path, change.events);
+        // NOTE: The change.full_path separators are unified to "/"
 
-        {
-            path := path_unify_sepa(change.full_path);
-            found, _, relative_path := split_from_left(change.full_path, workspace.dir);
-            if found {
-                relative_path = trim(relative_path, "/\\");
+        if workspace.paths.count {
+            path_in_workdir, _, relative_path := split_from_left(change.full_path, workspace.dir);
+            if path_in_workdir {
+                relative_path = trim_left(relative_path, "/");
+                
+                should_skip := true;
+                for workspace.paths {
+                    if os_path_begins_with(relative_path, it_index) {
+                        should_skip = false;
+                        break;
+                    }
+                }
+
+                if should_skip return;
             }
         }
         
@@ -668,6 +677,14 @@ start_file_watcher :: (watcher: *File_Watcher(void)) {
     ll("Starting to check % for changes in % directories.", ifx RECURSIVE_WATCH then "recursively" else "", dirs_to_watch);
 
     // deinit(watcher); // Those handlers are released during shutdown, right?
+}
+
+os_path_begins_with :: (path: string, prefix: string) -> bool {
+    #if OS == .WINDOWS {
+        return begins_with_nocase(path, prefix);
+    } else {
+        return begins_with_nocase(path, prefix);
+    }
 }
 
 get_workdir :: () -> string {

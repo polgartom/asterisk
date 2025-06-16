@@ -137,8 +137,8 @@ start_find_process :: (text: string) {
     // array_add(*command, "src/** *.jai *.bat *.txt *.md");
     // array_add(*command, "app/**");
     // array_add(*command, "resources/**");
-    
-    // array_add(*command, "-D:.");
+
+    array_add(*command, "-D:.");
 
     if workspace.files.count {
         for workspace.files {
