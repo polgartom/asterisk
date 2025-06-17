@@ -1114,9 +1114,9 @@ ReloadBufferFromDisk :: () {
 //
 
 register_keymap_procedures :: () {
-    core_keymap   = add_keymap(*keymap_set, "Core");
-    widget_keymap = add_keymap(*keymap_set, "Widget");
-    editor_keymap = add_keymap(*keymap_set, "Editor");
+    core_keymap   = add_keymap(*keymap_set, "core");
+    widget_keymap = add_keymap(*keymap_set, "widget");
+    editor_keymap = add_keymap(*keymap_set, "editor");
 
     Add :: (k: *Keymap, ident: Code) #expand {
         add_proc(k, #run Code_get_identifier_name(ident), #insert ident);
@@ -1190,10 +1190,6 @@ register_keymap_procedures :: () {
     Add(editor_keymap, WordCompletion);
 }
 
-init_keymaps :: () {
-    success := load_from_memory(*keymap_set, DEFAULT_KEYMAP_CONFIG, "default");
-    assert(success, "Failed to load the 'default.keymap'");
-}
 
 // @Todo:
 keymap_mapping_as_string :: (k: *Keymap, proc: $T) -> string, bool {
@@ -1227,106 +1223,9 @@ keymap_mapping_as_string :: (k: *Keymap, proc: $T) -> string, bool {
     return "", false;
 }
 
-keymap_set: Keymap_Set;
-
-core_keymap:   *Keymap;
-editor_keymap: *Keymap;
-widget_keymap: *Keymap;
-
 last_input_event: Event = ---;
 
 // @Cleanup
 ShiftHeld :: () -> bool #expand {
     return last_input_event.shift_pressed;
 }
-
-DEFAULT_KEYMAP_CONFIG :: #string DONE 
-[1] # Version number; do not delete!
-
-[Core]
-
-A-F4 Quit
-
-[Widget]
-
-ESC CloseCurrentWidget
-
-[Editor]
-
-C-, SwitchOrSplitEditorPanel
-A-w HideSecondEditorPanel
-
-C-f open_find_text_dialog
-C-S-f open_find_global_text_dialog
-C-g open_goto_line_dialog
-C-o open_file_browser
-C-p open_buffer_browser
-F1 open_command_browser
-
-A-0 ToggleDevInfo
-
-C-n CreateBuffer
-C-w CloseCurrentBuffer
-C-PageUp PrevBuffer
-C-PageDown NextBuffer
-C-s Save
-
-ArrowLeft MoveLeft
-ArrowUp MoveUp
-ArrowDown MoveDown
-ArrowRight MoveRight
-
-C-ArrowLeft MoveLeftWord
-A-ArrowLeft MoveLeftSubword
-C-ArrowRight MoveRightWord
-A-ArrowRight MoveRightSubword
-
-PageUp ScrollViewPortUp
-PageDown ScrollViewPortDown
-
-Home GotoFirstCharOfCurrentRow
-A-Home GotoLastCharOfCurrentRow
-S-Home GotoFirstCharOfCurrentRow
-A-S-Home GotoLastCharOfCurrentRow
-
-TAB InsertTab
-ENTER InsertLine
-C-ENTER InsertLineBelow
-C-j JoinLine
-
-C-c Copy
-C-v Paste
-C-x Cut
-
-C-k DeleteEverythingFromLeft
-
-Delete DeleteFromLeft
-C-Delete DeleteWordFromLeft
-A-Delete DeleteSubwordFromLeft
-
-Backspace DeleteFromRight
-C-Backspace DeleteWordFromRight
-A-Backspace DeleteSubwordFromRight
-
-C-l ExpandSelectionByLine
-S-ArrowUp ExpandSelectionUp
-S-ArrowLeft ExpandSelectionLeft
-S-ArrowDown ExpandSelectionDown
-S-ArrowRight ExpandSelectionRight
-C-S-ArrowLeft ExpandSelectionLeftByWord
-C-S-ArrowRight ExpandSelectionRightbyWord
-S-PageUp ExpandSelectionViewPortUp
-S-PageDown ExpandSelectionViewPortDown
-
-C-d ExtendSelectionByToken
-C-a SelectAll
-
-C-] IndentRight
-C-[ IndentLeft
-
-C-z Undo
-C-y Redo
-
-C-e WordCompletion
-
-DONE;

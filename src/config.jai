@@ -1,400 +1,281 @@
-get_section_lines :: (using handler: *Text_File_Handler, wanted_section: string, lines: *[..] string) {
-    section_found := false;
+CURRENT_CONFIG_VERSION :: 1;
 
-    str := file_data; // We want the whole str for this!
-    while str {
-        line, found := consume_next_line(*str);
-        line_number += 1;
+load_global_config :: () {
+    config_path := tprint("%/asterisk-config.cfg", config_dir);
 
-        if !found {
-            failed = true;
-            break;
-        }
-
-        line = trim(line);
-        comment_index := find_index_from_left(line, #char "#");
-        if comment_index != -1 line.count = comment_index;
-
-        if line.count == 0 continue;
-        if line[0] == #char "[" {
-            advance(*line, 1);
-
-            index := find_index_from_left(line, #char "]");
-            if index == -1 {
-                error(handler, "Invalid section name. '%' (line: %)!\n", line, line_number);
-                failed = true;
-                break;
-            }
-
-            if section_found break;
-
-            section := line;
-            section.count = index;
-
-            if section != wanted_section continue;
-
-            section_found = true;
-            
-        } else if section_found {
-            array_add(lines, line);
-        }
+    if !file_exists(config_path) {
+        File.write_entire_file(config_path, DEFAULT_CONFIG_FILE_DATA);
     }
+
+    data, ok := File.read_entire_file(config_path);
+    defer free_string(*data);
+    if !ok {
+        data = copy_string(DEFAULT_CONFIG_FILE_DATA);
+    }
+
+    parse_config("Global Config", config_path, data);
 }
 
-parse_color_config :: (config_data: string) {
-    using handler: Text_File_Handler;
+parse_config :: (name: string, filename: string, file_data: string) -> bool {
+    parse_style_section(file_data);
+
+    if !#compile_time parse_keymap_section(file_data);
+
+    return true;
+}
+
+parse_keymap_section :: (file_data: string) {
+    keymap_data, found := get_section_as_string("keymap", file_data);
+    if !found {
+        keymap_data, found = get_section_as_string("keymap", DEFAULT_CONFIG_FILE_DATA);
+        assert(found, "The [[keymap]] section is missing!\n");
+    }
+
+    load_from_memory :: (set: *Keymap_Set, memory: string) -> bool {
+        handler: Text_File_Handler;
+        handler.do_version_number = false;
+        defer deinit(*handler);
+        
+        start_from_memory(*handler, "default", "(no path)", memory);
+        if handler.failed return false;
+
+        return load_from_handler(set, null, *handler);
+    }
+
+    success := load_from_memory(*keymap_set, keymap_data);
+    assert(success);
+}
+
+parse_style_section :: (file_data: string) -> bool {
+    push_allocator(temp);
+
+    data, found := get_section_as_string("style", file_data);
+    if !found return false;
     
-    data := config_data;
-    start_from_memory(*handler, "Colors", "(no path)", data);
-    if failed return;
+    {
+        lines, valid := get_subsection_lines("colors", data);
+        if !valid return false;
 
-    defer deinit(*handler);
-
-    //index := find_index_from_left(data, "[Color]");
-    //assert(index != -1, "Unable to locate the [Color] section!");
-    //advance(*data, index);
-
-    current_section: string;
-
-    while data {
-        line, found := consume_next_line(*data);
-        line_number += 1;
-
-        if !found {
-            failed = true;
-            break;
-        }
-
-        line = trim(line);
-        comment_index := find_index_from_left(line, #char "#");
-        if comment_index != -1 line.count = comment_index;
-
-        if line.count == 0 continue;
-        if line[0] == #char "[" {
-            advance(*line, 1);
-
-            index := find_index_from_left(line, #char "]");
-            if index == -1 {
-                log_error("Invalid section name. '%' (line: %)!\n", line, line_number);
-                failed = true;
-                return;
-            }
-
-            section := line;
-            section.count = index;
-            
-            if current_section == "Color" && !equal(section, "Color") {
-                return;
-            }
-
-            current_section = section;
-
-        } else if current_section == "Color" {
+        for line: lines {
             key, rhs := break_by_colon(line);
 
             rhs = join(..split(rhs, "_")); // The jai's numeric separation thing is supported, like '0c_10_21_ff' -> '0c1021ff' 
             if rhs.count != 8 {
-                error(handler, "Invalid hex value ('%') given after the '%' key specifier!\n", rhs, key);
+                log_error("Invalid hex value ('%') given after the '%' key specifier!\n", rhs, key);
                 continue;
             }
 
             result, success, rem := string_to_int(rhs, base=16, u32);
             if !success || rem {
-                error(handler, "Unable to parse the hex value ('%') given after the '%' key specifier!\n", rhs, key);
+                log_error("Unable to parse the hex value ('%') given after the '%' key specifier!\n", rhs, key);
                 continue;
             }
 
             color_enum := map_name_to_color(key);
-            if color_enum == .NONE {
-                error(handler, "Unable to find the color '%'!\n", key);
-                continue;
-            }
+            // if color_enum == .NONE {
+            //     log_error("Unable to find the color '%'!\n", key);
+            //     continue;
+            // }
 
-            COLOR_MAP[color_enum] = hex_to_vec4(result); 
+            COLOR_MAP[color_enum] = hex_to_vec4(result);
         }
     }
-}
 
-parse_ui_config :: (config_data: string) {
-    using handler: Text_File_Handler;
-    
-    data := config_data;
-    start_from_memory(*handler, "UI", "(no path)", data);
-    if failed return;
-    
-    lines: [..] string;
-    defer {
-        deinit(*handler);
-        array_free(lines);
-    }
+    {
+        lines, valid := get_subsection_lines("ui", data);
+        if !valid return false;
 
-    get_section_lines(*handler, "UI", *lines);
-    if failed return;
+        for line: lines {
+            key, rhs := break_by_colon(line);
 
-    // @Cleanup: Set values dynamically?
-    for line: lines {
-        key, rhs := break_by_colon(line);
+            if key == {
+                case "font_size";
+                    val, success, rem := string_to_int(rhs, base=10, u8);
+                    if !success || rem {
+                        log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
 
-        if key == {
-            case "font_size";
-                val, success, rem := string_to_int(rhs, base=10, u8);
-                if !success || rem {
-                    error(handler, "Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
-                    continue;
-                }
+                    ui.font_size = val;
+                case "font_xs_size";
+                    val, success, rem := string_to_int(rhs, base=10, u8);
+                    if !success || rem {
+                        log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
 
-                ui.font_size = val;
-            case "font_xs_size";
-                val, success, rem := string_to_int(rhs, base=10, u8);
-                if !success || rem {
-                    error(handler, "Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
-                    continue;
-                }
+                    ui.font_xs_size = val;
 
-                ui.font_xs_size = val;
+                case "cursor_shape";
+                    val, ok := map_name_to_ui_enum(UI.Cursor_Shape, rhs);
+                    if !ok {
+                        log_error("'%' is an invalid cursor shape!\n", rhs);
+                        break;
+                    }
 
-            case "cursor_shape";
-                val, ok := map_name_to_ui_enum(UI.Cursor_Shape, rhs);
-                if !ok {
-                    warn(handler, "'%' is an invalid cursor shape!\n", rhs);
-                    break;
-                }
+                    ui.cursor_shape = val;
 
-                ui.cursor_shape = val;
+                case "cursor_line_indicator";
+                    val, ok := map_name_to_ui_enum(UI.Cursor_Line_Indicator, rhs);
+                    if !ok {
+                        log_error("'%' is an invalid cursor line indicator!\n", rhs);
+                        break;
+                    }
 
-            case "cursor_line_indicator";
-                val, ok := map_name_to_ui_enum(UI.Cursor_Line_Indicator, rhs);
-                if !ok {
-                    warn(handler, "'%' is an invalid cursor line indicator!\n", rhs);
-                    break;
-                }
+                    ui.cursor_line_indicator = val;
 
-                ui.cursor_line_indicator = val;
-
-            case;
-                warn(handler, "Unknown UI parameter '%'!\n", key);
-        };
-    }
-}
-
-check_config :: (data: string) -> bool {
-    str := data;
-    
-    if !str {
-        log_error("Empty config given.\n");
-        return false;
-    }
-
-    index := find_index_from_left(str, #char "\n");
-    if index != -1 {
-        str.count = index;
-    }
-
-    str = trim(str);
-    if !str || str[0] != #char "[" {
-        log_error("The config should start with the version number but this line given: |%|\n", str);
-        return false;
-    }
-
-    advance(*str, 1);
-
-    index = find_index_from_left(str, #char "]");
-    if index == -1 {
-        log_error("Invalid version section at the first line: |%|\n", str);
-        return false;
-    }
-
-    str.count = index;
-
-    version := string_to_int(str, base=10, u32);
-    if version != CONFIG_VERSION {
-        log_error("Outdated config file. Current version: %, given: %\n", CONFIG_VERSION, version);
-        return false;
+                case;
+                    log_error("Unknown UI parameter '%'!\n", key);
+            };
+        }
     }
 
     return true;
 }
 
-parse_project_config :: (data: string) {
-    using handler: Text_File_Handler;
+get_section_as_string :: (name: string, data: string) -> string, bool {
+    section := tprint("[[%]]", name);
 
-    start_from_memory(*handler, "Project", "(no path)", data);
-    if failed return;
+    i := find_index_from_left(data, section);
+    if i == -1 return "", false;
 
-    defer deinit(*handler);
+    start := advance(data, i);
+    section_line, found := consume_next_line(*start);
+    if !found return "", false;
 
+    i = find_index_from_left(start, "[[");
+    if i == -1 {
+        r := trim(start);
+        return r, !!r.count;
+    }
+
+    r := slice(start, 0, i);
+    r = trim(r);
+    return r, !!r.count;
+}
+
+get_subsection_lines :: (name: string, data: string) -> [..] string, bool {
     lines: [..] string;
-    lines.allocator = temporary_allocator;
+    lines.allocator = temp;
 
-    get_section_lines(*handler, "Project", *lines);
-    if failed return;
+    subsection := tprint("[%]", name);
+    add_lines := false;
+    s := data;
+    while true {
+        line, found := consume_next_line(*s);
+        if !found break;
 
-    for line: lines {
-        key, rhs := break_by_colon(line);
+        line = trim(line);
+        comment_index := find_index_from_left(line, #char "#");
+        if comment_index != -1 line.count = comment_index;
+        if line.count == 0 continue;
 
-        key = trim(key);
-        rhs = trim(rhs);
+        if begins_with(line, "[") {
+            if !ends_with(line, "]") return lines, false;
+            add_lines = line == subsection;
 
-        if key == {
-            case "files";
-                slices := split(rhs, ",",, temp);
-                for slices {
-                    pattern := trim(it, " \"");
-                    if !pattern continue;
-                    table_add(*workspace.files, copy_string(pattern), true);
-                }
-            case "paths";
-                slices := split(rhs, ",",, temp);
-                for slices {
-                    pattern := trim(it, " \"");
-                    if !pattern continue;
-                    table_add(*workspace.paths, copy_string(pattern), true);
-                }
-            case "exclude";
-                slices := split(rhs, ",",, temp);
-                for slices {
-                    pattern := trim(it, " \"");
-                    if !pattern continue;
-                    table_add(*workspace.exclude, copy_string(pattern), true);
-                }
+        } else if add_lines {
+            array_add(*lines, line);
         }
 
     }
 
+    return lines, true;
 }
 
-#scope_export
+config: Config;
 
-load_global_config :: () {
-    if !file_exists(config_filepath) {
-        log_error("Unable to locate the global config file! '%'\n", config_filepath);
-        return;
-    }
-
-    data, ok := File.read_entire_file(config_filepath);
-    defer free_string(*data);
-    if !ok {
-        log_error("Unable to read the global config file! '%'\n", config_filepath);
-        return;
-    }
-
-    if !check_config(data) {
-        log_error("Failed to parse the global config file! '%'\n", config_filepath);
-        return;
-    }
-
-    parse_color_config(data);
-    parse_ui_config(data);
+Config :: struct {
+    x := true;
 }
 
-load_project_config :: () {
-    path :: ".asterisk-project.cfg";
-
-    if !file_exists(path) return;
-
-    data := File.read_entire_file(path);
-    if !check_config(data) {
-        log_error("[%] failed to load the config '%'\n", #procedure_name(), path);
-        return;
-    }
-
-    log("[%] config loaded!\n", #procedure_name(), path);
-
-    parse_project_config(data);
-}
+Config_Section :: struct {
+    name: string;
+    subsections: [] string;
+};
 
 #scope_file
 
-CONFIG_VERSION :: 1;
+read_default_config_data :: (name: string) -> string {
+    data := File.read_entire_file(tprint("config/%", name));
+    data_with_replaced_version, occurrences := replace(data, "[0]  # Version", tprint("[%]  # Version", CURRENT_CONFIG_VERSION));
+    assert(occurrences == 1, "Error when trying to replace the default config version in '%'", name);
+    return data_with_replaced_version;
+}
 
-_DEFAULT_PROJECT_CONFIG :: #string CONFIG
-[1]
+DEFAULT_CONFIG_FILENAME :: "default.asterisk-config.cfg";
 
-[Project]
-# files: "*.jai", "*.txt", "*.bat", "*.sh"
-# paths: "src", "modules"
-# exclude: ".git", ".build", ".vs", ".vscode", ".idea"
+#scope_export
 
-CONFIG;
+DEFAULT_CONFIG_FILE_DATA :: #run read_default_config_data(DEFAULT_CONFIG_FILENAME);
 
-DEFAULT_CONFIG_STRING :: #run tprint(
-    _DEFAULT_CONFIG_STRING, 
-    CONFIG_VERSION
-);
+// #run,stallable {
+//     success := parse_config("Default Config", DEFAULT_CONFIG_FILENAME, DEFAULT_CONFIG_FILE_DATA);
+//     assert(success, "Couldn't parse the default config file '%'!", DEFAULT_CONFIG_FILENAME);
 
-_DEFAULT_CONFIG_STRING :: #string CONFIG
-[%] # Version number; do not delete!
+//     DEFAULT_COLOR_MAP = COLOR_MAP;
+// };
 
-[UI]
-font_size: 14
-font_xs_size: 13
-cursor_shape: block             # block, line, underscore
-cursor_line_indicator: filled   # none, filled, bordered
+// DEFAULT_CONFIG :: #run,stallable -> Config {
+//     config: Config;
+    
+//     success, default_config := parse_config("Default Config", DEFAULT_CONFIG_FILENAME, DEFAULT_CONFIG_FILE_DATA);
+//     assert(success, "Couldn't parse the default config file '%'!", DEFAULT_CONFIG_FILENAME);
+//     assert(!!default_config.keymap_section_data, "keymap_section_data is empty '%'!\n", DEFAULT_CONFIG_FILENAME);
 
-# Default theme
-[Color]
-background:                 0c1a21ff
-layout_separator:           dddddd1b
-text_default:               c2c2c2ff
-text_dimmed:                bbbbbbff
-text_highlight:             e3_31_9f_6a
-text_under_cursor:          0c1021ff
-text_under_inactive_cursor: fbde2da0
-cursor:                     fbde2dc0
-cursor_inactive:            3a3a3aff
-cursor_line_background:     cccccc0a
-footer_background:          b0a070ff
-footer_background_darken:   8b7c4dff
-footer_text:                000000ff
+//     DEFAULT_COLOR_MAP = COLOR_MAP;
+    
+//     return default_config;
+// };
 
-# JBLOW THEME
-# [Color]
-# background:                 122521ff
-# layout_separator:           dddddd1b
-# text_default:               BDB395ff
-# text_dimmed:                bbbbbbff
-# text_selection:             0000ffff
-# text_highlight:             e3_31_9f_6a
-# text_under_cursor:          0c1021ff
-# text_under_inactive_cursor: fbde2da0
-# cursor:                     86e08fff
-# cursor_inactive:            3a3a3aff
-# cursor_line_background:     cccccc0a
-# footer_background:          b0a070ff
-# footer_background_darken:   8b7c4dff
-# footer_text:                000000ff
-# lang_token_keyword: CCCCCCff
-# lang_token_directive: CCCCCCff
-# lang_token_numeric_value: B7CADDff
-# lang_token_comment: 31B72Cff
-# lang_token_string_literal: 2CA198ff
-# lang_token_procedure_call: BDB395ff
-# lang_token_escaped: CCCCCCff
+#scope_file
 
-# MODERN THEME (DARK)
-# [Color]
-# background:                 1A1A1AFF
-# layout_separator:           0C1021FF
-# text_default:               C0B9B9FF
-# text_dimmed:                7C7C7CFF
-# text_selection:             263238FF
-# text_highlight:             FFEB3B_ff
-# text_under_cursor:          455A64FF
-# text_under_inactive_cursor: 455A64FF
-# cursor:                     00bbecFF
-# cursor_inactive:            9E9E9EFF
-# cursor_line_background:     6a6a6a20
-# footer_background:          263238FF
-# footer_background_darken:   1C262BFF
-# footer_text:                FFFFFFFF
-# lang_token_keyword:         FF5252FF
-# lang_token_directive:       F48FB1FF
-# lang_token_numeric_value:   FF9800FF
-# lang_token_comment:         9E9E9EFF
-# lang_token_string_literal:  8BC34AFF
-# lang_token_procedure_call:  00BCD4FF
-# lang_token_escaped:         FF5722FF
+// # JBLOW THEME
+// # [Color]
+// # background:                 122521ff
+// # layout_separator:           dddddd1b
+// # text_default:               BDB395ff
+// # text_dimmed:                bbbbbbff
+// # text_selection:             0000ffff
+// # text_highlight:             e3_31_9f_6a
+// # text_under_cursor:          0c1021ff
+// # text_under_inactive_cursor: fbde2da0
+// # cursor:                     86e08fff
+// # cursor_inactive:            3a3a3aff
+// # cursor_line_background:     cccccc0a
+// # footer_background:          b0a070ff
+// # footer_background_darken:   8b7c4dff
+// # footer_text:                000000ff
+// # lang_token_keyword: CCCCCCff
+// # lang_token_directive: CCCCCCff
+// # lang_token_numeric_value: B7CADDff
+// # lang_token_comment: 31B72Cff
+// # lang_token_string_literal: 2CA198ff
+// # lang_token_procedure_call: BDB395ff
+// # lang_token_escaped: CCCCCCff
 
-CONFIG;
+// # MODERN THEME (DARK)
+// # [Color]
+// # background:                 1A1A1AFF
+// # layout_separator:           0C1021FF
+// # text_default:               C0B9B9FF
+// # text_dimmed:                7C7C7CFF
+// # text_selection:             263238FF
+// # text_highlight:             FFEB3B_ff
+// # text_under_cursor:          455A64FF
+// # text_under_inactive_cursor: 455A64FF
+// # cursor:                     00bbecFF
+// # cursor_inactive:            9E9E9EFF
+// # cursor_line_background:     6a6a6a20
+// # footer_background:          263238FF
+// # footer_background_darken:   1C262BFF
+// # footer_text:                FFFFFFFF
+// # lang_token_keyword:         FF5252FF
+// # lang_token_directive:       F48FB1FF
+// # lang_token_numeric_value:   FF9800FF
+// # lang_token_comment:         9E9E9EFF
+// # lang_token_string_literal:  8BC34AFF
+// # lang_token_procedure_call:  00BCD4FF
+// # lang_token_escaped:         FF5722FF
 
-#import,file "file_handler.jai";
+#import "Text_File_Handler";

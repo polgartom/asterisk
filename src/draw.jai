@@ -929,7 +929,7 @@ draw_global_debug_info :: (r: Rect) {
 Text_Style :: struct {
     text: string;
     colors: [..] Color;
-    default_colorv4: Vector4 = #run map_color_to_vec4(.TEXT_DEFAULT);
+    default_colorv4: Vector4 = #run map_default_color_to_vec4(.TEXT_DEFAULT);
 }
 
 draw_text :: (x: s64, y: s64, ts: Text_Style) -> width: s64 {

@@ -1,50 +1,3 @@
-window: Window_Type;
-window_width  := 1200;
-window_height := 1200;
-
-should_quit := false;
-
-current_time: float64 = 0.0;
-last_time: float64 = 0.0;
-frame_dt: float64 = 0.0;
-second_elapsed := false;
-
-redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
-fps: float64;
-frametime: float64;
-frame := 0;
-
-last_simulation_time : float64;
-last_showed_sim_time : float64;
-last_rendering_time  : float64;
-
-mode := Program_Mode.EDITOR;
-
-DEFAULT_FONT_PATH :: "firacode-retina/FiraCode-Retina.ttf";
-
-line_height :: 0.0;
-
-TAB_SIZE_IN_SPACES :: 4;
-TAB_SPACE_CHARS :: #run -> string {
-    builder: String_Builder;
-    builder.allocator = __temporary_allocator;
-    for 0..TAB_SIZE_IN_SPACES-1 {
-        append(*builder, " ");
-    }
-    return builder_to_string(*builder,, allocator = __temporary_allocator);
-}
-
-footer_height: float;
-
-Args :: struct {
-    workdir: string;
-}
-
-args: Args;
-
-executable_dir: string;
-config_filepath: string;
-
 // #run {
 //     #if OS == .WINDOWS {
 //         WR :: #import "Windows_Resources";
@@ -64,12 +17,13 @@ main :: () {
     print("\n\n");
 
     {
-        path := get_path_of_running_executable();
-        executable_dir = copy_string(path_strip_filename(path));
-        path_unify_sepa(executable_dir);
-        assert(executable_dir.count > 0);
+        dir := path_strip_filename(get_path_of_running_executable());
+        path_unify_sepa(dir);
+        dir = trim_right(dir, "/");
+        assert(dir.count > 0);
 
-        config_filepath = join(executable_dir, "config.cfg", separator="");
+        executable_dir = copy_string(dir);
+        config_dir = copy_string(dir);
     }
 
     {
@@ -85,7 +39,7 @@ main :: () {
         format.comma_string = ",";
     }
 
-    args_success, args=, is_set, files_from_cmdline := parse_arguments(Args);
+    args_success, executable_args=, is_set, files_from_cmdline := parse_arguments(type_of(executable_args));
     if !args_success {
         exit(1);
     }
@@ -96,8 +50,11 @@ main :: () {
     window_width, window_height = Simp.get_render_dimensions(window);
 
     register_keymap_procedures();
-
-    init_workspace(*workspace, args.workdir);
+    
+    load_global_config();
+    init_workspace(*workspace, executable_args.workdir);
+    
+    init_fonts();
 
     footer_height = primary_font_xs.character_height*1.5; // @Cleanup !!!
 
@@ -176,7 +133,7 @@ main :: () {
             }
         }
 
-        process_changes(workspace.watcher);
+        // process_changes(workspace.watcher);
 
         {
             // @Cleanup: Remove it!!
@@ -597,6 +554,21 @@ hex_to_vec4 :: (hex: u32) -> Vector4 {
     };
 }
 
+break_by_colon :: (line: string) -> (left: string, right: string) {
+    // left  := line;
+
+    // right := eat_until_space(line);  // 'right' now has everything from the first space to the end of the line.
+    // left.count -= right.count;
+            
+    // right = eat_spaces(right);       // Trim the spaces from 'right'.
+
+    found, left, right := split_from_left(line, ":");
+    if !found return "", "";
+
+    return trim(left), trim(right);
+}
+
+
 wait_for_event :: () {
     // @Todo: Wayland SDL
     
@@ -718,6 +690,7 @@ ms_since_init :: inline () -> float64 {
     return seconds_since_init() * 1000;
 }
 
+
 Program_Mode :: enum u8 {
     // CORE;
     EDITOR;
@@ -733,6 +706,63 @@ Anim :: struct {
 
     elapsed: float64;
 }
+
+
+
+////////////////////////////////
+//~ Globals
+
+window: Window_Type;
+window_width  := 1200;
+window_height := 1200;
+
+current_time: float64 = 0.0;
+last_time: float64 = 0.0;
+frame_dt: float64 = 0.0;
+second_elapsed := false;
+
+redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
+fps: float64;
+frametime: float64;
+frame := 0;
+
+last_simulation_time : float64;
+last_showed_sim_time : float64;
+last_rendering_time  : float64;
+
+footer_height: float;
+
+line_height := 0.0;
+
+TAB_SIZE_IN_SPACES :: 4;
+TAB_SPACE_CHARS :: #run -> string {
+    builder: String_Builder;
+    builder.allocator = __temporary_allocator;
+    for 0..TAB_SIZE_IN_SPACES-1 {
+        append(*builder, " ");
+    }
+    return builder_to_string(*builder,, allocator = __temporary_allocator);
+}
+
+executable_args: struct {
+    workdir: string;
+};
+
+config_dir:     string;
+executable_dir: string;
+
+should_quit := false;
+
+mode := Program_Mode.EDITOR;
+
+keymap_cfg_section_data: string; // @Todo
+keymap_set:    Keymap_Set;
+core_keymap:   *Keymap;
+editor_keymap: *Keymap;
+widget_keymap: *Keymap;
+
+////////////////////////////////
+//~ Imports
 
 #load "ui.jai";
 #load "editor.jai";

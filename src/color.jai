@@ -9,7 +9,7 @@ map_color_to_vec4 :: inline (color: Color) -> Vector4 {
 }
 
 map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return DEFAULT_COLOR[cast(s64) color] * context.color_intensity;
+    return DEFAULT_COLOR_MAP[cast(s64) color] * context.color_intensity;
 }
 
 map_name_to_color :: (name: string) -> Color {
@@ -62,52 +62,13 @@ whiten :: (color: Vector4, amount: float) -> Vector4 {
 }
 
 COLOR_MAP_SIZE :: #run enum_highest_value(Color) + 1;
-COLOR_MAP: [COLOR_MAP_SIZE] Vector4 = #run -> [] Vector4 {
-    colors: [..]Vector4;
-    for c: DEFAULT_COLOR array_add(*colors, c);
-    return colors;
-};
+COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
-DEFAULT_COLOR :: #run -> [] Vector4 {
-    colors: [..] Vector4;
-    Add :: ($c: u32) #expand {
-        array_add(*colors, #run hex_to_vec4(c));
-    }
-
-    for c: enum_values_as_enum(Color) {
-        if #complete c == {
-            case .NONE;                        Add(0x00000000);
-
-            case .COLOR_GREEN;                 Add(0x3f_7f_3fff);
-
-            case .LANG_TOKEN_KEYWORD;          Add(0x9c9d29ff);
-            case .LANG_TOKEN_DIRECTIVE;        Add(0xa8_6D_5A_ff);
-            case .LANG_TOKEN_COMMENT;          Add(0x3f_7a_3fff);
-            case .LANG_TOKEN_STRING_LITERAL;   Add(0x7a7a5a_ff);
-            case .LANG_TOKEN_NUMERIC_VALUE;    Add(0x9A7E6Fff);
-            case .LANG_TOKEN_PROCEDURE_CALL;   Add(0xacad89ff);
-            case .LANG_TOKEN_ESCAPED;          Add(0x9c5d29ff);
-
-            case .BACKGROUND;                  Add(0x0c1a21ff);
-            case .BACKGROUND2;                 Add(0x212121ff);
-            case .LAYOUT_SEPARATOR;            Add(0xdddddd1B);
-            case .TEXT_DEFAULT;                Add(0xd0d0d0ff);
-            case .TEXT_DIMMED;                 Add(0xbbbbbbff);
-            case .TEXT_SELECTION;              Add(0x00_e1_fa_35);
-            case .TEXT_SELECTION_MATCH;        Add(0xffffff20);
-            case .TEXT_HIGHLIGHT;              Add(0xe3_71_ff_5a);
-            case .TEXT_UNDER_CURSOR;           Add(0x0c1021ff);
-            case .TEXT_UNDER_INACTIVE_CURSOR;  Add(0xFBDE2Da0);
-            case .CURSOR;                      Add(0xFBDE2Dc0);
-            case .CURSOR_INACTIVE;             Add(0x3a3a3aff);
-            case .CURSOR_LINE_BACKGROUND;      Add(0xcccccc0A);
-            case .FOOTER_BACKGROUND;           Add(0xb0a070ff);
-            case .FOOTER_BACKGROUND_DARKEN;    Add(0x8b7c4dff);
-            case .FOOTER_TEXT;                 Add(0x000000ff);
-        }
-    }
-
-    return colors;
+#no_reset DEFAULT_COLOR_MAP: [COLOR_MAP_SIZE] Vector4 = #run,stallable -> [COLOR_MAP_SIZE] Vector4 {
+    ok := parse_style_section(DEFAULT_CONFIG_FILE_DATA);
+    assert(ok, "parse_style_section() proc failed at compile-time\n");
+    
+    return COLOR_MAP;
 }
 
 Color :: enum u8 {
