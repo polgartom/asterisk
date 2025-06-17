@@ -16,6 +16,48 @@ load_global_config :: () {
     parse_config("Global Config", config_path, data);
 }
 
+load_project_config :: () {
+    path := tprint("%/asterisk-project.cfg", working_dir);
+
+    if !file_exists(path) {
+        return;
+    }
+
+    file_data, ok := File.read_entire_file(path);
+    defer free_string(*file_data);
+    if !ok {
+        return;
+    }
+
+    lines, valid := get_subsection_lines("project", file_data,, temp);
+    if !valid return;
+
+    array_reset_keeping_memory(*config.ignore);
+    array_reset_keeping_memory(*config.allow);
+
+    for line: lines {
+        key, rhs := break_by_colon(line);
+
+        if key == {
+            case "ignore";
+                slices := split(rhs, ",",, temp);
+                for slices {
+                    s := trim(it, "\" ");
+                    slot := array_add(*config.ignore);
+                    modify_string(slot, s);
+                }
+            case "allow";
+                slices := split(rhs, ",",, temp);
+                for slices {
+                    s := trim(it, "\" ");
+                    slot := array_add(*config.allow);
+                    modify_string(slot, s);
+                }
+        };
+    }
+
+}
+
 parse_config :: (name: string, filename: string, file_data: string) -> bool {
     parse_style_section(file_data);
 
@@ -186,7 +228,8 @@ get_subsection_lines :: (name: string, data: string) -> [..] string, bool {
 config: Config;
 
 Config :: struct {
-    x := true;
+    ignore: [..] string;
+    allow: [..] string;
 }
 
 Config_Section :: struct {

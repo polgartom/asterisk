@@ -1,20 +1,7 @@
-init_workspace :: (using w: *Workspace, new_dir_: string) {
-    new_dir := new_dir_;
+init_workspace :: (using w: *Workspace) {
+    // new_dir = File.get_absolute_path(new_dir,, temp); // using temp alloc
 
-    if !new_dir || !is_directory(new_dir) {
-        //log_error("Unable to locate the given workspace directory's absolute location (%), so we use the current working direcoty.\n", new_dir);
-        new_dir = get_working_directory();
-    }
-
-    new_dir = File.get_absolute_path(new_dir,, temp); // using temp alloc
-    modify_string(*dir_os, new_dir);
-    
-    modify_string(*dir, new_dir);
-    path_unify_sepa(dir);
-
-    set_working_directory(dir_os);
-
-    print("[Workspace]: Working dir: '%'\n", dir);
+    // print("[Workspace]: Working dir: '%'\n", dir);
 
     // {
     //     for files   free_string(*it_index);
@@ -41,25 +28,19 @@ init_workspace :: (using w: *Workspace, new_dir_: string) {
     // start_file_watcher(w.watcher);
 }
 
-ReloadWorkspace :: () {
-    init_workspace(*workspace, workspace.dir);
+ReloadEditor :: () {
+    load_global_config();
+    load_project_config();
+    init_workspace(*workspace);
+
+    init_fonts();
+
 } @EditorCommand
 
 workspace: Workspace;
 
 Workspace :: struct {
     // watcher: *File_Watcher(void);
-
-    dir: string;
-    dir_os: string;
-
-    files: Table(string, bool);
-    paths: Table(string, bool);
-    exclude: Table(string, bool);
-
-    DEFAULT_FILES    :: string.[];
-    DEFAULT_PATHS    :: string.[];
-    DEFAULT_EXCLUDE :: string.[".git", ".vs", ".vscode", ".idea", "vendor", "node_modules"];
 }
 
 #scope_file

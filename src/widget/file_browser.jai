@@ -54,33 +54,12 @@ file_browser_scan :: () {
 
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
         if info.is_directory {
-            if workspace.exclude.count {
-                found := table_find_new(*workspace.exclude, info.short_name);
-                if (found) {
-                    info.descend_into_directory = false;
-                    return;
-                }
-            }
-
-            // if workspace.paths.count {
-            //     found := table_find_new(*workspace.paths, info.short_name);
-            //     if (!found) {
-            //         info.descend_into_directory = false;
-            //         return;
-            //     }
-            // }
+            info.descend_into_directory = should_descend_into_dir(info.full_name);
+            return;
         }
 
-        if workspace.files.count {
-            match := false;
-            for workspace.files {
-                if wildcard_match(info.short_name, it_index) {
-                    match = true;
-                    break;
-                }
-            }
-
-            if !match return;
+        if should_ignore_path(info.full_name) {
+            return;
         }
 
         new_item := array_add(*browser.items);

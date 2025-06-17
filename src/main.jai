@@ -24,6 +24,8 @@ main :: () {
 
         executable_dir = copy_string(dir);
         config_dir = copy_string(dir);
+        // working_dir = copy_string(get_workdir());
+        set_workdir(get_workdir());
     }
 
     {
@@ -41,7 +43,7 @@ main :: () {
 
     args_success, executable_args=, is_set, files_from_cmdline := parse_arguments(type_of(executable_args));
     if !args_success {
-        exit(1);
+        exit(1); // @Todo
     }
 
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
@@ -50,9 +52,15 @@ main :: () {
     window_width, window_height = Simp.get_render_dimensions(window);
 
     register_keymap_procedures();
-    
+
+    if executable_args.workdir && !set_workdir(executable_args.workdir) {
+        log_error("Failed to set the '%' as working directory!", executable_args.workdir);
+    }
+
     load_global_config();
-    init_workspace(*workspace, executable_args.workdir);
+    load_project_config();
+
+    init_workspace(*workspace);
     
     init_fonts();
 
@@ -568,6 +576,45 @@ break_by_colon :: (line: string) -> (left: string, right: string) {
     return trim(left), trim(right);
 }
 
+get_parent_dir_path :: (file_path: string) -> string {
+    path := path_strip_filename(file_path);
+    if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
+    return path;
+}
+
+should_descend_into_dir :: (path: string) -> bool {
+    path_chunks := split(path, "/",, allocator = temp);
+    for config.ignore {
+        if contains(it, cast(u8) #char "/") {
+            if platform_path_begins_with(path, it) return false;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if platform_path_equals(chunk, it) return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+should_ignore_path :: (path: string) -> ignore: bool {
+    path_chunks := split(path, "/",, allocator = temp);
+
+    for config.ignore {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if wildcard_match(path, it) return true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if wildcard_match(chunk, it) return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 wait_for_event :: () {
     // @Todo: Wayland SDL
@@ -590,23 +637,8 @@ start_file_watcher :: (watcher: *File_Watcher(void)) {
     EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
 
     file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-        // NOTE: The change.full_path separators are unified to "/"
-
-        if workspace.paths.count {
-            path_in_workdir, _, relative_path := split_from_left(change.full_path, workspace.dir);
-            if path_in_workdir {
-                relative_path = trim_left(relative_path, "/");
-                
-                should_skip := true;
-                for workspace.paths {
-                    if os_path_begins_with(relative_path, it_index) {
-                        should_skip = false;
-                        break;
-                    }
-                }
-
-                if should_skip return;
-            }
+        if should_ignore_path(change.full_path) {
+            return;
         }
         
         if change.events == .MODIFIED {
@@ -665,10 +697,13 @@ get_workdir :: () -> string {
     return dir;
 }
 
-set_workdir :: (dir_: string) {
+set_workdir :: (dir_: string) -> bool {
     dir := copy_temporary_string(dir_);
     path_unify_sepa(dir);
-    set_working_directory(dir);
+    ok := set_working_directory(dir);
+    if ok modify_string(*working_dir, dir);
+
+    return ok;
 }
 
 move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing := -1.0) -> float {
@@ -748,8 +783,9 @@ executable_args: struct {
     workdir: string;
 };
 
-config_dir:     string;
 executable_dir: string;
+config_dir:     string;
+working_dir:    string;
 
 should_quit := false;
 
@@ -760,6 +796,40 @@ keymap_set:    Keymap_Set;
 core_keymap:   *Keymap;
 editor_keymap: *Keymap;
 widget_keymap: *Keymap;
+
+////////////////////////////////
+//~ Platform
+
+#if OS == .WINDOWS {
+    platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
+        return equal_nocase(path_a, path_b);
+    }
+
+    platform_path_begins_with :: inline (path: string, subpath: string) -> bool {
+        return begins_with_nocase(path, subpath);
+    }
+
+    platform_path_contains :: inline (path: string, subpath: string) -> bool {
+        return contains_nocase(path, subpath);
+    }
+
+} else #if OS == .LINUX {
+    platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
+        return path_a == path_b;
+    }
+
+    platform_path_begins_with :: inline (path: string, subpath: string) -> bool {
+        return begins_with(path, subpath);
+    }
+
+    platform_path_contains :: inline (path: string, subpath: string) -> bool {
+        return contains(path, subpath);
+    }
+
+} else {
+    #assert false, "Unsupported OS";
+}
+
 
 ////////////////////////////////
 //~ Imports
