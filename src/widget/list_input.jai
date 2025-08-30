@@ -182,14 +182,16 @@ List_Input :: struct {
         label_styled: Text_Style;
         label_prefix_styled: Text_Style;
         
-        
-        #place label_styled;        label: string;
-        #place label_prefix_styled; label_prefix: string;
-
         label_for_search: string;
         ref: T;
 
         priority: s64 = 0; // for sorting
+        
+        #place label_styled;
+            label: string;
+        
+        #place label_prefix_styled;
+            label_prefix: string;
     }
 
     DEFAULT_THEME :: Theme.{

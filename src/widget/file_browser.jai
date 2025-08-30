@@ -5,19 +5,18 @@ open_file_browser :: () {
         fb_text_input = create_text_input(cast(u64)#location());
     }
     
-    if !current_dir {
-        _dir := get_workdir();
-        clear_text(fb_text_input);
-        insert_text(fb_text_input, _dir);
-        if (!ends_with(_dir, "/")) insert_text(fb_text_input, "/");
-        modify_string(*current_dir, fb_text_input.text);
+    if current_dir {
+        // Reset the input's text to a properly formatted path so we can list all files
+        // in the current directory. For example, the input might be entered as:
+        // "K:\Programming\asterisk\src\sour". In this case, we searched for "source.jai",
+        // but the path was only partially filled. Since we did find the file, the current
+        // directory is actually ".../src". We need to restore the correct format by
+        // removing the extra "sour" part and appending a separator ("/") at the end,
+        // resulting in: "K:\Programming\asterisk\src\".
+        insert_directory_to_text_input(current_dir);
+    } else {
+        file_browser_change_dir(get_workdir());
     }
-    
-    file_browser_scan();
-    
-    //change_dir(*file_browser, get_workdir());
-    
-//    log(">\n%\n\n", items);
     
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
@@ -73,6 +72,7 @@ _draw_file_browser :: () {
     for items {
         if !search_chunk || platform_path_contains(it.short_name, search_chunk) {
             opt := array_add(*options);
+            memmove(*opt.ref, *it, size_of(File_Visit_Info));
             if it.is_directory opt.priority += 100;
             
             opt.label_prefix_styled.font_override = font_icons;
@@ -101,8 +101,30 @@ _draw_file_browser :: () {
     
     if tinp.typed {
         linp.scroll_value = 0.0;
+        linp.selected_index = -1;
+    }
+    
+    if linp.selected_index == -1 linp.selected_index = 0;
+    
+    if linp.entered && options.count {
+        if linp.selected_index >= options.count || linp.selected_index < 0 {
+            log_error("Invalid index: % ; options: %\n", linp.selected_index, options);
+            linp.selected_index = -1;
+            return;                
+        }
+                
+        opt := options[linp.selected_index];
+        if opt.ref.is_directory {
+            file_browser_change_dir(opt.ref.full_name);
+        } else {
+            buffer := open_file_or_create_empty_buffer(active_editor, opt.ref.full_name);
+            change_active_buffer(active_editor, buffer);
+            close_current_widget();
+        }
+        
         linp.selected_index = 0;
     }
+    
 }
 
 file_browser_scan :: () {
@@ -122,8 +144,15 @@ file_browser_scan :: () {
         assert(!!_short_name);
         if _short_name[0] == #char "/" then advance(*_short_name, 1);
 
+        fullname := info.full_name;
+        chunks := split(info.full_name, "/",, allocator=temp);
+        for chunks if !it remove it;
+        fullname = join(..chunks, separator="/",, temp);
+
+        //log("# %\n", fullname);
+
         modify_string(*new_item.short_name, _short_name);
-        modify_string(*new_item.full_name, info.full_name);
+        modify_string(*new_item.full_name, fullname);
         path_unify_sepa(new_item.short_name);
         path_unify_sepa(new_item.full_name);
 
@@ -142,13 +171,18 @@ file_browser_scan :: () {
 
 #scope_file
 
-change_dir :: (using fb: *File_Browser, _dir: string) {
-    //dir := append_dir_sepa(_dir,, temp);
-    //defer free(dir);
+insert_directory_to_text_input :: (dir: string) {
+    using file_browser;
     
     clear_text(fb_text_input);
-    insert_text(fb_text_input, _dir);
-    if (!ends_with(_dir, "/")) insert_text(fb_text_input, "/");
+    insert_text(fb_text_input, dir);
+    if !ends_with(dir, "/") insert_text(fb_text_input, "/");
+}
+
+file_browser_change_dir :: (dir: string) {
+    using file_browser;
+    
+    insert_directory_to_text_input(dir);
     modify_string(*current_dir, fb_text_input.text);
     file_browser_scan();
 }
@@ -159,13 +193,9 @@ file_browser: File_Browser;
 
 File_Browser :: struct {
     fb_text_input: *Text_Input;
- 
     search_text: string;
     current_dir: string;
-
     items: [..] File_Visit_Info;
-
-    options: [..] List_Input.Option;
-
+    options: [..] List_Input.Option(File_Visit_Info);
     scan_requested := true;
 }
