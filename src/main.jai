@@ -106,6 +106,9 @@ main :: () {
 
     }
 
+    // @DEBUG
+    open_file_browser();
+
     while !should_quit {
         if !redraw_requested {
             wait_for_event();
@@ -508,6 +511,14 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     }
 
     return -1, false;
+}
+
+append_dir_sepa :: inline (path: string) -> string {
+    if ends_with(path, "/") return path;
+    p := alloc_string(path.count+1);
+    memmove(p.data, path.data, path.count);
+    p[p.count-1] = #char "/";
+    return p;
 }
 
 path_unify_sepa :: inline (path: string) {

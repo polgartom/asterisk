@@ -4,60 +4,74 @@ open_file_browser :: () {
     if !fb_text_input {
         fb_text_input = create_text_input(cast(u64)#location());
     }
-
+    
+    change_dir(*file_browser, get_workdir());
+    
+    log(">\n%\n\n", items);
+    
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
 
-    if scan_requested {
-        file_browser_scan();
-    }
-
 } @EditorCommandUnlisted(editor_keymap)
 
-file_browser_change_dir :: (path: string) -> (success: bool) {
-    using file_browser;
-    
-    is, success := is_directory(path);
-    assert(success, "Failed to % check if it's a directory or not.", path);
-    assert(is,      "The % is doesn't a valid directory!", path);
-    
-    modify_string(*current_dir, path);
-    path_unify_sepa(current_dir);
-
-    modify_string(*search_text, current_dir);
-
-    return true;
-}
-
-// @Cleanup: Remove it!
-file_browser_change_dir :: (info: File_Visit_Info) -> (success: bool) {
+_draw_file_browser :: () {
     using file_browser;
 
-    // @Todo: Check if the directory is still exists.
-    if info.had_error || info.is_symlink || !info.is_directory return false;
-    assert(!!info.full_name);
+    font := primary_font_xs;
+    pad  := cast(float32) font.em_width * .5;
+    ed_r := active_editor.rect_for_draw;
+    
+    theme := Text_Input.DEFAULT_THEME;
+    theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
+    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    return file_browser_change_dir(info.full_name);
+    w := 400.0; // @Tempoary
+    k := window_height * .1;
+    
+    h := cast(float, font.character_height * 2.0);
+    b := cast(float, window_height - k*.1);
+    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r.x = window_width*.5 - w;
+    r.w = w * 2.0;
+    r.y += 5.0; 
+
+    tinp := fb_text_input;
+    update_text_input(tinp, r, font, theme=theme);
+    r.y -= 5.0;
+
+    options: [..] List_Input.Option;
+    options.allocator = temp;
+    
+    chunks := split(tinp.text, "/",, allocator=temp);
+    search_chunk := "";
+    if chunks search_chunk = chunks[chunks.count-1];
+    
+    for items {
+        if !search_chunk || platform_path_contains(it.short_name, search_chunk) {
+            opt := array_add(*options);
+            modify_string(*opt.label, it.short_name);
+        }
+    }
+
+    list_rect := r;
+    list_rect.h = 1.5*k;
+
+    linp_theme := List_Input.DEFAULT_THEME;
+    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
+    
 }
 
-// @Speed: We don't want to run this on every file browser dialog open!
 file_browser_scan :: () {
     using file_browser;
 
     array_reset_keeping_memory(*items);
 
-    if !current_dir {
-        wd := get_working_directory();
-        assert(!!wd.count);
-        file_browser_change_dir(wd);
-    }
-
     visitor :: (info: *File_Visit_Info, browser: *File_Browser) {
-        if info.is_directory {
-            info.descend_into_directory = should_descend_into_dir(info.full_name);
-            return;
-        }
-
         if should_ignore_path(info.full_name) {
             return;
         }
@@ -82,16 +96,26 @@ file_browser_scan :: () {
         descend_into_directory = info.descend_into_directory;        
     }
 
-    // @Todo: We need to make a recursive version of this file browser, like the "Search files by name" dialog in vscode
-    visit_files(current_dir, recursive=true, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
-
-    // for items {
-    //     open_file_or_create_empty_buffer(active_editor, it.full_name);
-    //     // if ends_with(it.full_name, ".jai") open_file_or_create_empty_buffer(active_editor, it.full_name);
-    // }
+    visit_files(current_dir, recursive=false, *file_browser, visitor, visit_directories=true, follow_directory_symlinks=false);
 
     scan_requested = false;
-} @EditorCommand(name=Rescan_Working_Directory)
+}
+
+#scope_file
+
+change_dir :: (using fb: *File_Browser, _dir: string) {
+    //dir := append_dir_sepa(_dir,, temp);
+    //defer free(dir);
+    
+    clear_text(fb_text_input);
+    insert_text(fb_text_input, _dir);
+    if (!ends_with(_dir, "/")) insert_text(fb_text_input, "/");
+    modify_string(*current_dir, fb_text_input.text);
+    
+    file_browser_scan();
+}
+
+#scope_export
 
 file_browser: File_Browser;
 

@@ -29,6 +29,7 @@ draw_frame :: () {
         draw_widgets();
     }
 
+/*
     if show_debug_info {
         b := active_editor.active_buffer;
         for b.history {
@@ -37,6 +38,7 @@ draw_frame :: () {
 
         draw_global_debug_info(active_editor.rect_for_draw);
     }
+*/
 
     swap_buffers();
 }
@@ -538,104 +540,7 @@ draw_buffer_browser :: () {
 }
 
 draw_file_browser :: () {
-    font := primary_font_xs;
-    pad  := cast(float32) font.em_width * .5;
-    ed_r := active_editor.rect_for_draw;
-    
-    theme := Text_Input.DEFAULT_THEME;
-    theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-    theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
-    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
-    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_5f);
-    theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
-
-    w := 400.0; // @Tempoary
-    k := window_height * .1;
-
-    h := cast(float, font.character_height * 2.0);
-    b := cast(float, window_height - k*.1);
-    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
-    r.x = window_width*.5 - w;
-    r.w = w * 2.0;
-    r.y += 5.0; 
-
-    update_text_input(file_browser.fb_text_input, r, font, placeholder="Search files by name", theme=theme);
-    r.y -= 5.0; 
-
-    {
-        using file_browser;
-
-        options: [..] List_Input.Option;
-        options.allocator = temp;
-        array_reserve(*options, items.count);
-
-        for items {
-            if fb_text_input.text {
-                // found := wildcard_match(it.short_name, fb_text_input.text);
-                found := contains_nocase(it.short_name, fb_text_input.text);
-                if !found continue;
-            }
-
-            array_add(*options, .{label = it.short_name});
-        }
-
-        list_rect := r;
-        list_rect.w = w*2.0;
-        list_rect.h = 1.5*k;
-        linp := list_input(list_rect, xx #location(), options, font);
-
-        if fb_text_input.typed then linp.scroll_value = 0.0;
-        if linp.selected_index == -1 then linp.selected_index = 0;
-
-        if linp.entered && options.count {
-            if linp.selected_index >= options.count || linp.selected_index < 0 {
-                assert(false, "Invalid index: % ; options: % ; items: %\n", linp.selected_index, options, items);
-                return;                
-            }
-            selected_option := options[linp.selected_index];
-
-            index := -1;        
-            for items {
-                if it.short_name == selected_option.label {
-                    index = it_index;
-                    break;
-                }
-            }
-            assert(index != -1);
-
-            item := items[index];
-            if item.is_directory {
-                ok := file_browser_change_dir(item);
-                assert(ok);
-                file_browser_scan();
-
-                clear_text(fb_text_input);
-
-                linp.scroll_value = 0.0;
-                linp.selected_index = 0;
-            } else {
-                clear_text(fb_text_input);
-                linp.scroll_value = 0.0;
-                linp.selected_index = 0;
-
-                buffer := find_buffer_by_filepath(item.full_name);
-                if buffer != null {
-                    change_active_buffer(active_editor, buffer);
-                } else {
-                    buffer := open_file_or_create_empty_buffer(active_editor, item.full_name);
-                    change_active_buffer(active_editor, buffer);
-                }
-
-                close_current_widget();
-            }
-
-        }
-
-        if fb_text_input.typed && items.count {
-            linp.selected_index = 0;
-        }
-    }
-
+    _draw_file_browser();
 }
 
 draw_find_global_text_dialog :: () {
