@@ -1110,6 +1110,31 @@ ReloadBufferFromDisk :: () {
 
 } @EditorCommand
 
+OpenEditorConfigFile :: () {
+    config_path := get_editor_config_path();
+    if file_exists(config_path) {
+        buffer := open_file_or_create_empty_buffer(active_editor, config_path);
+        change_active_buffer(active_editor, buffer);        
+    } else {
+        // @Todo: Show error alert
+        log_error("Unable to locate the editor config file: '%'\n", config_path);
+    }
+    
+    // @Todo: Show error alert
+} @EditorCommand
+
+OpenProjectConfigFile :: () {
+    config_path := get_project_config_path();
+    if file_exists(config_path) {
+        buffer := open_file_or_create_empty_buffer(active_editor, config_path);
+        change_active_buffer(active_editor, buffer);
+    } else {
+        // @Todo: Show error alert
+        log_error("Unable to locate the project config file: '%'\n", config_path);
+    }
+    
+} @EditorCommand
+
 ////////////////////////////////////
 //
 

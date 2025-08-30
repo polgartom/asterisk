@@ -1,6 +1,5 @@
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
 - "to_upper_case", "to_lower_case" commands
-- History group fix
 - Fix issue that cursor skipping combined symbols like ((){
 - Better "find global text search"
 - Scrollbars
@@ -12,7 +11,7 @@
 - "Open project config file" command
 - "Open editor config file" command
 - Reload editor on project or editor config changes
-- Raddbg like file explorer 
+- VSCode like "find file" widget
 - Fuzzy matching search for files and "find global text search"
 - File watcher:
     -> Reload open files on changes
@@ -22,6 +21,35 @@
     - Specific keybindings for commands and so on...
     
 ------------------------------------------------
+
+K:/Programming/asterisk/./src/draw.jai:614,13: Assertion failed: Invalid index: -1 ; options: [Option{Text_Style{
+    text = "src/config.jai:274:DEFAULT_CONFIG_FILE_DATA :: #run read_default_config_data(DEFAULT_CONFIG_FILENAME);";
+    colors = [TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT...];
+    default_colorv4 = Vector4{0.815686, 0.815686, 0.815686, 1};
+    font_override = null;
+    x_offset = 0;
+    y_offset = 0;
+  }, Text_Style{
+    text = "";
+    colors = [];
+    default_colorv4 = Vector4{0.815686, 0.815686, 0.815686, 1};
+    font_override = null;
+    x_offset = 0;
+    y_offset = 0;
+  }, "", Result{"src/config.jai", 274}, 0}] ; buffers: [2cf_93fb_0080, 2cf_93fb_0230, 2cf_93fb_03e0, 2cf_93fb_0590, 2cf_93fb_0740, 2cf_93fb_08f0, 2cf_93fb_0aa0, 2cf_93fb_0c50, 2cf_93fb_0e00]
+
+
+Stack trace:
+C:/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
+C:/jai/modules/Basic/module.jai:87: assert_helper
+K:/Programming/asterisk/./src/draw.jai:614: draw_find_global_text_dialog
+K:/Programming/asterisk/./src/draw.jai:403: draw_widgets
+K:/Programming/asterisk/./src/draw.jai:29: draw_frame
+K:/Programming/asterisk/./src/main.jai:242: main
+A breakpoint was hit, but no debugger is attached.
+
+------------------------------------------------
+
 
 /opt/jai/modules/String/module.jai:816,5: Assertion failed: index = -1
 

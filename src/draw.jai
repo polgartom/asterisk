@@ -389,7 +389,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
             bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
 
-            // Simp.set_shader_for_color(true); // do we need this right here?
+            //Simp.set_shader_for_color(true); // do we need this right here?
             Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), map_color_to_vec4(.TEXT_SELECTION_MATCH));
         }
     }

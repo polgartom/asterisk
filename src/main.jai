@@ -57,6 +57,9 @@ main :: () {
         log_error("Failed to set the '%' as working directory!", executable_args.workdir);
     }
 
+    // Assign colors made during compile-time
+    for DEFAULT_COLOR_MAP COLOR_MAP[it_index] = it;
+
     load_global_config();
     load_project_config();
 
@@ -105,9 +108,6 @@ main :: () {
         }
 
     }
-
-    // @DEBUG
-    open_file_browser();
 
     while !should_quit {
         if !redraw_requested {

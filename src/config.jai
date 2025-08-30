@@ -1,8 +1,7 @@
 CURRENT_CONFIG_VERSION :: 1;
 
 load_global_config :: () {
-    config_path := tprint("%/asterisk-config.cfg", config_dir);
-
+    config_path := get_editor_config_path();
     if !file_exists(config_path) {
         File.write_entire_file(config_path, DEFAULT_CONFIG_FILE_DATA);
     }
@@ -17,13 +16,10 @@ load_global_config :: () {
 }
 
 load_project_config :: () {
-    path := tprint("%/.asterisk-project.cfg", working_dir);
+    config_path := get_project_config_path();
+    if !file_exists(config_path) return;
 
-    if !file_exists(path) {
-        return;
-    }
-
-    file_data, ok := File.read_entire_file(path);
+    file_data, ok := File.read_entire_file(config_path);
     defer free_string(*file_data);
     if !ok {
         return;
@@ -75,6 +71,14 @@ load_project_config :: () {
 
 }
 
+get_editor_config_path :: () -> string {
+    return tprint("%/asterisk-config.cfg", config_dir);
+}
+
+get_project_config_path :: () -> string {
+    return tprint("%/.asterisk-project.cfg", working_dir);
+}
+
 parse_config :: (name: string, filename: string, file_data: string) -> bool {
     parse_style_section(file_data);
 
@@ -110,7 +114,7 @@ parse_style_section :: (file_data: string) -> bool {
 
     data, found := get_section_as_string("style", file_data);
     if !found return false;
-    
+        
     {
         lines, valid := get_subsection_lines("colors", data);
         if !valid return false;
