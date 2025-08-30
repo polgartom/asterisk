@@ -1,13 +1,19 @@
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
-- A proper file watcher
 - "to_upper_case", "to_lower_case" commands
 - Fix issue that cursor skipping combined symbols like ((){
 - Better "find global text search"
 - Scrollbars
 - Mouse:
-    -> Move cursor at clicked point
+    -> Move cursor to clicked point
     -> Select text with
     -> Scrolling
+- "Open project config file" command
+- "Open editor config file" command
+- Reload editor on project or editor config changes
+- Raddbg like file explorer 
+- Fuzzy matching search for files and "find global text search"
+- File watcher:
+    -> Reload open files on changes
 
 [Config]
     - Which file extensions and directories are included, excluded
