@@ -465,7 +465,22 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
     batch.data = history.data + history_index;
     batch.count = 1;
 
-    if h.type == .DELETE {
+    if h.type == .INSERT {
+        should_alphanum := is_alphanum(h.text[0]);
+        start_index := history_index;
+        list := array_view(history, 0, history_index);
+        for #v2 < list {
+            if it.type != h.type break;
+            if should_alphanum {
+                if !is_alphanum(it.text[0]) break;
+            } else {
+                if is_alphanum(it.text[0]) break;
+            }
+            start_index = it_index;
+        }
+
+        batch = array_view(history, start_index, (history_index+1) - start_index);
+    } else if h.type == .DELETE {
         nochars := count_utf8_characters(h.text);
         if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
         
@@ -485,22 +500,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         }
 
         batch = array_view(history, start_index, (history_index+1) - start_index);
-    } else if h.type == .INSERT {
-        should_alphanum := is_alphanum(h.text[0]);
-        start_index := history_index;
-        list := array_view(history, 0, history_index);
-        for #v2 < list {
-            if it.type != h.type break;
-            if should_alphanum {
-                if !is_alphanum(it.text[0]) break;
-            } else {
-                if is_alphanum(it.text[0]) break;
-            }
-            start_index = it_index;
-        }
-
-        batch = array_view(history, start_index, (history_index+1) - start_index);
-    }
+    } 
 
     return batch;
 }
@@ -515,28 +515,39 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
     batch.data = history.data + history_index;
     batch.count = 1;
 
-    // @Incomplete
-    // We want to batch up the .DELETE history items too but it's not so easy because we can't simply determinate where is the "separation" between delete actions.
-    // We need to separate them by "it was an alphanum or separator (like in .INSERT)", "it was a multi-char deletion or not (required to check if that is not simply an utf8 character)",
-
     if h.type == .INSERT {
+        should_alphanum := is_alphanum(h.text[0]);
         end_index := history_index;
-
         list := advance(history, history_index);
-        if is_alphanum(h.text[0]) {
-            for list {
-                if it.type != h.type break;
+        
+        for list {
+            if it.type != h.type break;
+            if should_alphanum {
                 if !is_alphanum(it.text[0]) break;
-
-                end_index += 1;
-            }
-        } else {
-            for list {
-                if it.type != h.type break;
+            } else {
                 if is_alphanum(it.text[0]) break;
-
-                end_index += 1;
             }
+            end_index += 1;
+        }
+
+        batch = array_view(history, history_index, end_index-history_index);
+    } else if h.type == .DELETE {
+        nochars := count_utf8_characters(h.text);
+        if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
+    
+        should_alphanum := is_alphanum(h.text[0]);
+        end_index := history_index;
+        list := advance(history, history_index);
+        for list {
+            if it.type != h.type break;
+            nochars = count_utf8_characters(it.text);
+            if nochars != 1 break;
+            if should_alphanum {
+                if !is_alphanum(it.text[0]) break;
+            } else {
+                if is_alphanum(it.text[0]) break;
+            }
+            end_index += 1;
         }
 
         batch = array_view(history, history_index, end_index-history_index);
