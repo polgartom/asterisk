@@ -5,7 +5,17 @@ open_file_browser :: () {
         fb_text_input = create_text_input(cast(u64)#location());
     }
     
-    change_dir(*file_browser, get_workdir());
+    if !current_dir {
+        _dir := get_workdir();
+        clear_text(fb_text_input);
+        insert_text(fb_text_input, _dir);
+        if (!ends_with(_dir, "/")) insert_text(fb_text_input, "/");
+        modify_string(*current_dir, fb_text_input.text);
+    }
+    
+    file_browser_scan();
+    
+    //change_dir(*file_browser, get_workdir());
     
 //    log(">\n%\n\n", items);
     
@@ -24,7 +34,7 @@ _draw_file_browser :: () {
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
-    theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
+    theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
@@ -40,9 +50,13 @@ _draw_file_browser :: () {
 
     tinp := fb_text_input;
     update_text_input(tinp, r, font, theme=theme);
+    //label(xx(r.x-30), xx r.y, FOLDER_ICON, font_icons, theme.fg_color);
+    
     r.y -= 5.0;
 
     array_reset_keeping_memory(*options);
+
+    // @Todo: Handle multiple drives
 
     path := path_strip_filename(tinp.text);
     if !platform_path_equals(path, current_dir) {
@@ -54,21 +68,41 @@ _draw_file_browser :: () {
     search_chunk := "";
     if chunks search_chunk = chunks[chunks.count-1];
     
+    prefix_width := max(file_icon_md_width, folder_icon_md_width);
+    
     for items {
         if !search_chunk || platform_path_contains(it.short_name, search_chunk) {
             opt := array_add(*options);
+            if it.is_directory opt.priority += 100;
+            
+            opt.label_prefix_styled.font_override = font_icons;
+            opt.label_prefix_styled.x_offset = 2;
+            if it.is_directory {
+                modify_string(*opt.label_prefix, FOLDER_ICON);
+            } else {
+                modify_string(*opt.label_prefix, FILE_ICON);
+                opt.label_prefix_styled.default_colorv4 = #run hex_to_vec4(0xff_ff_ff_8a);
+            }
+            
             modify_string(*opt.label, it.short_name);
+            opt.label_styled.x_offset = prefix_width + 8;
         }
     }
+    
+    quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));
 
     list_rect := r;
     list_rect.h = 1.5*k;
 
     linp_theme := List_Input.DEFAULT_THEME;
-    linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
-    linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
+    linp_theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x3a_4a_7a_8a);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
     
+    if tinp.typed {
+        linp.scroll_value = 0.0;
+        linp.selected_index = 0;
+    }
 }
 
 file_browser_scan :: () {

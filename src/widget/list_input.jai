@@ -133,7 +133,15 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
             color = theme.current_item_fg_color;
         }
         
-        draw_text(xx x, xx (y+ch*.25), opt.label_styled);
+        _x: s64 = xx x;
+        _y: s64 = xx (y+ch*.25);
+        if opt.label_prefix {
+            ts := opt.label_prefix_styled;
+            draw_text(_x + ts.x_offset, _y + ts.y_offset, ts);
+        }
+        
+        ts := opt.label_styled;
+        draw_text(_x + ts.x_offset, _y + ts.y_offset, ts);
     }
 
     //PrintDev("options rendered: %\n", rendered);
@@ -170,16 +178,18 @@ List_Input :: struct {
     entered := false;
     selected_index := -1;
 
-    Option :: struct ($T: Type = void) {
+    Option :: struct ($T: Type = void) {        
         label_styled: Text_Style;
+        label_prefix_styled: Text_Style;
         
+        
+        #place label_styled;        label: string;
+        #place label_prefix_styled; label_prefix: string;
+
         label_for_search: string;
         ref: T;
 
         priority: s64 = 0; // for sorting
-    
-        #place label_styled;
-            label: string;
     }
 
     DEFAULT_THEME :: Theme.{

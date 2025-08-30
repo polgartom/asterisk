@@ -835,10 +835,16 @@ Text_Style :: struct {
     text: string;
     colors: [..] Color;
     default_colorv4: Vector4 = #run map_default_color_to_vec4(.TEXT_DEFAULT);
+    font_override: *Simp.Dynamic_Font;
+    x_offset: s64 = 0;
+    y_offset: s64 = 0;
 }
 
 draw_text :: (x: s64, y: s64, ts: Text_Style) -> width: s64 {
     font := primary_font;
+    if ts.font_override {
+        font = ts.font_override;
+    }
     
     Simp.set_shader_for_text();
     

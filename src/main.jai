@@ -397,26 +397,6 @@ find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) ->
     return -1;
 }
 
-init_fonts :: () {
-    _BAKED_FONT_DATA :: #run -> [] u8 {
-        #import "Compiler";
-        filename := tprint("%/../data/firacode-retina/FiraCode-Retina.ttf", #filepath);
-        font_binary, success := File.read_entire_file(filename);
-        if !success compiler_report(tprint("Unable to load font file '%'!\n", filename));
-
-        result := add_global_data(cast([] u8)font_binary, .READ_ONLY);
-        return result;
-    }
-
-    primary_font    = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_size);
-    primary_font_xs = Simp.get_font_at_size(_BAKED_FONT_DATA, ui.font_xs_size);
-
-    assert(primary_font != null && primary_font_xs != null);
-}
-
-primary_font: *Simp.Dynamic_Font;
-primary_font_xs: *Simp.Dynamic_Font;
-
 first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     line_height := get_line_height();
     start_row: s64 = xx (editor.top_offset / line_height);
@@ -757,7 +737,6 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
 ms_since_init :: inline () -> float64 {
     return seconds_since_init() * 1000;
 }
-
 
 Program_Mode :: enum u8 {
     // CORE;
