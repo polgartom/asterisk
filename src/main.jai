@@ -582,15 +582,32 @@ get_parent_dir_path :: (file_path: string) -> string {
     return path;
 }
 
+platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []string) -> []string {
+    r := path_chunks;
+    for i: 0..compare_chunks.count-1 {
+        if !path_chunks.count break;
+        if !platform_path_equals(path_chunks[0], compare_chunks[i]) break;
+        r = advance(r, 1);
+    }
+    
+    return r;
+}
+
 should_descend_into_dir :: (path: string) -> bool {
-    path_chunks := split(path, "/",, allocator = temp);
-    for config.ignore {
-        if contains(it, cast(u8) #char "/") {
-            if platform_path_begins_with(path, it) return false;
+    auto_release_temp();
+
+    path_chunks := split(path, "/",, allocator=temp);
+    workdir_chunks := split(get_workdir(), "/",, allocator=temp);
+    path_chunks = platform_skip_matching_path_chunks(path_chunks, workdir_chunks);
+    if !path_chunks return false;
+
+    for ignore: config.ignore {
+        if contains(ignore, cast(u8) #char "/") {
+            if platform_path_begins_with(path, ignore) return false;
         } else {
             // Match partial path
             for chunk : path_chunks {
-                if platform_path_equals(chunk, it) return false;
+                if platform_path_equals(chunk, ignore) return false;
             }
         }
     }
@@ -599,7 +616,10 @@ should_descend_into_dir :: (path: string) -> bool {
 }
 
 should_ignore_path :: (path: string) -> ignore: bool {
-    path_chunks := split(path, "/",, allocator = temp);
+    path_chunks := split(path, "/",, allocator=temp);
+    workdir_chunks := split(get_workdir(), "/",, allocator=temp);
+    path_chunks = platform_skip_matching_path_chunks(path_chunks, workdir_chunks);
+    if !path_chunks return false;
 
     for config.ignore {
         if contains(it, cast(u8) #char "/") {
