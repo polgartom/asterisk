@@ -29,6 +29,8 @@ load_project_config :: () {
         return;
     }
 
+    // [project]
+
     lines, valid := get_subsection_lines("project", file_data,, temp);
     if !valid return;
 
@@ -55,6 +57,21 @@ load_project_config :: () {
                 }
         };
     }
+
+    // [command]
+
+    // lines, valid := get_subsection_lines("command", file_data,, temp);
+    // if !valid return;
+
+    // for line: lines {
+    //     key, rhs := break_by_colon(line);
+
+    //     if key == {
+    //         case "find_global_text";
+    //             s := trim(rhs, "` ");
+    //             if !s continue;
+    //     };
+    // }
 
 }
 

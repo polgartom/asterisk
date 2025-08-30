@@ -830,7 +830,6 @@ widget_keymap: *Keymap;
     #assert false, "Unsupported OS";
 }
 
-
 ////////////////////////////////
 //~ Imports
 
