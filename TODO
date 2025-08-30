@@ -1,7 +1,13 @@
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
-- File watcher
-- Update the cursor position in the other editor panel if the same file is open in both. For example, if we insert text in the left editor, the right editor’s cursor would appear to move backward because its position stays the same while the content grows.
-- Add commands like "to_snake_case" or "to_upper_case"... and a command selection widget
+- A proper file watcher
+- "to_upper_case", "to_lower_case" commands
+- Fix issue that cursor skipping combined symbols like ((){
+- Better "find global text search"
+- Scrollbars
+- Mouse:
+    -> Move cursor at clicked point
+    -> Select text with
+    -> Scrolling
 
 [Config]
     - Which file extensions and directories are included, excluded
