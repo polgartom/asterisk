@@ -13,6 +13,9 @@
 - Fuzzy matching search for files and "find global text search"
 - File watcher:
     -> Reload open files on changes
+Text input:
+    -> Overflow scroll
+    -> Show selection
 
 [Config]
     - Which file extensions and directories are included, excluded
