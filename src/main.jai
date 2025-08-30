@@ -271,6 +271,17 @@ find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
     return row_table.count-1;
 }
 
+count_utf8_characters :: (str: string) -> s64 {
+    chars := 0;
+    bytes := 0;
+    while (bytes < str.count) {
+        bytes += 1 + trailingBytesForUTF8[str[0]];
+        chars += 1;
+    }
+    
+    return chars;
+}
+
 byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
 
@@ -582,17 +593,6 @@ get_parent_dir_path :: (file_path: string) -> string {
     return path;
 }
 
-platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []string) -> []string {
-    r := path_chunks;
-    for i: 0..compare_chunks.count-1 {
-        if !path_chunks.count break;
-        if !platform_path_equals(path_chunks[0], compare_chunks[i]) break;
-        r = advance(r, 1);
-    }
-    
-    return r;
-}
-
 should_descend_into_dir :: (path: string) -> bool {
     auto_release_temp();
 
@@ -821,6 +821,17 @@ widget_keymap: *Keymap;
 
 ////////////////////////////////
 //~ Platform
+
+platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []string) -> []string {
+    r := path_chunks;
+    for i: 0..compare_chunks.count-1 {
+        if !path_chunks.count break;
+        if !platform_path_equals(path_chunks[0], compare_chunks[i]) break;
+        r = advance(r, 1);
+    }
+    
+    return r;
+}
 
 #if OS == .WINDOWS {
     platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
