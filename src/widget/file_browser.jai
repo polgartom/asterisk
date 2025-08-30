@@ -7,7 +7,7 @@ open_file_browser :: () {
     
     change_dir(*file_browser, get_workdir());
     
-    log(">\n%\n\n", items);
+//    log(">\n%\n\n", items);
     
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
@@ -42,9 +42,14 @@ _draw_file_browser :: () {
     update_text_input(tinp, r, font, theme=theme);
     r.y -= 5.0;
 
-    options: [..] List_Input.Option;
-    options.allocator = temp;
-    
+    array_reset_keeping_memory(*options);
+
+    path := path_strip_filename(tinp.text);
+    if !platform_path_equals(path, current_dir) {
+        modify_string(*current_dir, path);
+        file_browser_scan();
+    }
+
     chunks := split(tinp.text, "/",, allocator=temp);
     search_chunk := "";
     if chunks search_chunk = chunks[chunks.count-1];
@@ -111,7 +116,6 @@ change_dir :: (using fb: *File_Browser, _dir: string) {
     insert_text(fb_text_input, _dir);
     if (!ends_with(_dir, "/")) insert_text(fb_text_input, "/");
     modify_string(*current_dir, fb_text_input.text);
-    
     file_browser_scan();
 }
 
@@ -126,6 +130,8 @@ File_Browser :: struct {
     current_dir: string;
 
     items: [..] File_Visit_Info;
+
+    options: [..] List_Input.Option;
 
     scan_requested := true;
 }
