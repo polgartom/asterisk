@@ -17,7 +17,7 @@ load_global_config :: () {
 }
 
 load_project_config :: () {
-    path := tprint("%/asterisk-project.cfg", working_dir);
+    path := tprint("%/.asterisk-project.cfg", working_dir);
 
     if !file_exists(path) {
         return;
