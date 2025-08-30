@@ -45,6 +45,15 @@ CloseCurrentWidget :: () {
 
 // [Editor]
 
+reload_editor :: () {
+    load_global_config();
+    load_project_config();
+    init_workspace(*workspace);
+
+    init_fonts();
+
+} @EditorCommand
+
 SwitchOrSplitEditorPanel :: () {
     c := active_editor;
 

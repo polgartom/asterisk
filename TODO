@@ -8,9 +8,7 @@
     -> Select text with
     -> Scrolling
 - Alert messages
-- "Open project config file" command
-- "Open editor config file" command
-- Reload editor on project or editor config changes
+- Move line up and down with ALT+UP/ALT+DOWN keys
 - VSCode like "find file" widget
 - Fuzzy matching search for files and "find global text search"
 - File watcher:

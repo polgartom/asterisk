@@ -835,7 +835,22 @@ save_buffer :: (using buffer: *Buffer) -> bool {
         modify_string(*filepath_os_sepa, path);
     }
 
-    return buffer_write_to_disk(buffer);
+    ok := buffer_write_to_disk(buffer);
+    
+    {
+        // @Temporary: We could flag the buffer, like .BUFFER_EDITOR_CONFIG or .BUFFER_PROJECT_CONFIG
+        // Also we should put this in file watcher procedure
+        config_path := get_editor_config_path();
+        if file_exists(config_path) && platform_path_equals(config_path, filepath) {
+            reload_editor();
+        }
+        config_path = get_project_config_path();
+        if file_exists(config_path) && platform_path_equals(config_path, filepath) {
+            reload_editor();
+        }    
+    }
+
+    return ok;
 }
 
 close_buffer :: (buffer: *Buffer) {

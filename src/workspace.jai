@@ -28,15 +28,6 @@ init_workspace :: (using w: *Workspace) {
     // start_file_watcher(w.watcher);
 }
 
-ReloadEditor :: () {
-    load_global_config();
-    load_project_config();
-    init_workspace(*workspace);
-
-    init_fonts();
-
-} @EditorCommand
-
 workspace: Workspace;
 
 Workspace :: struct {
