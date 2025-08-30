@@ -616,6 +616,8 @@ should_descend_into_dir :: (path: string) -> bool {
 }
 
 should_ignore_path :: (path: string) -> ignore: bool {
+    auto_release_temp();
+    
     path_chunks := split(path, "/",, allocator=temp);
     workdir_chunks := split(get_workdir(), "/",, allocator=temp);
     path_chunks = platform_skip_matching_path_chunks(path_chunks, workdir_chunks);
