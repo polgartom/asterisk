@@ -206,7 +206,7 @@ main :: () {
 
         if ctrl_released {
             if word_complete.active {
-                word_complete_abort();
+                word_complete_end();
             }
         }
 

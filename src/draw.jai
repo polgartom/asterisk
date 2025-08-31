@@ -29,7 +29,6 @@ draw_frame :: () {
         draw_widgets();
     }
 
-/*
     if show_debug_info {
         b := active_editor.active_buffer;
         for b.history {
@@ -38,7 +37,6 @@ draw_frame :: () {
 
         draw_global_debug_info(active_editor.rect_for_draw);
     }
-*/
 
     swap_buffers();
 }

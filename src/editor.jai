@@ -684,7 +684,31 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
     }
 }
 
-add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Type, text: string, range: Range) {
+add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_History) {
+    if history.count && history_index != history.count-1 {
+        // We should truncate the history because...
+        new_size := buffer.history_index+1;
+        history.count = new_size;
+        Clamp(*history_index, -1, history.count-1);
+    }
+
+    h := array_add(*history);
+    h.type   = new_history.type;
+    h.range  = new_history.range;
+    h.cursor = new_history.cursor;
+
+    assert(!!new_history.text);
+    modify_string(*h.text, new_history.text);
+    
+    if new_history.type == .REPLACE {
+        assert(!!new_history.old_text);
+        modify_string(*h.old_text, new_history.old_text);
+    }
+    
+    history_index += 1; // also we jump -1 to 0 if no history exists
+}
+
+add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Type, text: string, range: Range, _old_text: string = "" /*for replace*/) {
     if history.count && history_index != history.count-1 {
         // We should truncate the history because...
         new_size := buffer.history_index+1;
@@ -703,7 +727,6 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
         old_text := slice(buffer, range.start, range.end - range.start);
         modify_string(*h.old_text, old_text);
     }
-
     
     history_index += 1; // also we jump -1 to 0 if no history exists
 }

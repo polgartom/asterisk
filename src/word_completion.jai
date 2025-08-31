@@ -2,9 +2,14 @@
 
 word_completion :: (forwards := true, subwords := false) {
     using word_complete;
-    should_abort = false;
 
     if !active {
+        if history.text free_string(*history.text);
+        if history.old_text free_string(*history.old_text);
+        new_history: Buffer_History;
+        history = new_history;
+        history.type = .REPLACE;
+
         search_for_subwords = subwords;
         word_complete_search();
 
@@ -39,11 +44,15 @@ word_completion_previous :: () {
     word_complete_apply();
 }
 
-word_complete_abort :: () {
+word_complete_end :: () {
     using word_complete;
 
     active = false;
     if !results.count return;
+
+    assert(!!history.text.count);
+    e, b := get_active_editor_and_buffer();
+    add_history(e, b, history);
 
     for results { free(it.word); }
     array_reset_keeping_memory(*results);
@@ -141,12 +150,20 @@ word_complete_apply :: ($apply_history := false) {
     word   := result.word;
  
     buf_str := to_string(buffer);
-    buf_len := cast(s32) buffer.count;
 
-    // @Todo: We don't want to save every replacement in the history, we want to save the last one, when we released the CTRL key
     cursor := *editor.cursor;
-    cursor.sel = seek_left_utf8_until_alphanum(buf_str, cursor.pos, include_last_non_alphanum_char=false);
-    replace_selection(editor, buffer, cursor, result.word, history=true);
+    start := seek_left_utf8_until_alphanum(buf_str, cursor.pos, include_last_non_alphanum_char=false);
+    end := cursor.pos;
+    range := Range.{start, end};
+    if !history.old_text {
+        old_text := slice(buf_str, start, end - start);
+        modify_string(*history.old_text, old_text);
+        history.range = range;
+        history.cursor = cursor;
+    }
+    modify_string(*history.text, result.word);
+    replace_text_at(editor, buffer, range, result.word, history=false);
+    set_cursor_pos(buffer, cursor, start + result.word.count, horizontal=true);
 }
 
 // This procedure is copied from focus editor
@@ -163,10 +180,12 @@ Word_Completion :: struct {
     initial_word: string;
 
     active := false;
-    should_abort := false;
     selected_result_index := -1;
     search_for_subwords := false;
     results: [..] Word_Result;
+    history: Buffer_History;
+    //old_text_range: Range;
+    //new_text: string;
 }
 
 Word_Result :: struct {

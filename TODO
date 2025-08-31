@@ -17,7 +17,7 @@ Text input:
     -> Overflow scroll
     -> Show selection
     -> History
-
+- Unable to find a glyph in font '' for utf32 character 10.
 [Config]
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
