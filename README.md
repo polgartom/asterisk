@@ -1,1 +1,1 @@
-![Capture25 03 29](https://github.com/user-attachments/assets/a0290573-0925-47d3-85f1-31f3b1a2f2e9)
+<img width="1674" height="1440" alt="Capture" src="https://github.com/user-attachments/assets/5b73e53c-0ee9-4d1d-9faf-99f89bad7c03" />
