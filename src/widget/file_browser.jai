@@ -14,6 +14,7 @@ open_file_browser :: () {
         // removing the extra "sour" part and appending a separator ("/") at the end,
         // resulting in: "K:\Programming\asterisk\src\".
         insert_directory_to_text_input(current_dir);
+        file_browser_scan();
     } else {
         file_browser_change_dir(get_workdir());
     }

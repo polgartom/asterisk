@@ -8,7 +8,7 @@
     -> Select text with
     -> Scrolling
 - Alert messages
-- Move line up and down with ALT+UP/ALT+DOWN keys
+- Use default keymap action for some action that not set
 - VSCode like "find file" widget
 - Fuzzy matching search for files and "find global text search"
 - File watcher:
@@ -16,6 +16,7 @@
 Text input:
     -> Overflow scroll
     -> Show selection
+    -> History
 
 [Config]
     - Which file extensions and directories are included, excluded

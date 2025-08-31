@@ -1034,6 +1034,45 @@ IndentRight :: () {
     c.col = byte_pos_to_row_col_index(buffer, c.pos);
 }
 
+// @Incomplete: Move up all of the selected lines (partially selected lines included)
+MoveLineUp :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+    
+    row_index := find_row_index(buffer, editor.cursor.pos);
+    if row_index == 0 return;
+    prev_row_index := row_index - 1;
+    row := row_table[row_index];
+    prev_row := row_table[prev_row_index];
+    
+    rs := get_row_as_string(buffer, row);
+    prs := get_row_as_string(buffer, prev_row);
+    new_text := tprint("%1\n%2", rs, prs);
+    replace_text_at(editor, buffer, Range.{prev_row.start, row.end}, new_text);
+    
+    dest_cursor_pos := editor.cursor.pos - prs.count - 1;
+    set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=false, with_selection=true);
+}
+
+// @Incomplete: Move down all of the selected lines (partially selected lines included)
+MoveLineDown :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+    
+    row_index := find_row_index(buffer, editor.cursor.pos);
+    if row_index == row_table.count-1 return;
+    next_row_index := row_index + 1;
+    row := row_table[row_index];
+    next_row := row_table[next_row_index];
+        
+    rs := get_row_as_string(buffer, row);
+    nrs := get_row_as_string(buffer, next_row);
+    new_text := tprint("%1\n%2", nrs, rs);
+    replace_text_at(editor, buffer, Range.{row.start, next_row.end}, new_text);
+    dest_cursor_pos := editor.cursor.pos + nrs.count + 1;
+    set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=false, with_selection=true);
+}
+
 ExtendSelectionByToken :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -1217,6 +1256,8 @@ register_keymap_procedures :: () {
 
     Add(editor_keymap, IndentLeft);
     Add(editor_keymap, IndentRight);
+    Add(editor_keymap, MoveLineUp);
+    Add(editor_keymap, MoveLineDown);
 
     Add(editor_keymap, Undo);
     Add(editor_keymap, Redo);

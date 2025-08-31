@@ -611,12 +611,10 @@ draw_find_global_text_dialog :: () {
 
     if linp.entered && options.count {
         if linp.selected_index >= options.count || linp.selected_index < 0 {
-            assert(false, "Invalid index: % ; options: % ; buffers: %\n", linp.selected_index, options, buffers);
-            return;                
+            log_error("Invalid index: % ; options: % ; buffers: %\n", linp.selected_index, options, buffers);
+            return;             
         }
         
-        // SwitchOrSplitEditorPanel(); // open the file on the opposite side
-
         selected_option := options[linp.selected_index];
         target := selected_option.ref;
         
