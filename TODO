@@ -1,6 +1,6 @@
 - Bug! Handle remote directories that contain only files. E.g., if I specify the workdir like -workdir \\server.local\var\www, and www contains only files, it will crash.
 - "to_upper_case", "to_lower_case" commands
-- Fix issue that cursor skipping combined symbols like ((){
+- Don't include the line separator when skipping words or tokens, e.g.: "(((( $$$$ \n". If we skip the whitespaces, we also skip the line separator — but we don't want that.
 - Better "find global text search"
 - Scrollbars
 - Mouse:
@@ -22,6 +22,8 @@ Text input:
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
     
+- Why does junk history accumulate when Ctrl+Enter is pressed?
+
 ------------------------------------------------
 
 K:/Programming/asterisk/./src/draw.jai:614,13: Assertion failed: Invalid index: -1 ; options: [Option{Text_Style{

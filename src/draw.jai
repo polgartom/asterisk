@@ -30,10 +30,13 @@ draw_frame :: () {
     }
 
     if show_debug_info {
+        /*
+        @Bug @Investigate Why does junk history accumulate when Ctrl+Enter is pressed?
         b := active_editor.active_buffer;
         for b.history {
             PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
         }
+        */
 
         draw_global_debug_info(active_editor.rect_for_draw);
     }

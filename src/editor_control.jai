@@ -314,9 +314,9 @@ move_left_word :: ($subword_mode: bool) {
             }
         }
     } else {
-        not_combined := is_separator(text[editor.cursor.pos], subword_mode) && !is_separator(text[end], subword_mode);
+        not_combined := is_separator(text[editor.cursor.pos], subword_mode) && (!is_separator(text[end], subword_mode) || is_whitespace(text[end]));
         for start..end {
-            separator := is_separator(text[it], subword_mode);
+            separator := is_separator(text[it], subword_mode) && !is_whitespace(text[it]);
             if not_combined {
                 if separator {
                     offset = it;
@@ -357,9 +357,9 @@ move_right_word :: ($subword_mode: bool) {
         return;
     }
 
-    combined := is_separator(text[editor.cursor.pos]);
+    combined := is_separator(text[editor.cursor.pos]) && !is_whitespace(text[start]);
     for start..text.count-1 {
-        separator := is_separator(text[it], subword_mode);
+        separator := is_separator(text[it], subword_mode) && !is_whitespace(text[it]);
         if combined {
             if !separator {
                 set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
