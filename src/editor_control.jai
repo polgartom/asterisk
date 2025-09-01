@@ -267,7 +267,11 @@ move_left_word :: ($subword_mode: bool) {
     cursor := *editor.cursor;
     if cursor.pos == 0 return;
 
-    pos  := prev_character_pos(buffer, cursor.pos); // We always move at least one character to the left, so we start there
+    // Moving left is trickier than moving right:
+    // - The cursor is visually *after* the character at cursor.pos, so to move left we must first step back one character before scanning.
+    // - From there, we continue stepping left until we hit the boundary between token types (whitespace, separator, alphanumeric).
+
+    pos  := prev_character_pos(buffer, cursor.pos);
     char := buffer.data[pos];
 
     if is_whitespace(char) {
