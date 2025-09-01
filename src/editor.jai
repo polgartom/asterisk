@@ -246,6 +246,11 @@ next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
     return at + 1 + trailingBytesForUTF8[byte];
 }
 
+// @Todo: Deprecate the prev_char_byte_offset() proc and use the prev_character_pos() name everywhere
+prev_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
+    return prev_char_byte_offset(buffer, at);
+}
+
 count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
     count := 0;
     for buffers {

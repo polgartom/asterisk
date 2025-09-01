@@ -263,117 +263,81 @@ MoveRight :: () {
 move_left_word :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
-    
-    if editor.cursor.pos == 0 return;
 
-    if editor.cursor.pos == buffer.count {
-        offset := prev_char_byte_offset(buffer, editor.cursor.pos);
-        set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true);
-    }
+    cursor := *editor.cursor;
+    if cursor.pos == 0 return;
 
-    row_index := find_row_index(buffer, editor.cursor.pos);    
-    row := row_table[row_index];
+    pos  := prev_character_pos(buffer, cursor.pos); // We always move at least one character to the left, so we start there
+    char := buffer.data[pos];
 
-    offset := row.start;
-    if offset == editor.cursor.pos {
-        if row_index == 0 return; // no more row above
-
-        row = row_table[row_index-1];
-        offset = row.start;
-    }
-
-    text := to_string(buffer);
-
-    start := offset; // we use this as initial value, because offset-1 is a line break if row.count > 1
-    end := prev_char_byte_offset(buffer, editor.cursor.pos);
-    assert(end > -1);
-    assert(end < text.count);
-
-    // @Cleanup
-    whitespace := is_whitespace(text[editor.cursor.pos]) && is_whitespace(text[end]);
-    if whitespace {
-        last_non_whitespace_offset := editor.cursor.pos;
-        for start..end {
-            if !is_whitespace(text[it]) {
-                last_non_whitespace_offset = it;
-            }
+    if is_whitespace(char) {
+        // Whitespaces
+        while pos {
+            i := prev_character_pos(buffer, pos);
+            c := buffer.data[i];
+            if !is_whitespace(c) break;
+            pos = i;
         }
-        new_pos := last_non_whitespace_offset+1;
-        if new_pos > editor.cursor.pos new_pos = last_non_whitespace_offset;
-        if new_pos == editor.cursor.pos new_pos = max(0, editor.cursor.pos-1);
-        set_cursor_pos(buffer, *editor.cursor, new_pos, horizontal=true);
-        return;
-    }
-
-    // @Cleanup
-    if !is_separator(text[end], subword_mode) && !is_separator(text[editor.cursor.pos], subword_mode) {
-        for start..end {
-            separator := is_separator(text[it], subword_mode);
-            if separator {
-                offset = it;
-            }
+    } else if is_separator(char) {
+        // Tokens like (){}$...
+        while pos {
+            i := prev_character_pos(buffer, pos);
+            c := buffer.data[i];
+            if !is_separator(c, subword_mode) || is_whitespace(c) break;
+            pos = i;
         }
     } else {
-        not_combined := is_separator(text[editor.cursor.pos], subword_mode) && (!is_separator(text[end], subword_mode) || is_whitespace(text[end]));
-        for start..end {
-            separator := is_separator(text[it], subword_mode) && !is_whitespace(text[it]);
-            if not_combined {
-                if separator {
-                    offset = it;
-                }
-            } else {
-                if !separator {
-                    offset = it;
-                }
-            }
+        // Alphanum
+        while pos {
+            i := prev_character_pos(buffer, pos);
+            c := buffer.data[i];
+            if is_separator(c, subword_mode) break;
+            pos = i;
         }
     }
-    
-    if offset != start {
-        offset += 1 + trailingBytesForUTF8[text[offset]];
-    }
 
-    set_cursor_pos(buffer, *editor.cursor, offset, horizontal=true);
+    set_cursor_pos(buffer, cursor, pos, horizontal=true);
 }
 
 move_right_word :: ($subword_mode: bool) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    if editor.cursor.pos == buffer.count return;
+    cursor := *editor.cursor;
+    if cursor.pos == buffer.count return;
 
-    text  := to_string(buffer);
-    start := editor.cursor.pos + 1 + trailingBytesForUTF8[text[editor.cursor.pos]];
+    // Moving right is conceptually different from moving left:
+    // - When moving left we must first "step back" one character, because the cursor is visually *after* the character.
+    // - When moving right we can start scanning immediately from the current character, since the cursor is visually *before* it.
+    // In both cases, the goal is to stop at the first boundary between token types (whitespace, separator, alphanumeric).
 
-    // It's a better solution than the current IDE's behavior
-    whitespace := is_whitespace(text[editor.cursor.pos]);
-    if whitespace {
-        last_whitespace_offset := editor.cursor.pos;
-        for start..text.count-1 {
-            last_whitespace_offset = it;
-            if !is_whitespace(text[it]) break;
+    pos  := cursor.pos;
+    char := buffer.data[pos];
+
+    if is_whitespace(char) {
+        // Whitespaces
+        while pos {
+            pos = next_character_pos(buffer, pos);
+            c := buffer.data[pos];
+            if !is_whitespace(c) break;
         }
-        set_cursor_pos(buffer, *editor.cursor, last_whitespace_offset, horizontal=true);
-        return;
+    } else if is_separator(char) {
+        // Tokens like (){}$...
+        while pos {
+            pos = next_character_pos(buffer, pos);
+            c := buffer.data[pos];
+            if !is_separator(c, subword_mode) || is_whitespace(c) break;
+        }
+    } else {
+        // Alphanum
+        while pos {
+            pos = next_character_pos(buffer, pos);
+            c := buffer.data[pos];
+            if is_separator(c, subword_mode) break;
+        }
     }
 
-    combined := is_separator(text[editor.cursor.pos]) && !is_whitespace(text[start]);
-    for start..text.count-1 {
-        separator := is_separator(text[it], subword_mode) && !is_whitespace(text[it]);
-        if combined {
-            if !separator {
-                set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
-                return;
-            }
-        } else {
-            if separator {
-                set_cursor_pos(buffer, *editor.cursor, it, horizontal=true);
-                return;
-            }
-        }
-    }
-
-    set_cursor_pos(buffer, *editor.cursor, text.count, horizontal=true); // no more word so we should jump to the last byte of the row
+    set_cursor_pos(buffer, cursor, pos, horizontal=true);
 }
 
 MoveLeftWord :: inline () {
