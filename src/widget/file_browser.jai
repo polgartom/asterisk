@@ -74,7 +74,7 @@ _draw_file_browser :: () {
         if !search_chunk || platform_path_contains(it.short_name, search_chunk) {
             opt := array_add(*options);
             memmove(*opt.ref, *it, size_of(File_Visit_Info));
-            if it.is_directory opt.priority += 100;
+            if it.is_directory opt.priority += items.count+1;
             
             opt.label_prefix_styled.font_override = font_icons;
             opt.label_prefix_styled.x_offset = 2;
@@ -90,7 +90,8 @@ _draw_file_browser :: () {
         }
     }
     
-    quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));
+    quick_sort(options, (a, b) => cast(s64) (count_utf8_characters(b.label) - count_utf8_characters(a.label))); // prefer shorter files 
+    quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));                                     // prefer directories over files
 
     list_rect := r;
     list_rect.h = 1.5*k;

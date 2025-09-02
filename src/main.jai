@@ -28,8 +28,6 @@ main :: () {
         set_workdir(get_workdir());
     }
 
-    // ((((((((( aaaaaaaaaaaa          aaaaaaaaaaaa         ((((((  ((((((((((((
-
     {
         format := *context.print_style.default_format_struct;
         format.draw_type_name = true;
