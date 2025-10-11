@@ -152,6 +152,13 @@ parse_style_section :: (file_data: string) -> bool {
             key, rhs := break_by_colon(line);
 
             if key == {
+                // @Todo
+                case "font_name";
+                    val := trim(rhs);
+                    if !val {
+                        log_error("Invalid font name ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
                 case "font_size";
                     val, success, rem := string_to_int(rhs, base=10, u8);
                     if !success || rem {

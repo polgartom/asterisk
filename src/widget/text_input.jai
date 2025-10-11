@@ -2,7 +2,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
     // timer := seconds_since_init();
     // defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
-    found, input := table_find_new(*inputs, ui_id);
+    found, input := table_find(*inputs, ui_id);
     if !found {
         input = create_text_input(ui_id);
     }
@@ -140,10 +140,21 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
     // center := b + (t-b)*.5 - ch*.25;
     
+    cx := left - left_pad + 5.0;
+    if cursor.pos && text {
+        t := text;
+        t.count = cursor.pos;
+        cx += measure_text_width(font, t);
+    }
+    
+    if cx > (r.x + r.w - 5.0) {
+        left -= cx - (r.x + r.w);
+    }
+    
     // @Incomplete: Icon as prefix
     if prefix {
         left += label(xx left, xx center, prefix, font, theme.fg_color);
-    }
+    }    
 
     if text {
         label(xx left, xx center, text, font, theme.fg_color);
@@ -369,7 +380,7 @@ Text_Input :: struct {
         bg_color          = #run hex_to_vec4(0xa397a3ff),
         placeholder_color = Vector4.{0,0,0,.5},
         cursor_color      = #run hex_to_vec4(0x47253aff),
-        selection_color   = #run map_color_to_vec4(.TEXT_SELECTION),
+        selection_color   = #run hex_to_vec4(0xff_ff_ff_21),
         border_color      = #run hex_to_vec4(0x101953_ff),
     };
     

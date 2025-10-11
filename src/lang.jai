@@ -276,7 +276,7 @@ Language :: enum_flags u64 {
 #scope_file
 
 match_with_any_keyword :: inline (token_str: string) -> bool {
-    found, _ := table_find_new(*KEYWORDS_TABLE, token_str);
+    found, _ := table_find(*KEYWORDS_TABLE, token_str);
     return found;
 }
 

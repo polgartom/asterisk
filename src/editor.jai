@@ -27,7 +27,7 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
         add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
     }
 
-    // @Temporary? 
+    // @Temporary
     // We must rescan the lines right after text insertion because the byte_pos_to_row_col_index() works on the buffer's "row_table" that is dirty at that point so
     // if we append some text to the current line after the last character the byte_pos_to_row_col_index() will think that we on the next row.
     // This commit buffer procedure will no cause any overhead by calling it multiple times because we rescan the lines only if it's dirty.
@@ -1150,14 +1150,12 @@ Buffer :: struct {
     cursor_backup: [editors.count] Cursor;
 
     colors: [] Color;
-    tokenization_time: float64 = 0.0;
 
     dirty := false;
     unsaved := false;
     modtime: float64;
 
     row_table: [..] Row_Info;
-    row_table_recalc_time: float64 = 0.0;
 
     filepath: string;
     filepath_os_sepa: string; // keep this for comparisons
@@ -1168,6 +1166,10 @@ Buffer :: struct {
     // @Todo: It's mainly for the system buffers like logs or console output etc..
     language: Language = .PLAIN_TEXT;
     initialized := false;
+
+    // For measurements
+    tokenization_time: float64 = 0.0;
+    row_table_recalc_time: float64 = 0.0;
 }
 
 Buffer_History :: struct {

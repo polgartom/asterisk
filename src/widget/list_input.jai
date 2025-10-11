@@ -2,7 +2,7 @@
 // The r: Rect's h (height) param represents the maximum height of the list.
 list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
     
-    found, input := table_find_new(*inputs, ui_id);
+    found, input := table_find(*inputs, ui_id);
     if !found {
         input = New(List_Input);
         table_add(*inputs, ui_id, input);

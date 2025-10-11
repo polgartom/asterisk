@@ -8,35 +8,38 @@ draw_frame :: () {
 
     rect := make_rect(0.0, 0.0, xx width, xx height);
 
+    LEFT_PADDING :: 5;
+    _, rect = cut_left(rect, LEFT_PADDING);
+
+    // @Todo: Fix the footer visual
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
+        sepa_rect := right;
+        _, right = cut_left(right, LEFT_PADDING);
 
         draw_editor(*editors[0], left);
         draw_editor(*editors[1], right);
 
         Simp.set_shader_for_color(true);
         c := map_color_to_vec4(.LAYOUT_SEPARATOR);
-        Simp.immediate_quad(right.x - 1.0, right.y, right.x + 1.0, right.h + right.y, c);
+        Simp.immediate_quad(sepa_rect.x - 1.0, sepa_rect.y, sepa_rect.x + 1.0, sepa_rect.h + sepa_rect.y, c);
         
     } else {
         draw_editor(*editors[0], rect);
     }
 
-    // draw_debug_mouse_character_selection(active_editor, rect);
-
+    //draw_debug_mouse_character_selection(active_editor, rect);
+    
     // Widgets
     if mode == .WIDGET {
         draw_widgets();
     }
 
     if show_debug_info {
-        /*
-        @Bug @Investigate Why does junk history accumulate when Ctrl+Enter is pressed?
         b := active_editor.active_buffer;
         for b.history {
             PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
         }
-        */
 
         draw_global_debug_info(active_editor.rect_for_draw);
     }
