@@ -1019,7 +1019,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     
     // Viewport (X)
 
-    x_threshold := em(1.0, primary_font) * 2;
+    x_threshold := em(1.0, r_font) * 2;
 
     mx := get_cursor_x(buffer, *editor.cursor);
     mx = cast(s64)(mx - editor.left_offset - r.w);

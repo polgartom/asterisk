@@ -12,25 +12,6 @@ map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
     return DEFAULT_COLOR_MAP[cast(s64) color] * context.color_intensity;
 }
 
-map_name_to_color :: (name: string) -> Color {
-    #insert -> string {
-        b: String_Builder;
-        print_to_builder(*b, "if name == {\n");
-
-        for name: enum_names(Color) {
-            key_name := copy_string(name);
-            to_lower_in_place(key_name);
-            print_to_builder(*b, "case \"%\"; return .%;\n", key_name, name);
-        }
-
-        print_to_builder(*b, "}\n");
-
-        return builder_to_string(*b);
-    }
-
-    return .NONE;
-}
-
 darken :: (color: Vector4, amount: float) -> Vector4 {
     result: Vector4;
 

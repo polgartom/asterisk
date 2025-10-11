@@ -27,7 +27,7 @@ open_file_browser :: () {
 _draw_file_browser :: () {
     using file_browser;
 
-    font := primary_font_xs;
+    font := r_font_sm;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -50,7 +50,7 @@ _draw_file_browser :: () {
 
     tinp := fb_text_input;
     update_text_input(tinp, r, font, theme=theme);
-    //label(xx(r.x-30), xx r.y, FOLDER_ICON, font_icons, theme.fg_color);
+    //label(xx(r.x-30), xx r.y, FOLDER_ICON, r_font_icons, theme.fg_color);
     
     r.y -= 5.0;
 
@@ -76,7 +76,7 @@ _draw_file_browser :: () {
             memmove(*opt.ref, *it, size_of(File_Visit_Info));
             if it.is_directory opt.priority += items.count+1;
             
-            opt.label_prefix_styled.font_override = font_icons;
+            opt.label_prefix_styled.font_override = r_font_icons;
             opt.label_prefix_styled.x_offset = 2;
             if it.is_directory {
                 modify_string(*opt.label_prefix, FOLDER_ICON);

@@ -1,14 +1,14 @@
 
 init_fonts :: () {
-    primary_font    = Simp.get_font_at_size(cast([]u8)FONT_DEFAULT.data, ui.font_size);
-    primary_font_xs = Simp.get_font_at_size(cast([]u8)FONT_DEFAULT.data, ui.font_xs_size);
+    r_font       = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size);
+    r_font_sm    = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size_sm);
+    r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, font_size);
 
-    font_icons = Simp.get_font_at_size(cast([]u8)FONT_ICONS.data, ui.font_size);
-    file_icon_md_width = measure_text_width(font_icons, FILE_ICON);
-    folder_icon_md_width = measure_text_width(font_icons, FOLDER_ICON);
-    folder_open_icon_md_width = measure_text_width(font_icons, FOLDER_ICON);
+    assert(r_font != null && r_font_sm != null && r_font_icons != null);
 
-    assert(primary_font != null && primary_font_xs != null);
+    file_icon_md_width        = measure_text_width(r_font_icons, FILE_ICON);
+    folder_icon_md_width      = measure_text_width(r_font_icons, FOLDER_ICON);
+    folder_open_icon_md_width = measure_text_width(r_font_icons, FOLDER_ICON);    
 }
 
 load_font :: (name: string) -> Loaded_Font {
@@ -26,12 +26,16 @@ fontawesome_utf32_to_utf8 :: (character: u32) -> string {
     return s;
 }
 
-primary_font: *Simp.Dynamic_Font;
-primary_font_xs: *Simp.Dynamic_Font;
-font_icons: *Simp.Dynamic_Font;
+font_size: u8 = 14;
+font_size_sm: u8 = 13; // change this dynamically based on the dpi and the font_size
 
-FONT_DEFAULT :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
-FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+r_font:       *Simp.Dynamic_Font;
+r_font_sm:    *Simp.Dynamic_Font;
+r_font_icons: *Simp.Dynamic_Font;
+
+file_icon_md_width := 0;
+folder_icon_md_width := 0;
+folder_open_icon_md_width := 0;
 
 PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);
 CASE_SENSITIVE_ICON :: #run fontawesome_utf32_to_utf8(0xf031);
@@ -43,9 +47,8 @@ FILE_ICON           :: #run fontawesome_utf32_to_utf8(0xf15b);
 FOLDER_ICON         :: #run fontawesome_utf32_to_utf8(0xf07b);
 FOLDER_OPEN_ICON    :: #run fontawesome_utf32_to_utf8(0xf07c);
 
-file_icon_md_width := 0;
-folder_icon_md_width := 0;
-folder_open_icon_md_width := 0;
+BAKED_FONT_DEFAULT :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
+BAKED_FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 Loaded_Font :: struct {
     name: string;

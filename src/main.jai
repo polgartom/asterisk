@@ -67,7 +67,7 @@ main :: () {
     
     init_fonts();
 
-    footer_height = primary_font_xs.character_height*1.5; // @Cleanup !!!
+    footer_height = r_font_sm.character_height*1.5; // @Cleanup !!!
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -365,7 +365,7 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Fo
     s := get_row_as_string(buffer, row);
     s = slice(s, 0, cursor.pos - row.start);
 
-    if !font then font = primary_font;
+    if !font then font = r_font;
     cx = measure_text_width(font, s);
 
     return cx;
@@ -428,7 +428,7 @@ last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info 
 }
 
 get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
-    if !font then font = primary_font;
+    if !font then font = r_font;
 
     return row * (font.default_line_spacing + line_height);
 }
@@ -696,6 +696,28 @@ start_file_watcher :: (watcher: *File_Watcher(void)) {
     // deinit(watcher); // Those handlers are released during shutdown, right?
 }
 
+get_enum_by_name :: ($t: Type, name: string) -> (_enum: t, success: bool) {
+    #insert -> string {
+        b: String_Builder;
+        print_to_builder(*b, "if name == {\n");
+
+        enums := enum_names(t);
+        assert(enums.count > 0, "Please add some enum member to '%'\n", t);
+        
+        for name: enums {
+            key_name := copy_string(name);
+            to_lower_in_place(key_name);
+            print_to_builder(*b, "case \"%\"; return .%, true;\n", key_name, name);
+        }
+
+        print_to_builder(*b, "}\n");
+
+        print_to_builder(*b, "return .%, false;\n", enums[0]);
+
+        return builder_to_string(*b);
+    }
+}
+
 os_path_begins_with :: (path: string, prefix: string) -> bool {
     #if OS == .WINDOWS {
         return begins_with_nocase(path, prefix);
@@ -754,8 +776,6 @@ Anim :: struct {
     elapsed: float64;
 }
 
-
-
 ////////////////////////////////
 //~ Globals
 
@@ -808,6 +828,12 @@ keymap_set:    Keymap_Set;
 core_keymap:   *Keymap;
 editor_keymap: *Keymap;
 widget_keymap: *Keymap;
+
+cursor_shape := Cursor_Shape.BLOCK;
+cursor_line_indicator := Cursor_Line_Indicator.FILLED;
+
+Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
+Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
 
 ////////////////////////////////
 //~ Platform

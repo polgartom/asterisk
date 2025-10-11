@@ -129,7 +129,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         color := map_color_to_vec4(.TEXT_DEFAULT);
 
-        left_pad := cast(float32) primary_font.em_width;
+        left_pad := cast(float32) r_font.em_width;
 
         push_scissor(r);
         defer pop_scissor();
@@ -148,7 +148,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
     }
 
-    draw_cursor(editor, buffer, r, ui.cursor_shape, ui.cursor_line_indicator);
+    draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
 
     {
         // Draw footer
@@ -159,7 +159,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         footer := footer_r;
         Simp.set_shader_for_color(true);
 
-        font := primary_font_xs;
+        font := r_font_sm;
 
         fg_color := map_color_to_vec4(.FOOTER_TEXT);
         bg_color := map_color_to_vec4(.FOOTER_BACKGROUND);
@@ -227,7 +227,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
 }
 
-draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Shape.BLOCK, line_indicator := UI.Cursor_Line_Indicator.FILLED) {
+draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape.BLOCK, line_indicator := Cursor_Line_Indicator.FILLED) {
     push_scissor(r);
     defer pop_scissor();
 
@@ -240,9 +240,9 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Sh
     line_text := get_row_as_string(buffer, row);
     line_text  = slice(line_text, 0, c.pos - row.start);
 
-    cx := r.x + measure_text_width(primary_font, line_text) - editor.left_offset;
-    cw := em(1.0, primary_font);
-    ch := primary_font.character_height;
+    cx := r.x + measure_text_width(r_font, line_text) - editor.left_offset;
+    cw := em(1.0, r_font);
+    ch := r_font.character_height;
 
     bottom := (r.h + r.y) - get_line_height(row_index + 1) + editor.top_offset;
 
@@ -285,8 +285,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := UI.Cursor_Sh
             // Change character's color under the cursor
             if buffer.count {
                 character := get_character_as_string_at(buffer, xx c.pos);
-                Simp.prepare_text(primary_font, character);
-                Simp.draw_prepared_text(primary_font, xx cx, xx bottom, fg_color);
+                Simp.prepare_text(r_font, character);
+                Simp.draw_prepared_text(r_font, xx cx, xx bottom, fg_color);
             }
         case .LINE;
             Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + max(cw*.5, 3.0)), bottom - (ch/2-(ch*0.2)), bg_color);
@@ -309,9 +309,9 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
     selection_color := map_color_to_vec4(.TEXT_SELECTION);
 
-    left_pad := cast(float32) primary_font.em_width;
+    left_pad := cast(float32) r_font.em_width;
 
-    ch := primary_font.character_height;
+    ch := r_font.character_height;
     line_height := get_line_height();
 
     sel_start, sel_end := selected_range(c);
@@ -336,13 +336,13 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         // Convert the first N unselected bytes in the row to pixels
         start := max(sel_start, row_start) - row_start;
         t1 := slice(t, 0, start);
-        if t1.count then left += Simp.prepare_text(primary_font, t1);
+        if t1.count then left += Simp.prepare_text(r_font, t1);
 
         // Convert the remained bytes in the row to pixels
         t2 := advance(t, start);
         t2.count -= row_end - min(sel_end, row_end);
-        if t2.count then width += Simp.prepare_text(primary_font, t2);
-                    else width += primary_font.em_width;
+        if t2.count then width += Simp.prepare_text(r_font, t2);
+                    else width += r_font.em_width;
 
         bottom := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
         // @Hacky We should add +.001 as a crude fix for some rounding issues because there is a very subtle gap if editor.top_offset is 0.0.
@@ -384,12 +384,12 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
 
             left := r.x - editor.left_offset;
             rem_left  := slice(buffer, row.start, pos - row.start);
-            if rem_left then left += cast(float32) measure_text_width(primary_font, rem_left);
+            if rem_left then left += cast(float32) measure_text_width(r_font, rem_left);
 
             text := slice(buffer, row.start, row.end);
             text  = advance(text, rem_left.count);
             text  = slice(text, 0, s.count);
-            width := measure_text_width(primary_font, text);
+            width := measure_text_width(r_font, text);
 
             bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
 
@@ -413,7 +413,7 @@ draw_widgets :: () {
 }
 
 draw_command_browser :: () {
-    font := primary_font_xs;
+    font := r_font_sm;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -487,7 +487,7 @@ draw_command_browser :: () {
 }
 
 draw_buffer_browser :: () {
-    font := primary_font_xs;
+    font := r_font_sm;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -550,7 +550,7 @@ draw_file_browser :: () {
 draw_find_global_text_dialog :: () {
     using find_global_text_dialog;
 
-    font := primary_font_xs;
+    font := r_font_sm;
     pad  := cast(float32) font.em_width * .5;
     ed_r := active_editor.rect_for_draw;
     
@@ -643,13 +643,13 @@ draw_find_text_dialog :: () {
     ed_r := active_editor.rect_for_draw;
 
     {
-        font := primary_font_xs;
+        font := r_font_sm;
         ch := font.character_height;
         k      := ed_r.h * .1;
         kw     := ed_r.w * .15;
         width  := kw * 2.0;
         height := em(2.0, font);
-        pad    := cast(float32, primary_font.em_width);// * .5;
+        pad    := cast(float32, r_font.em_width);// * .5;
 
         r := make_rect(
             ed_r.x + ed_r.w - width - pad,
@@ -702,7 +702,7 @@ draw_find_text_dialog :: () {
     re_i := last_visible_row_index(editor, buffer);
 
     line_height := get_line_height();
-    ch := primary_font.character_height;
+    ch := r_font.character_height;
     color := map_color_to_vec4(.TEXT_HIGHLIGHT);
 
     #if 0 {
@@ -730,12 +730,12 @@ draw_find_text_dialog :: () {
 
         left := r.x - editor.left_offset;
         rem_left  := slice(buffer, row.start, pos - row.start);
-        if rem_left then left += cast(float32) measure_text_width(primary_font, rem_left);
+        if rem_left then left += cast(float32) measure_text_width(r_font, rem_left);
 
         text := slice(buffer, row.start, row.end);
         text  = advance(text, rem_left.count);
         text  = slice(text, 0, input.text.count);
-        width := measure_text_width(primary_font, text);
+        width := measure_text_width(r_font, text);
 
         bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
 
@@ -753,12 +753,12 @@ draw_goto_line_dialog :: () {
 
     ed_r := active_editor.rect_for_draw;
 
-    font   := primary_font_xs;
+    font   := r_font_sm;
     k      := ed_r.h * .1;
     kw     := ed_r.w * .12;
     width  := kw * 2.0;
     height := em(2.0, font);
-    pad    := cast(float32, primary_font.em_width);// * .5;
+    pad    := cast(float32, r_font.em_width);// * .5;
 
     r := make_rect(
         ed_r.x + ed_r.w - width - pad,
@@ -822,9 +822,9 @@ draw_global_debug_info :: (r: Rect) {
 
         rmargin := 10;
 
-        w := Simp.prepare_text(primary_font, s);
+        w := Simp.prepare_text(r_font, s);
         bottom += line_height;
-        Simp.draw_prepared_text(primary_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
+        Simp.draw_prepared_text(r_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
 
         if ln then row += 1;
     }
@@ -843,7 +843,7 @@ Text_Style :: struct {
 }
 
 draw_text :: (x: s64, y: s64, ts: Text_Style) -> width: s64 {
-    font := primary_font;
+    font := r_font;
     if ts.font_override {
         font = ts.font_override;
     }
@@ -936,8 +936,8 @@ draw_generated_quads :: (using styled_text: Text_Style, font: *Simp.Dynamic_Font
 }
 
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
-    w := Simp.prepare_text(primary_font, s);
-    Simp.draw_prepared_text(primary_font, left, bottom, color);
+    w := Simp.prepare_text(r_font, s);
+    Simp.draw_prepared_text(r_font, left, bottom, color);
     return w;
 }
 
@@ -948,7 +948,7 @@ draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, wi
 }
 
 draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
-    font := primary_font;
+    font := r_font;
     
     width := Simp.prepare_text(font, text, 0);
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
@@ -1044,9 +1044,9 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
         row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
         if row_index != -1 {
             row_str := get_row_as_string(buffer, row_index);
-            width := measure_text_width(primary_font, row_str);
+            width := measure_text_width(r_font, row_str);
             bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
-            ch      := primary_font.character_height;
+            ch      := r_font.character_height;
             Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
         }
 
@@ -1058,15 +1058,15 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
             if i == approx_row {
                 s := get_row_as_string(buffer, i);
 
-                ch      := primary_font.character_height;
+                ch      := r_font.character_height;
                 bottom  := (r.h+r.y) - get_line_height(approx_row+1) + editor.top_offset;
-                // width   := Simp.prepare_text(primary_font, s);
+                // width   := Simp.prepare_text(r_font, s);
                 // Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
 
                 cw := 0;
                 left := 0.0;
                 while s.count {
-                    cw = Simp.get_character_width_in_pixels(primary_font, s.data, .LEFT_JUSTIFIED);
+                    cw = Simp.get_character_width_in_pixels(r_font, s.data, .LEFT_JUSTIFIED);
                     if cast(float)mx <= left break;
 
                     left += cw;
@@ -1076,7 +1076,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
                 }
 
                 if cw == 0 {
-                    cw = primary_font.em_width;
+                    cw = r_font.em_width;
                     Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), cast(float)cw, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
                 } else {
                     Simp.immediate_quad(left-cw, bottom + (ch-ch*0.1), left, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});

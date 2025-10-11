@@ -134,7 +134,7 @@ parse_style_section :: (file_data: string) -> bool {
                 continue;
             }
 
-            color_enum := map_name_to_color(key);
+            color_enum := get_enum_by_name(Color, key);
             // if color_enum == .NONE {
             //     log_error("Unable to find the color '%'!\n", key);
             //     continue;
@@ -165,35 +165,21 @@ parse_style_section :: (file_data: string) -> bool {
                         log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
                         continue;
                     }
-
-                    ui.font_size = val;
-                case "font_xs_size";
-                    val, success, rem := string_to_int(rhs, base=10, u8);
-                    if !success || rem {
-                        log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
-                        continue;
-                    }
-
-                    ui.font_xs_size = val;
-
+                    font_size = val;
                 case "cursor_shape";
-                    val, ok := map_name_to_ui_enum(UI.Cursor_Shape, rhs);
+                    val, ok := get_enum_by_name(Cursor_Shape, rhs);
                     if !ok {
                         log_error("'%' is an invalid cursor shape!\n", rhs);
                         break;
                     }
-
-                    ui.cursor_shape = val;
-
+                    cursor_shape = val;
                 case "cursor_line_indicator";
-                    val, ok := map_name_to_ui_enum(UI.Cursor_Line_Indicator, rhs);
+                    val, ok := get_enum_by_name(Cursor_Line_Indicator, rhs);
                     if !ok {
                         log_error("'%' is an invalid cursor line indicator!\n", rhs);
                         break;
                     }
-
-                    ui.cursor_line_indicator = val;
-
+                    cursor_line_indicator = val;
                 case;
                     log_error("Unknown UI parameter '%'!\n", key);
             };
