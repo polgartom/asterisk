@@ -789,7 +789,9 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
 
             normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
             
-            final_text := replace(_input, "\t", TAB_SPACE_CHARS);
+            spaces := talloc_string(tab_size);
+            for spaces { spaces[it_index] = " "; } 
+            final_text := replace(_input, "\t", spaces);
             defer free(final_text);
 
             insert_text_at(editor, buffer, 0, final_text, history=false);

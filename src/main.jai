@@ -347,17 +347,7 @@ working_dir:    string;
 footer_height: float;
 line_height := 0.0;    // @Todo
 letter_spacing := 0.0; // @Todo
-
-// @Todo Make this dynamic
-TAB_SIZE_IN_SPACES :: 4;
-TAB_SPACE_CHARS :: #run -> string {
-    builder: String_Builder;
-    builder.allocator = __temporary_allocator;
-    for 0..TAB_SIZE_IN_SPACES-1 {
-        append(*builder, " ");
-    }
-    return builder_to_string(*builder,, allocator = __temporary_allocator);
-}
+tab_size := 4;
 
 mode := Program_Mode.EDITOR;
 Program_Mode :: enum u8 { EDITOR; WIDGET; };

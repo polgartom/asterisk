@@ -168,6 +168,13 @@ parse_style_section :: (file_data: string) -> bool {
                         continue;
                     }
                     font_size = val;
+                case "tab_size";
+                    val, success, rem := string_to_int(rhs, base=10, u8);
+                    if !success || rem {
+                        log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
+                    tab_size = max(1, val);
                 case "cursor_shape";
                     val, ok := get_enum_by_name(Cursor_Shape, rhs);
                     if !ok {

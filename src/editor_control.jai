@@ -505,8 +505,8 @@ DeleteFromRight :: () {
         for #v2 < 0..editor.cursor.pos-1 {
             if text.data[it] == #char " " {
                 spaces += 1;
-                if spaces == TAB_SIZE_IN_SPACES {
-                    bytes_to_del = TAB_SIZE_IN_SPACES;
+                if spaces == tab_size {
+                    bytes_to_del = tab_size;
                     break;
                 }
             } else {
@@ -743,7 +743,7 @@ JoinLine :: () {
 }
 
 InsertTab :: () {
-    // @Todo: convert < TAB_SIZE_IN_SPACES spaces to tab
+    // @Todo: convert < tab_size spaces to tab
     // text := builder_to_string(*builder, do_reset = false);
     // defer free(text);
 
@@ -755,8 +755,9 @@ InsertTab :: () {
     // }
 
     editor, buffer := get_active_editor_and_buffer();
-
-    insert_text_at_cursor(editor, buffer, *editor.cursor, TAB_SPACE_CHARS);
+    spaces := talloc_string(tab_size);
+    for spaces { spaces[it_index] = " "; } 
+    insert_text_at_cursor(editor, buffer, *editor.cursor, spaces);
 }
 
 GotoFirstCharOfCurrentRow :: inline () {
@@ -888,8 +889,8 @@ IndentLeft :: () {
 
         s := get_row_as_string(buffer, row);
         spaces := count_whitespaces_from_left(s, space_character_only=true);
-        del := TAB_SIZE_IN_SPACES;
-        if spaces < TAB_SIZE_IN_SPACES then del = spaces;
+        del := tab_size;
+        if spaces < tab_size then del = spaces;
         new_s := advance(s, del);
         array_add(*block_lines, new_s);
 
@@ -960,8 +961,8 @@ IndentRight :: () {
 
         s := get_row_as_string(buffer, row);
         spaces := count_whitespaces_from_left(s, space_character_only=true);
-        rem := spaces % TAB_SIZE_IN_SPACES;
-        add := TAB_SIZE_IN_SPACES - rem;
+        rem := spaces % tab_size;
+        add := tab_size - rem;
 
         new_s := alloc_string(s.count + add,, temp);
         new_s.count = s.count + add;
