@@ -436,10 +436,16 @@ Clipboard :: #import "Clipboard";
 Hash      :: #import "Hash";
 
 #if OS == .WINDOWS {
+    #import "Windows";
+    #import "Windows_Utf8";
+    #import "Windows_Registry";
+
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
     GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
-} else #if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
+}
+
+#if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
     crt :: #system_library "libc";
 }

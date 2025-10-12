@@ -159,6 +159,8 @@ parse_style_section :: (file_data: string) -> bool {
                         log_error("Invalid font name ('%') given after the '%' key specifier!\n", rhs, key);
                         continue;
                     }
+                    modify_string(*font_name, val,, allocator=context.default_allocator);
+                    // ll("font_name: '%' | found: % | filepath: %\n", val, found, filepath);
                 case "font_size";
                     val, success, rem := string_to_int(rhs, base=10, u8);
                     if !success || rem {
