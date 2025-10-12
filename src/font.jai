@@ -44,7 +44,7 @@ fontawesome_utf32_to_utf8 :: (character: u32) -> string {
 
 fnt_get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
     if !font then font = r_font;
-    return row * (font.default_line_spacing + line_height);
+    return row * (font.default_line_spacing + line_height*dpi_scale);
 }
 
 em :: (x: float, font: *Simp.Dynamic_Font) -> float {
