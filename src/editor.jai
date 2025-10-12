@@ -486,7 +486,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
 
         batch = array_view(history, start_index, (history_index+1) - start_index);
     } else if h.type == .DELETE {
-        nochars := count_utf8_characters(h.text);
+        nochars := utf8_character_count(h.text);
         if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
         
         should_alphanum := is_alphanum(h.text[0]);
@@ -494,7 +494,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         list := array_view(history, 0, history_index);
         for #v2 < list {
             if it.type != h.type break;
-            nochars = count_utf8_characters(it.text);
+            nochars = utf8_character_count(it.text);
             if nochars != 1 break;
             if should_alphanum {
                 if !is_alphanum(it.text[0]) break;
@@ -537,7 +537,7 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
 
         batch = array_view(history, history_index, end_index-history_index);
     } else if h.type == .DELETE {
-        nochars := count_utf8_characters(h.text);
+        nochars := utf8_character_count(h.text);
         if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
     
         should_alphanum := is_alphanum(h.text[0]);
@@ -545,7 +545,7 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         list := advance(history, history_index);
         for list {
             if it.type != h.type break;
-            nochars = count_utf8_characters(it.text);
+            nochars = utf8_character_count(it.text);
             if nochars != 1 break;
             if should_alphanum {
                 if !is_alphanum(it.text[0]) break;

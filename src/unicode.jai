@@ -1,3 +1,14 @@
+utf8_character_count :: (str: string) -> s64 {
+    chars := 0;
+    bytes := 0;
+    while (bytes < str.count) {
+        bytes += 1 + trailingBytesForUTF8[str[0]];
+        chars += 1;
+    }
+    
+    return chars;
+}
+
 // @Cleanup: Shorter name
 seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
     point := _point - 1;
@@ -32,6 +43,5 @@ seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alpha
 
     return point;
 }
-
 
 #import "Unicode";

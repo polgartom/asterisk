@@ -15,33 +15,23 @@ main :: () {
     }
 
     {
-        format := *context.print_style.default_format_struct;
-        format.draw_type_name = true;
-        format.use_newlines_if_long_form = true;
-        format.indentation_width = 2;
+        format_struct := *context.print_style.default_format_struct;
+        format_struct.draw_type_name = true;
+        format_struct.use_newlines_if_long_form = true;
+        format_struct.indentation_width = 2;
+        format_int := *context.print_style.default_format_int;
+        format_int.digits_per_comma = 3;
+        format_int.comma_string = ",";
     }
-    {
-        format := *context.print_style.default_format_int;
-        format.digits_per_comma = 3;
-        format.comma_string = ",";
-    }
-
-    _string_for_utf32_to_utf8: [4] u8;
-    string_for_utf32_to_utf8 := string.{
-        data  = *_string_for_utf32_to_utf8[0],
-        count = 4
-    };
-
-    // Assign colors made during compile-time
-    for DEFAULT_COLOR_MAP COLOR_MAP[it_index] = it;
 
     args_success, executable_args=, is_set, files_from_cmdline := parse_arguments(type_of(executable_args));
     if !args_success {
+        log_error("Invalid args given!\n");
         exit(1); // @Todo
     }
 
     if executable_args.workdir && !set_workdir(executable_args.workdir) {
-        log_error("Failed to set the '%' as working directory!", executable_args.workdir);
+        log_error("Failed to set the '%' as working directory!\n", executable_args.workdir);
     }
 
     {
@@ -53,6 +43,9 @@ main :: () {
         config_dir = copy_string(dir);
         set_workdir(get_workdir());
     }
+
+    // Assign colors made during compile-time
+    for DEFAULT_COLOR_MAP { COLOR_MAP[it_index] = it; }
 
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
     msaa := Simp.prepare_window(window, wanted_msaa = 8);
@@ -104,8 +97,6 @@ main :: () {
             }
         }
 
-        // process_changes(workspace.watcher);
-
         {
             // @Cleanup: Remove it!!
             enable(*keymap_set, editor_keymap, mode == .EDITOR);
@@ -118,7 +109,6 @@ main :: () {
 
         for event : events_this_frame {
             // ll("%\n", event);
-
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -155,14 +145,13 @@ main :: () {
                     if buffer.readonly continue;
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
                     
-                    zero_memory(string_for_utf32_to_utf8.data, 0x4);
-                    character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
-
-                    insert_text_at_cursor(editor, buffer, *editor.cursor, string_for_utf32_to_utf8);
+                    c := character_utf32_to_utf8(event.utf32,, allocator=temporary_allocator);
+                    insert_text_at_cursor(editor, buffer, *editor.cursor, c);
                 }
             }
         }
 
+        // @Cleanup
         if ctrl_released {
             if word_complete.active {
                 word_complete_end();
@@ -204,23 +193,10 @@ main :: () {
         draw_frame();
         
         array_reset(*debug_infos);
-
         reset_temporary_storage();
-
         // sleep_milliseconds(6); // @Temporary
     }
 } @NoProfile
-
-count_utf8_characters :: (str: string) -> s64 {
-    chars := 0;
-    bytes := 0;
-    while (bytes < str.count) {
-        bytes += 1 + trailingBytesForUTF8[str[0]];
-        chars += 1;
-    }
-    
-    return chars;
-}
 
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
     return Simp.prepare_text(font, text);

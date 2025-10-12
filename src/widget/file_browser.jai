@@ -90,7 +90,7 @@ _draw_file_browser :: () {
         }
     }
     
-    quick_sort(options, (a, b) => cast(s64) (count_utf8_characters(b.label) - count_utf8_characters(a.label))); // prefer shorter files 
+    quick_sort(options, (a, b) => cast(s64) (utf8_character_count(b.label) - utf8_character_count(a.label))); // prefer shorter files 
     quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));                                     // prefer directories over files
 
     list_rect := r;
