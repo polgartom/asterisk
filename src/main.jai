@@ -52,6 +52,8 @@ main :: () {
     Simp.set_render_target(window);
     window_width, window_height = Simp.get_render_dimensions(window);
 
+    dpi_scale = get_dpi_scale(window);
+
     register_keymap_procedures();
     load_global_config();
     load_project_config();
@@ -87,11 +89,10 @@ main :: () {
             Simp.update_window(it.window);
             if it.window == window {
                 should_reinit := (it.width != window_width) || (it.height != window_height);
-
                 window_width  = it.width;
                 window_height = it.height;
-
                 if should_reinit {
+                    dpi_scale = get_dpi_scale(window);
                     init_fonts();
                 }
             }
@@ -198,6 +199,28 @@ main :: () {
     }
 } @NoProfile
 
+get_dpi_scale :: (window: Window_Type) -> float {
+    // Copied from Focus editor
+    #if OS == .WINDOWS {
+        dpi := cast(float) GetDpiForWindow(window);
+        return dpi / 96.0;
+        // #if WINDOWS7 {
+        //     return 1.0;  // poor Windows 7 users
+        // } else {
+        //     dpi := cast(float) GetDpiForWindow(window);
+        //     return dpi / 96.0;
+        // }
+    }
+    #if OS == .LINUX {
+        /*
+        * `Linux_Display` is empty on platforms other than Linux, so importing it should be basically
+        * free on Windows/MacOS.
+        */
+        LD :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
+        return LD.get_dpi_scaling_factor(window);
+    }
+}
+
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
     return Simp.prepare_text(font, text);
 }
@@ -302,6 +325,7 @@ executable_args: struct { workdir: string; };
 window: Window_Type;
 window_width  := 1200;
 window_height := 1200;
+dpi_scale := 1.0;
 should_quit := false;
 redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
 frame := 0;
@@ -415,6 +439,7 @@ Hash      :: #import "Hash";
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
+    GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 } else #if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
     crt :: #system_library "libc";
 }

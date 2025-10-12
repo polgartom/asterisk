@@ -1,7 +1,7 @@
 init_fonts :: () {
-    r_font       = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size);
-    r_font_sm    = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size_sm);
-    r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, font_size);
+    r_font       = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, cast(int)(font_size*dpi_scale));
+    r_font_sm    = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, cast(int)(font_size_sm*dpi_scale));
+    r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size*dpi_scale));
 
     assert(r_font != null && r_font_sm != null && r_font_icons != null);
 
