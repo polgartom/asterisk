@@ -38,20 +38,15 @@ Quit :: () {
 }
 
 // [Widget]
-
 CloseCurrentWidget :: () {
     close_current_widget();
 }
 
 // [Editor]
-
-reload_editor :: () {
+ReloadEditor :: () {
     load_global_config();
     load_project_config();
-    init_workspace(*workspace);
-
     init_fonts();
-
 } @EditorCommand
 
 SwitchOrSplitEditorPanel :: () {

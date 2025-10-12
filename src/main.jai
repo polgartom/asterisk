@@ -63,11 +63,9 @@ main :: () {
     load_global_config();
     load_project_config();
 
-    init_workspace(*workspace);
-    
     init_fonts();
 
-    footer_height = r_font_sm.character_height*1.5; // @Cleanup !!!
+    footer_height = r_font_sm.character_height*1.5; // @Temporary
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
@@ -760,47 +758,28 @@ ms_since_init :: inline () -> float64 {
     return seconds_since_init() * 1000;
 }
 
-Program_Mode :: enum u8 {
-    // CORE;
-    EDITOR;
-    WIDGET;
-};
-
-Anim :: struct {
-    active: bool;
-    start: float;
-    target: float;
-    started_at: float;
-    duration: float;
-
-    elapsed: float64;
-}
-
-////////////////////////////////
-//~ Globals
-
 window: Window_Type;
 window_width  := 1200;
 window_height := 1200;
+should_quit := false;
+redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
+frame := 0;
+fps: float64;
 
 current_time: float64 = 0.0;
 last_time: float64 = 0.0;
 frame_dt: float64 = 0.0;
 second_elapsed := false;
-
-redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
-fps: float64;
 frametime: float64;
-frame := 0;
-
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
 
 footer_height: float;
+line_height := 0.0;    // @Todo
+letter_spacing := 0.0; // @Todo
 
-line_height := 0.0;
-
+// @Todo Make this dynamic
 TAB_SIZE_IN_SPACES :: 4;
 TAB_SPACE_CHARS :: #run -> string {
     builder: String_Builder;
@@ -811,17 +790,12 @@ TAB_SPACE_CHARS :: #run -> string {
     return builder_to_string(*builder,, allocator = __temporary_allocator);
 }
 
-executable_args: struct {
-    workdir: string;
-};
+mode := Program_Mode.EDITOR;
+Program_Mode :: enum u8 { EDITOR; WIDGET; };
 
 executable_dir: string;
 config_dir:     string;
 working_dir:    string;
-
-should_quit := false;
-
-mode := Program_Mode.EDITOR;
 
 keymap_cfg_section_data: string; // @Todo
 keymap_set:    Keymap_Set;
@@ -835,8 +809,22 @@ cursor_line_indicator := Cursor_Line_Indicator.FILLED;
 Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
 Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
 
+executable_args: struct { workdir: string; };
+
+Anim :: struct {
+    active: bool;
+    start: float;
+    target: float;
+    started_at: float;
+    duration: float;
+
+    elapsed: float64;
+}
+
 ////////////////////////////////
 //~ Platform
+
+// @Todo: Cleanup
 
 platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []string) -> []string {
     r := path_chunks;
@@ -882,7 +870,6 @@ platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []
 ////////////////////////////////
 //~ Imports
 
-#load "ui.jai";
 #load "editor.jai";
 #load "editor_control.jai";
 #load "cursor.jai";
@@ -894,7 +881,6 @@ platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []
 #load "lang.jai";
 #load "debug.jai";
 #load "word_completion.jai";
-#load "workspace.jai";
 #load "project.jai";
 #load "utils.jai";
 #load "view.jai";

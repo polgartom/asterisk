@@ -176,7 +176,7 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
 
         if !cmd.name cmd.name = cmd.proc_name;
         cmd.name = key_to_user_friendly_string(cmd.name, camelcase=true,, temp);
-        cmd.name = tprint("$ %", cmd.name);
+        cmd.name = tprint("%", cmd.name);
 
         array_add(*editor_commands, cmd);
     }
