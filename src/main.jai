@@ -14,36 +14,44 @@ main :: () {
         Windows.timeBeginPeriod(1);
     }
 
-    print("\n\n");
-
-    {
-        dir := path_strip_filename(get_path_of_running_executable());
-        path_unify_sepa(dir);
-        dir = trim_right(dir, "/");
-        assert(dir.count > 0);
-
-        executable_dir = copy_string(dir);
-        config_dir = copy_string(dir);
-        // working_dir = copy_string(get_workdir());
-        set_workdir(get_workdir());
-    }
-
     {
         format := *context.print_style.default_format_struct;
         format.draw_type_name = true;
         format.use_newlines_if_long_form = true;
         format.indentation_width = 2;
     }
-
     {
         format := *context.print_style.default_format_int;
         format.digits_per_comma = 3;
         format.comma_string = ",";
     }
 
+    _string_for_utf32_to_utf8: [4] u8;
+    string_for_utf32_to_utf8 := string.{
+        data  = *_string_for_utf32_to_utf8[0],
+        count = 4
+    };
+
+    // Assign colors made during compile-time
+    for DEFAULT_COLOR_MAP COLOR_MAP[it_index] = it;
+
     args_success, executable_args=, is_set, files_from_cmdline := parse_arguments(type_of(executable_args));
     if !args_success {
         exit(1); // @Todo
+    }
+
+    if executable_args.workdir && !set_workdir(executable_args.workdir) {
+        log_error("Failed to set the '%' as working directory!", executable_args.workdir);
+    }
+
+    {
+        dir := path_strip_filename(get_path_of_running_executable());
+        path_unify_sepa(dir);
+        dir = trim_right(dir, "/");
+        assert(dir.count > 0);
+        executable_dir = copy_string(dir);
+        config_dir = copy_string(dir);
+        set_workdir(get_workdir());
     }
 
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
@@ -52,60 +60,14 @@ main :: () {
     window_width, window_height = Simp.get_render_dimensions(window);
 
     register_keymap_procedures();
-
-    if executable_args.workdir && !set_workdir(executable_args.workdir) {
-        log_error("Failed to set the '%' as working directory!", executable_args.workdir);
-    }
-
-    // Assign colors made during compile-time
-    for DEFAULT_COLOR_MAP COLOR_MAP[it_index] = it;
-
     load_global_config();
     load_project_config();
-
+    init_editor_buffers(files_from_cmdline);
     init_fonts();
-
     footer_height = r_font_sm.character_height*1.5; // @Temporary
 
     last_time = seconds_since_init();
     last_second_time: float64 = 0.0;
-
-    string_for_utf32_to_utf8 := alloc_string(4);
-
-    {
-        // log_buffer    = create_readonly_buffer("logs");
-        // logerr_buffer = create_readonly_buffer("errors");
-
-        active_editor = *editors[0];
-        active_editor.visible = true;
-
-        if files_from_cmdline.count == 2 {
-            // @Temporary
-            open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
-            open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
-
-            editors[0].visible = true;
-            editors[1].visible = true;
-
-        } else {
-            for filepath: files_from_cmdline {
-                e := *editors[it_index % editors.count];
-                b := open_file_or_create_empty_buffer(e, filepath);
-                change_active_buffer(e, b);
-                
-                e.visible = true;
-            }
-        }
-
-        // @Todo: Don't draw the editor if no active buffer is assigned to
-        for *e: editors {
-            if !e.active_buffer {
-                b := create_or_find_empty_buffer(e);
-                change_active_buffer(e, b);
-            }
-        }
-
-    }
 
     while !should_quit {
         if !redraw_requested {
@@ -191,9 +153,8 @@ main :: () {
                 if event.type == .TEXT_INPUT && !event.ctrl_pressed {
                     editor, buffer := get_active_editor_and_buffer(); // @Temporary
                     if buffer.readonly continue;
-
                     if event.utf32 == 0x7F continue; // @Hacky Prevent insertion of the "Delete character" (127) because of the Ctrl-Backspace
-
+                    
                     zero_memory(string_for_utf32_to_utf8.data, 0x4);
                     character_utf32_to_utf8(event.utf32, *string_for_utf32_to_utf8);
 
@@ -321,7 +282,6 @@ set_workdir :: (dir_: string) -> bool {
     path_unify_sepa(dir);
     ok := set_working_directory(dir);
     if ok modify_string(*working_dir, dir);
-
     return ok;
 }
 

@@ -1237,8 +1237,39 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
 
 // }
 
-active_editor: *Editor = null;
+init_editor_buffers :: (files_from_cmdline: [] string) {
+    // log_buffer    = create_readonly_buffer("logs");
+    // logerr_buffer = create_readonly_buffer("errors");
+    active_editor = *editors[0];
+    active_editor.visible = true;
+    if files_from_cmdline.count == 2 {
+        // @Temporary
+        open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
+        open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
 
+        editors[0].visible = true;
+        editors[1].visible = true;
+
+    } else {
+        for filepath: files_from_cmdline {
+            e := *editors[it_index % editors.count];
+            b := open_file_or_create_empty_buffer(e, filepath);
+            change_active_buffer(e, b);
+            
+            e.visible = true;
+        }
+    }
+
+    // @Todo: Don't draw the editor if no active buffer is assigned to
+    for *e: editors {
+        if !e.active_buffer {
+            b := create_or_find_empty_buffer(e);
+            change_active_buffer(e, b);
+        }
+    }
+}
+
+active_editor: *Editor = null;
 editors: [2] Editor;
 buffers: [..] *Buffer;
 
