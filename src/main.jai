@@ -250,28 +250,6 @@ main :: () {
     }
 } @NoProfile
 
-find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
-    assert(buffer.initialized, "buffer: %\n", buffer.*);
-
-    index := find_row_index(buffer, byte_pos);
-    assert(index < row_table.count, "buffer: %\n", buffer.*);
-
-    return row_table[index];
-}
-
-find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
-    if byte_pos == 0 return 0;
-
-    assert(row_table.count != 0);
-    for row, row_index: row_table {
-        if byte_pos <= row.end {
-            return row_index;
-        }
-    }
-
-    return row_table.count-1;
-}
-
 count_utf8_characters :: (str: string) -> s64 {
     chars := 0;
     bytes := 0;
@@ -283,303 +261,8 @@ count_utf8_characters :: (str: string) -> s64 {
     return chars;
 }
 
-byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
-    assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
-
-    row := find_row(buffer, byte_pos);
-    col := 0;
-    pos := row.start;
-    while pos < byte_pos {
-        col += 1;
-        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
-    }
-
-    return col;
-}
-
-get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
-    editor, buffer := get_active_editor_and_buffer();
-
-    if y_is_relative {
-        y += editor.top_offset;
-    }
-
-    approx_index := cast(s64)floor(y / get_line_height());
-    if (approx_index > buffer.row_table.count - 1) || (approx_index < 0) return -1;
-
-    return approx_index;
-}
-
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
     return Simp.prepare_text(font, text);
-}
-
-// @Cleanup: naming
-next_char_byte_offset :: inline (s: string, start: s64) -> s64 {
-    assert(start < s.count); // Do we want to assert this?
-    byte := s[start];
-    return start + 1 + trailingBytesForUTF8[byte];
-}
-
-// @Cleanup: Remove it, because we have the seek_previous_utf8_char or something like that.
-prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
-    if start == 0 return 0;
-
-    ptr := buffer.data + start;
-    ptr -= 1;
-
-    first_bit := ptr.* & 0x80;
-    if first_bit == 0x0 return ptr - buffer.data; // 1 byte length char
-
-    // Cursor (caret) movement is based on characters, not bytes - this issue should never occur!
-    first_2bit := ptr.* & 0xc0;
-    assert(first_2bit != 0xc0, "The start byte (buffer.data+start) is in the middle of a Unicode character.");
-    assert(first_2bit == 0x80, "Invalid UTF-8"); // the first bit check happens above
-
-    bytes := 1;
-    while (ptr.* & 0xc0) == 0x80 && (ptr > buffer.data) {
-        ptr -= 1;
-        bytes += 1;
-        assert(bytes <= 4, "Invalid UTF-8! We expect less than 5 bytes but we got %", bytes); // it's not totally correct
-    }
-
-    assert((ptr.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
-
-    return ptr - buffer.data;
-}
-
-get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Font = null) -> s64 {
-    if cursor.pos == 0 return 0;
-    if cursor.x_cache != -1 return cursor.x_cache;
-
-    // @Speed !!!!!! the prepare_text is so slooow!
-
-    cx := 0;
-    defer cursor.x_cache = cx; // @Temporary
-
-    row := find_row(buffer, cursor.pos);
-    if row.start == cursor.pos return 0;
-
-    s := get_row_as_string(buffer, row);
-    s = slice(s, 0, cursor.pos - row.start);
-
-    if !font then font = r_font;
-    cx = measure_text_width(font, s);
-
-    return cx;
-}
-
-//  @Cleanup: Naming
-find_index_from_right_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
-    assert(start_index > -1 && start_index < s.count);
-
-    cursor := start_index;
-    while cursor >= 0 {
-        if s[cursor] != byte return cursor;
-        cursor -= 1;
-    }
-
-    return -1;
-}
-
-//  @Cleanup: Naming
-find_index_from_left_until_not :: (s: string, byte: u8, start_index: s64 = 0) -> s64  #no_abc {
-    assert(start_index > -1);
-
-    cursor := start_index;
-    while cursor < s.count {
-        if s[cursor] != byte return cursor;
-        cursor += 1;
-    }
-
-    return -1;
-}
-
-first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
-    line_height := get_line_height();
-    start_row: s64 = xx (editor.top_offset / line_height);
-    start_row = clamp(start_row - 1, 0, row_table.count-1);
-
-    return start_row;
-}
-
-last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
-    viewport_h := window_height-footer_height*2; // @Hacky
-
-    line_height := get_line_height();
-    end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);
-    end_row = clamp(end_row+1, 0, row_table.count-1);
-
-    return end_row;
-}
-
-first_visible_row :: inline (editor: *Editor, buffer: *Buffer) -> Row_Info {
-    index := first_visible_row_index(editor, buffer);;
-    
-    return buffer.row_table[index];
-}
-
-last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info {
-    index := last_visible_row_index(editor, buffer);
-
-    return buffer.row_table[index];
-}
-
-get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
-    if !font then font = r_font;
-
-    return row * (font.default_line_spacing + line_height);
-}
-
-count_whitespaces_from_left :: (s: string, $space_character_only := false) -> s64 {
-    count := 0;
-    for c: s {
-        #if space_character_only {
-            if c != #char " " break;
-        } else {
-            if !is_whitespace(c) break;
-        }
-        count += 1;
-    }
-
-    return count;
-}
-
-// @Cleanup: Shorter name
-seek_left_one_utf8_character_byte_pos :: (s: string, _point: int) -> int {
-    point := _point - 1;
-    while point > 0 {
-        c := s[point];
-        if (192 & c) != 128  return point;
-        point -= 1;
-    }
-
-    return 0;
-}
-
-// @Cleanup: Shorter name
-seek_right_one_utf8_character_byte_pos :: (s: string, point: int) -> int {
-    if point == s.count {
-        return point;
-    }
-    return point + 1 + trailingBytesForUTF8[s[point]];
-}
-
-// @Cleanup: Naming
-seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alphanum_char := true) -> int {
-    while point {
-        point = seek_left_one_utf8_character_byte_pos(s, point);
-        if !is_alphanum(s[point]) {
-            #if !include_last_non_alphanum_char {
-                point += 1;
-            }
-            break;
-        }
-    }
-
-    return point;
-}
-
-find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> int, found: bool {
-    if s.count < substring.count  return -1, false;
-
-    for start_index..s.count-substring.count {
-        t := slice(s, it, substring.count);
-        if equal_nocase(t, substring) return it, true;
-    }
-
-    return -1, false;
-}
-
-append_dir_sepa :: inline (path: string) -> string {
-    if ends_with(path, "/") return path;
-    p := alloc_string(path.count+1);
-    memmove(p.data, path.data, path.count);
-    p[p.count-1] = #char "/";
-    return p;
-}
-
-path_unify_sepa :: inline (path: string) {
-    for 0..path.count-1 {
-        if path[it] == #char "\\" {
-            path[it] = #char "/";
-        }
-    }
-}
-
-free_string :: (target: *string) {
-    if target.count && target.data free(target.*);
-    target.data = null;
-    target.count = 0;
-}
-
-modify_string :: (target: *string, new_value: string) {    
-    if target.count free(target.*);
-    target.* = copy_string(new_value);
-}
-
-advance :: (arr: *[] $T, steps := 1) {
-    assert(arr.count - steps > -1 && steps > -1);
-
-    arr.data  += steps;
-    arr.count -= steps;
-}
-
-advance :: (arr: [] $T, steps := 1) -> [] T {
-    assert(arr.count - steps > -1 && steps > -1);
-
-    r: [] T;
-    r.data  = arr.data  + steps;
-    r.count = arr.count - steps;
-
-    return r;
-}
-
-get_range_as_string :: (s: string, range: Range) -> string {
-    return slice(s, range.start, range.end - range.start);
-}
-
-rgba_to_vec4 :: (r: u8, g: u8, b: u8, a: float = 1.0) -> Vector4 {
-    return .{
-        r / 255.0,
-        g / 255.0,
-        b / 255.0,
-        a
-    };
-}
-
-hex_to_vec4 :: (hex: u32) -> Vector4 {
-    r := (hex>>24) & 0xFF;
-    g := (hex>>16) & 0xFF;
-    b := (hex>>8)  & 0xFF;
-    a := (hex>>0)  & 0xFF;
-
-    return .{
-        r / 255.0,
-        g / 255.0,
-        b / 255.0,
-        a / 255.0
-    };
-}
-
-break_by_colon :: (line: string) -> (left: string, right: string) {
-    // left  := line;
-
-    // right := eat_until_space(line);  // 'right' now has everything from the first space to the end of the line.
-    // left.count -= right.count;
-            
-    // right = eat_spaces(right);       // Trim the spaces from 'right'.
-
-    found, left, right := split_from_left(line, ":");
-    if !found return "", "";
-
-    return trim(left), trim(right);
-}
-
-get_parent_dir_path :: (file_path: string) -> string {
-    path := path_strip_filename(file_path);
-    if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
-    return path;
 }
 
 should_descend_into_dir :: (path: string) -> bool {
@@ -627,103 +310,6 @@ should_ignore_path :: (path: string) -> ignore: bool {
     return false;
 }
 
-wait_for_event :: () {
-    // @Todo: Wayland SDL
-    
-    #if OS == .WINDOWS {
-        WaitMessage();
-    }
-
-    #if OS == .LINUX {
-        X11:: #import "X11";
-        xevent: X11.XEvent;
-        while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
-    }
-} @NoProfile
-
-start_file_watcher :: (watcher: *File_Watcher(void)) {
-    VERBOSE_WATCHER :: false;//DEBUG;
-    RECURSIVE_WATCH :: true;
-    // EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.MODIFIED|.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
-    EVENTS_TO_WATCH :: File_Change_Event.ALL_EVENTS & (~(.ATTRIBUTES_CHANGED)); // We don't want to rescan recursively the entire working directory just because we've changed a file's content.
-
-    file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-        if should_ignore_path(change.full_path) {
-            return;
-        }
-        
-        if change.events == .MODIFIED {
-            buffer := find_buffer_by_filepath(change.full_path);
-            if buffer {
-                writetime_from_disk := file_modtime_and_size(change.full_path);
-                r := compare_apollo_times(writetime_from_disk, buffer.last_writetime);
-                
-                buffer.should_reload_from_disk = r != 0;
-            }
-
-            return;
-        }
-        
-        file_browser.scan_requested = true;
-    }
-
-    if !init(
-        watcher, 
-        file_change_callback, 
-        null, 
-        events_to_watch = EVENTS_TO_WATCH,
-        merge_window_seconds = 1.0, 
-        verbose = VERBOSE_WATCHER, 
-        watch_recursively = RECURSIVE_WATCH
-    ) {
-        log_error("Could not initialize watcher");
-        exit(3);
-    }
-
-    dirs_to_watch := string.[get_working_directory()];
-    assert(dirs_to_watch.count > 0);
-
-    ll("Adding folders: %", dirs_to_watch);
-    if !add_directories(watcher, ..dirs_to_watch) {
-        log_error("Could not watch directories %", dirs_to_watch);
-        exit(4);
-    }
-
-    ll("Starting to check % for changes in % directories.", ifx RECURSIVE_WATCH then "recursively" else "", dirs_to_watch);
-
-    // deinit(watcher); // Those handlers are released during shutdown, right?
-}
-
-get_enum_by_name :: ($t: Type, name: string) -> (_enum: t, success: bool) {
-    #insert -> string {
-        b: String_Builder;
-        print_to_builder(*b, "if name == {\n");
-
-        enums := enum_names(t);
-        assert(enums.count > 0, "Please add some enum member to '%'\n", t);
-        
-        for name: enums {
-            key_name := copy_string(name);
-            to_lower_in_place(key_name);
-            print_to_builder(*b, "case \"%\"; return .%, true;\n", key_name, name);
-        }
-
-        print_to_builder(*b, "}\n");
-
-        print_to_builder(*b, "return .%, false;\n", enums[0]);
-
-        return builder_to_string(*b);
-    }
-}
-
-os_path_begins_with :: (path: string, prefix: string) -> bool {
-    #if OS == .WINDOWS {
-        return begins_with_nocase(path, prefix);
-    } else {
-        return begins_with_nocase(path, prefix);
-    }
-}
-
 get_workdir :: () -> string {
     dir := get_working_directory();
     path_unify_sepa(dir);
@@ -739,24 +325,43 @@ set_workdir :: (dir_: string) -> bool {
     return ok;
 }
 
-move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing := -1.0) -> float {
-    if a > b {
-        if amount_decreasing == -1  amount_decreasing = amount_increasing;
-
-        a -= amount_decreasing;
-
-        if a < b  a = b;
-    } else {
-        a += amount_increasing;
-        if a > b  a = b;
-    }
-
-    return a;
-}
-
 ms_since_init :: inline () -> float64 {
     return seconds_since_init() * 1000;
 }
+
+wait_for_event :: () {
+    // @Todo: Wayland SDL
+    #if OS == .WINDOWS {
+        WaitMessage();
+    }
+    #if OS == .LINUX {
+        X11:: #import "X11";
+        xevent: X11.XEvent;
+        while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
+    }
+} @NoProfile
+
+memmove :: inline (destination: *void, source: *void, count: s64) {
+    c_memmove(destination, source, xx count);
+}
+
+zero_memory :: inline (ptr: *void, size: s64) {
+    memset(ptr, 0, size);
+}
+
+Align :: inline (n: $T, $$ PAGE_SIZE: s64) -> T {
+    return (n + PAGE_SIZE-1) & ~(PAGE_SIZE-1);
+}
+
+c_malloc  :: (size: u64) -> *void                               #foreign crt "malloc";
+c_free    :: (memory: *void)                                    #foreign crt "free";
+c_realloc :: (memory: *void, size: u64) -> *void                #foreign crt "realloc";
+c_memmove :: (dest: *void, src: *void, count: u64) -> *void     #foreign crt "memmove";
+
+//////////////////////////////
+// Globals
+
+executable_args: struct { workdir: string; };
 
 window: Window_Type;
 window_width  := 1200;
@@ -774,6 +379,10 @@ frametime: float64;
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
+
+executable_dir: string;
+config_dir:     string;
+working_dir:    string;
 
 footer_height: float;
 line_height := 0.0;    // @Todo
@@ -793,10 +402,6 @@ TAB_SPACE_CHARS :: #run -> string {
 mode := Program_Mode.EDITOR;
 Program_Mode :: enum u8 { EDITOR; WIDGET; };
 
-executable_dir: string;
-config_dir:     string;
-working_dir:    string;
-
 keymap_cfg_section_data: string; // @Todo
 keymap_set:    Keymap_Set;
 core_keymap:   *Keymap;
@@ -809,80 +414,43 @@ cursor_line_indicator := Cursor_Line_Indicator.FILLED;
 Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
 Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
 
-executable_args: struct { workdir: string; };
+////////////////////////////////
+// Debug
 
-Anim :: struct {
-    active: bool;
-    start: float;
-    target: float;
-    started_at: float;
-    duration: float;
+show_debug_info := DEBUG;
+debug_infos: [..] string;
 
-    elapsed: float64;
+PrintDev :: (fmt: string, args: .. Any) #expand {
+    s := tprint(fmt, ..args);
+    array_add(*debug_infos, s); // can we use temporary allocator for dynamic arrays?
+} @PrintLike
+
+ll :: (fmt: string, args: .. Any) #expand {
+    s := tprint(fmt, ..args);
+    log("[%] %", #procedure_name(), s);
+} @PrintLike
+
+MeasureProc :: () #expand {
+    time := seconds_since_init();
+    `defer {
+        print("[%/time] %ms\n", #procedure_name(), (seconds_since_init() - time) * 1000);
+    };
 }
 
 ////////////////////////////////
-//~ Platform
+// Imports
 
-// @Todo: Cleanup
-
-platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []string) -> []string {
-    r := path_chunks;
-    for i: 0..compare_chunks.count-1 {
-        if !path_chunks.count break;
-        if !platform_path_equals(path_chunks[0], compare_chunks[i]) break;
-        r = advance(r, 1);
-    }
-    
-    return r;
-}
-
-#if OS == .WINDOWS {
-    platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
-        return equal_nocase(path_a, path_b);
-    }
-
-    platform_path_begins_with :: inline (path: string, subpath: string) -> bool {
-        return begins_with_nocase(path, subpath);
-    }
-
-    platform_path_contains :: inline (path: string, subpath: string) -> bool {
-        return contains_nocase(path, subpath);
-    }
-
-} else #if OS == .LINUX {
-    platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
-        return path_a == path_b;
-    }
-
-    platform_path_begins_with :: inline (path: string, subpath: string) -> bool {
-        return begins_with(path, subpath);
-    }
-
-    platform_path_contains :: inline (path: string, subpath: string) -> bool {
-        return contains(path, subpath);
-    }
-
-} else {
-    #assert false, "Unsupported OS";
-}
-
-////////////////////////////////
-//~ Imports
-
+#load "common.jai";
+#load "unicode.jai";
 #load "editor.jai";
 #load "editor_control.jai";
 #load "cursor.jai";
-#load "memory.jai";
 #load "draw.jai";
 #load "config.jai";
 #load "color.jai";
 #load "widget.jai";
 #load "lang.jai";
-#load "debug.jai";
 #load "word_completion.jai";
-#load "project.jai";
-#load "utils.jai";
 #load "view.jai";
 #load "font.jai";
 
@@ -892,7 +460,6 @@ platform_skip_matching_path_chunks :: (path_chunks: []string, compare_chunks: []
 #import "String";
 #import "Math";
 #import "Window_Creation";
-#import "Unicode";
 #import "Command_Line";
 #import "Sort";
 #import "Random";
@@ -910,10 +477,8 @@ Hash      :: #import "Hash";
 
 #if OS == .WINDOWS {
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
-
     user32 :: #system_library "user32";
     WaitMessage :: () -> s32 #foreign user32;
-
 } else #if OS == .MACOS || OS == .IOS || OS == .LINUX || OS == .ANDROID {
     crt :: #system_library "libc";
 }

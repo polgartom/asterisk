@@ -251,7 +251,17 @@ Config_Section :: struct {
     subsections: [] string;
 };
 
+#scope_export
+
+DEFAULT_CONFIG_FILE_DATA :: #run read_default_config_data(DEFAULT_CONFIG_FILENAME);
+
 #scope_file
+
+break_by_colon :: (line: string) -> (left: string, right: string) {
+    found, left, right := split_from_left(line, ":");
+    if !found return "", "";
+    return trim(left), trim(right);
+}
 
 read_default_config_data :: (name: string) -> string {
     data := File.read_entire_file(tprint("config/%", name));
@@ -261,78 +271,5 @@ read_default_config_data :: (name: string) -> string {
 }
 
 DEFAULT_CONFIG_FILENAME :: "default.asterisk-config.cfg";
-
-#scope_export
-
-DEFAULT_CONFIG_FILE_DATA :: #run read_default_config_data(DEFAULT_CONFIG_FILENAME);
-
-// #run,stallable {
-//     success := parse_config("Default Config", DEFAULT_CONFIG_FILENAME, DEFAULT_CONFIG_FILE_DATA);
-//     assert(success, "Couldn't parse the default config file '%'!", DEFAULT_CONFIG_FILENAME);
-
-//     DEFAULT_COLOR_MAP = COLOR_MAP;
-// };
-
-// DEFAULT_CONFIG :: #run,stallable -> Config {
-//     config: Config;
-    
-//     success, default_config := parse_config("Default Config", DEFAULT_CONFIG_FILENAME, DEFAULT_CONFIG_FILE_DATA);
-//     assert(success, "Couldn't parse the default config file '%'!", DEFAULT_CONFIG_FILENAME);
-//     assert(!!default_config.keymap_section_data, "keymap_section_data is empty '%'!\n", DEFAULT_CONFIG_FILENAME);
-
-//     DEFAULT_COLOR_MAP = COLOR_MAP;
-    
-//     return default_config;
-// };
-
-#scope_file
-
-// # JBLOW THEME
-// # [Color]
-// # background:                 122521ff
-// # layout_separator:           dddddd1b
-// # text_default:               BDB395ff
-// # text_dimmed:                bbbbbbff
-// # text_selection:             0000ffff
-// # text_highlight:             e3_31_9f_6a
-// # text_under_cursor:          0c1021ff
-// # text_under_inactive_cursor: fbde2da0
-// # cursor:                     86e08fff
-// # cursor_inactive:            3a3a3aff
-// # cursor_line_background:     cccccc0a
-// # footer_background:          b0a070ff
-// # footer_background_darken:   8b7c4dff
-// # footer_text:                000000ff
-// # lang_token_keyword: CCCCCCff
-// # lang_token_directive: CCCCCCff
-// # lang_token_numeric_value: B7CADDff
-// # lang_token_comment: 31B72Cff
-// # lang_token_string_literal: 2CA198ff
-// # lang_token_procedure_call: BDB395ff
-// # lang_token_escaped: CCCCCCff
-
-// # MODERN THEME (DARK)
-// # [Color]
-// # background:                 1A1A1AFF
-// # layout_separator:           0C1021FF
-// # text_default:               C0B9B9FF
-// # text_dimmed:                7C7C7CFF
-// # text_selection:             263238FF
-// # text_highlight:             FFEB3B_ff
-// # text_under_cursor:          455A64FF
-// # text_under_inactive_cursor: 455A64FF
-// # cursor:                     00bbecFF
-// # cursor_inactive:            9E9E9EFF
-// # cursor_line_background:     6a6a6a20
-// # footer_background:          263238FF
-// # footer_background_darken:   1C262BFF
-// # footer_text:                FFFFFFFF
-// # lang_token_keyword:         FF5252FF
-// # lang_token_directive:       F48FB1FF
-// # lang_token_numeric_value:   FF9800FF
-// # lang_token_comment:         9E9E9EFF
-// # lang_token_string_literal:  8BC34AFF
-// # lang_token_procedure_call:  00BCD4FF
-// # lang_token_escaped:         FF5722FF
 
 #import "Text_File_Handler";

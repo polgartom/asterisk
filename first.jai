@@ -175,8 +175,8 @@ maybe_add_editor_command :: (decl: *Code_Declaration, note: *Code_Note) {
         }
 
         if !cmd.name cmd.name = cmd.proc_name;
-        cmd.name = key_to_user_friendly_string(cmd.name, camelcase=true,, temp);
-        cmd.name = tprint("%", cmd.name);
+        // cmd.name = key_to_user_friendly_string(cmd.name, camelcase=true,, temp);
+        // cmd.name = tprint("%", cmd.name);
 
         array_add(*editor_commands, cmd);
     }
@@ -201,11 +201,6 @@ set_icon :: (message: *Message) {
     }
 }
 
-ll :: (fmt: string, args: .. Any) #expand {
-    s := tprint(fmt, ..args);
-    log("[%] %", #procedure_name(), s);
-} @PrintLike
-
 plugins: [..] *Metaprogram_Plugin;
 verbose := false;
 
@@ -222,7 +217,7 @@ injected_editor_commands: bool;
 
 ICON_FILEPATH :: "data/icon/icon.ico";
 
-#import,file "src/utils.jai";
+#load "src/common.jai";
 
 String :: #import "String";
 #import "Compiler";

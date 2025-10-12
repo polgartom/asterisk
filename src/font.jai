@@ -1,4 +1,3 @@
-
 init_fonts :: () {
     r_font       = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size);
     r_font_sm    = Simp.get_font_at_size(cast([]u8)BAKED_FONT_DEFAULT.data, font_size_sm);
@@ -24,6 +23,16 @@ fontawesome_utf32_to_utf8 :: (character: u32) -> string {
     zero_memory(s.data, 4);
     character_utf32_to_utf8(character, *s);
     return s;
+}
+
+fnt_get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) -> float32 {
+    if !font then font = r_font;
+    return row * (font.default_line_spacing + line_height);
+}
+
+em :: (x: float, font: *Simp.Dynamic_Font) -> float {
+    if font return font.em_width * x;
+    return 1;  // In case we get null fonts from the user.
 }
 
 font_size: u8 = 14;

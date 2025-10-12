@@ -1,8 +1,3 @@
-
-
-////////////////////////////////
-//~ Rect
-
 expand :: (rect: Rect, amount: float) -> Rect {
     r := rect;
     r.x -= amount;
@@ -154,76 +149,33 @@ intersect :: (a: Rect, b: Rect) -> Rect {
 ////////////////////////////////
 //~ 
 
-Alignment :: enum { none; top; left; right; center; bottom; };
+// Alignment :: enum { none; top; left; right; center; bottom; };
 
+// @Cleanup better name
 font_calc_y_center_insert_point :: (rect: Rect, character_height: int) -> float {
     return rect.y + rect.h*.5 - character_height*.5;
 }
 
-em :: (x: float, font: *Simp.Dynamic_Font) -> float {
-    if font return font.em_width * x;
-    return 1;  // In case we get null fonts from the user.
-}
+//////////////////
+// Animation
 
-push_scissor :: (_rect: Rect) {
-    rect := _rect;
-
-    if scissor_stack {
-        top := peek_pointer(scissor_stack);
-        rect = intersect(top.*, rect);
-    }
-
-    set_scissor(rect);
-    array_add(*scissor_stack, rect);
-}
-
-pop_scissor :: () {
-    pop(*scissor_stack);
-
-    if scissor_stack {
-        r := peek(scissor_stack);
-        set_scissor(r);
+move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing := -1.0) -> float {
+    if a > b {
+        if amount_decreasing == -1  amount_decreasing = amount_increasing;
+        a -= amount_decreasing;
+        if a < b  a = b;
     } else {
-        Simp.clear_scissor();
+        a += amount_increasing;
+        if a > b  a = b;
     }
+    return a;
 }
 
-set_scissor :: (r: Rect) {
-    x0 := cast(s32) r.x;
-    y0 := cast(s32) r.y;
-    x1 := cast(s32) (r.x + r.w);
-    y1 := cast(s32) (r.y + r.h);
-
-    Simp.set_scissor(x0, y0, x1, y1);
-}
-
-scissor_stack: [..] Rect;
-
-////////////////////////////////
-//~ Range
-
-is_overlap :: (r1: Range, r2: Range) -> bool {
-    if r1.a > r2.b || r2.a > r1.a return false;
-    return true;
-}
-
-get_overlap_range :: (r1: Range, r2: Range) -> bool, Range {
-    if !is_overlap(r1, r2) return false, .{0,0};
-
-    return true, .{max(r1.a, r2.a), min(r1.b, r2.b)};
-}
-
-Range :: struct {
-    start: s64;
-    end:   s64;
-
-    #place start; 
-    a: s64; b: s64;
-}
-
-////////////////////////////////
-//~ Viewport
-
-Viewport :: struct {
-    
+Anim :: struct {
+    active: bool;
+    start: float;
+    target: float;
+    started_at: float;
+    duration: float;
+    elapsed: float64;
 }

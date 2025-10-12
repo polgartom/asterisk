@@ -1051,9 +1051,9 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
 
     // Viewport (Y)
 
-    y_threshold := get_line_height() * 6;
+    y_threshold := fnt_get_line_height() * 6;
     
-    my := get_line_height(find_row_index(buffer, editor.cursor.pos));
+    my := fnt_get_line_height(find_row_index(buffer, editor.cursor.pos));
     my = r.h - my + editor.top_offset;
 
     target = editor.top_offset;
@@ -1082,6 +1082,133 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     }
 
     redraw_requested = true;
+}
+
+find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
+    assert(buffer.initialized, "buffer: %\n", buffer.*);
+
+    index := find_row_index(buffer, byte_pos);
+    assert(index < row_table.count, "buffer: %\n", buffer.*);
+
+    return row_table[index];
+}
+
+find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
+    if byte_pos == 0 return 0;
+
+    assert(row_table.count != 0);
+    for row, row_index: row_table {
+        if byte_pos <= row.end {
+            return row_index;
+        }
+    }
+
+    return row_table.count-1;
+}
+
+first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
+    line_height := fnt_get_line_height();
+    start_row: s64 = xx (editor.top_offset / line_height);
+    start_row = clamp(start_row - 1, 0, row_table.count-1);
+
+    return start_row;
+}
+
+last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
+    viewport_h := window_height-footer_height*2; // @Hacky
+
+    line_height := fnt_get_line_height();
+    end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);
+    end_row = clamp(end_row+1, 0, row_table.count-1);
+
+    return end_row;
+}
+
+first_visible_row :: inline (editor: *Editor, buffer: *Buffer) -> Row_Info {
+    index := first_visible_row_index(editor, buffer);;
+    
+    return buffer.row_table[index];
+}
+
+last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info {
+    index := last_visible_row_index(editor, buffer);
+
+    return buffer.row_table[index];
+}
+
+byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
+    assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
+
+    row := find_row(buffer, byte_pos);
+    col := 0;
+    pos := row.start;
+    while pos < byte_pos {
+        col += 1;
+        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
+    }
+
+    return col;
+}
+
+get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
+    editor, buffer := get_active_editor_and_buffer();
+
+    if y_is_relative {
+        y += editor.top_offset;
+    }
+
+    approx_index := cast(s64)floor(y / fnt_get_line_height());
+    if (approx_index > buffer.row_table.count - 1) || (approx_index < 0) return -1;
+
+    return approx_index;
+}
+
+get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Font = null) -> s64 {
+    if cursor.pos == 0 return 0;
+    if cursor.x_cache != -1 return cursor.x_cache;
+
+    // @Speed !!!!!! the prepare_text is so slooow!
+
+    cx := 0;
+    defer cursor.x_cache = cx; // @Temporary
+
+    row := find_row(buffer, cursor.pos);
+    if row.start == cursor.pos return 0;
+
+    s := get_row_as_string(buffer, row);
+    s = slice(s, 0, cursor.pos - row.start);
+
+    if !font then font = r_font;
+    cx = measure_text_width(font, s);
+
+    return cx;
+}
+
+// @Cleanup: Remove it, because we have the seek_previous_utf8_char or something like that.
+prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
+    if start == 0 return 0;
+
+    ptr := buffer.data + start;
+    ptr -= 1;
+
+    first_bit := ptr.* & 0x80;
+    if first_bit == 0x0 return ptr - buffer.data; // 1 byte length char
+
+    // Cursor (caret) movement is based on characters, not bytes - this issue should never occur!
+    first_2bit := ptr.* & 0xc0;
+    assert(first_2bit != 0xc0, "The start byte (buffer.data+start) is in the middle of a Unicode character.");
+    assert(first_2bit == 0x80, "Invalid UTF-8"); // the first bit check happens above
+
+    bytes := 1;
+    while (ptr.* & 0xc0) == 0x80 && (ptr > buffer.data) {
+        ptr -= 1;
+        bytes += 1;
+        assert(bytes <= 4, "Invalid UTF-8! We expect less than 5 bytes but we got %", bytes); // it's not totally correct
+    }
+
+    assert((ptr.* & 0xc0) == 0xc0, "No more characters are left, and we don't have the byte indicating the Unicode character's byte length.\n");
+
+    return ptr - buffer.data;
 }
 
 // logbuf :: (text: string) {

@@ -120,7 +120,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         avg_row_render_time: float64 = 0.0;
         rendered_rows := 0;
 
-        line_height := get_line_height();
+        line_height := fnt_get_line_height();
 
         start_row: s64 = xx (top_offset / line_height);
         start_row = clamp(start_row - 1, 0, row_table.count-1);
@@ -244,7 +244,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     cw := em(1.0, r_font);
     ch := r_font.character_height;
 
-    bottom := (r.h + r.y) - get_line_height(row_index + 1) + editor.top_offset;
+    bottom := (r.h + r.y) - fnt_get_line_height(row_index + 1) + editor.top_offset;
 
     bg_color := map_color_to_vec4(.CURSOR);
     fg_color := map_color_to_vec4(.TEXT_UNDER_CURSOR);
@@ -312,7 +312,7 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     left_pad := cast(float32) r_font.em_width;
 
     ch := r_font.character_height;
-    line_height := get_line_height();
+    line_height := fnt_get_line_height();
 
     sel_start, sel_end := selected_range(c);
     start_row := find_row_index(buffer, sel_start);
@@ -701,7 +701,7 @@ draw_find_text_dialog :: () {
     rs_i := first_visible_row_index(editor, buffer);
     re_i := last_visible_row_index(editor, buffer);
 
-    line_height := get_line_height();
+    line_height := fnt_get_line_height();
     ch := r_font.character_height;
     color := map_color_to_vec4(.TEXT_HIGHLIGHT);
 
@@ -812,7 +812,7 @@ draw_global_debug_info :: (r: Rect) {
 
     row := 1;
     max := 0;
-    line_height := get_line_height();
+    line_height := fnt_get_line_height();
     bottom: float32 = footer_height + line_height;
 
     for #v2 < debug_infos {
@@ -1045,12 +1045,12 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
         if row_index != -1 {
             row_str := get_row_as_string(buffer, row_index);
             width := measure_text_width(r_font, row_str);
-            bottom  := (r.h+r.y) - get_line_height(row_index+1) + editor.top_offset;
+            bottom  := (r.h+r.y) - fnt_get_line_height(row_index+1) + editor.top_offset;
             ch      := r_font.character_height;
             Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
         }
 
-        approx_row := cast(s64)floor((my+editor.top_offset) / get_line_height());
+        approx_row := cast(s64)floor((my+editor.top_offset) / fnt_get_line_height());
 
         first := first_visible_row_index(editor, buffer);
         last  := last_visible_row_index(editor, buffer);
@@ -1059,7 +1059,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
                 s := get_row_as_string(buffer, i);
 
                 ch      := r_font.character_height;
-                bottom  := (r.h+r.y) - get_line_height(approx_row+1) + editor.top_offset;
+                bottom  := (r.h+r.y) - fnt_get_line_height(approx_row+1) + editor.top_offset;
                 // width   := Simp.prepare_text(r_font, s);
                 // Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
 
@@ -1097,3 +1097,36 @@ draw_quad :: (r: Rect, color: Vector4) {
     draw_quad(p0, p1, p2, p3, color);
 }
 
+push_scissor :: (_rect: Rect) {
+    rect := _rect;
+
+    if scissor_stack {
+        top := peek_pointer(scissor_stack);
+        rect = intersect(top.*, rect);
+    }
+
+    set_scissor(rect);
+    array_add(*scissor_stack, rect);
+}
+
+pop_scissor :: () {
+    pop(*scissor_stack);
+
+    if scissor_stack {
+        r := peek(scissor_stack);
+        set_scissor(r);
+    } else {
+        Simp.clear_scissor();
+    }
+}
+
+set_scissor :: (r: Rect) {
+    x0 := cast(s32) r.x;
+    y0 := cast(s32) r.y;
+    x1 := cast(s32) (r.x + r.w);
+    y1 := cast(s32) (r.y + r.h);
+
+    Simp.set_scissor(x0, y0, x1, y1);
+}
+
+scissor_stack: [..] Rect;
