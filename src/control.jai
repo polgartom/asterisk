@@ -17,7 +17,6 @@ Quit :: () {
 
     // @Todo: Linux
     #if OS == .WINDOWS {
-        // @Todo @Bug This won't work because the WM_QUIT is sent and handled (probably), so the MessageBoxW will return 0!
         modal_text := utf8_to_wide("Some buffers are unsaved, do you want to save them?"); // @Cleanup: Can we do this at compile-time?
         result := MessageBoxW(window, modal_text, modal_text, MB_YESNOCANCEL | MB_ICONWARNING);
         if result == {

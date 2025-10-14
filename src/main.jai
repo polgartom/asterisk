@@ -400,7 +400,7 @@ MeasureProc :: () #expand {
 #load "common.jai";
 #load "unicode.jai";
 #load "editor.jai";
-#load "editor_control.jai";
+#load "control.jai";
 #load "cursor.jai";
 #load "draw.jai";
 #load "config.jai";
