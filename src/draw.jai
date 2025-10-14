@@ -555,17 +555,17 @@ draw_find_global_text_dialog :: () {
     ed_r := active_editor.rect_for_draw;
     
     theme := Text_Input.DEFAULT_THEME;
-    theme.bg_color = #run hex_to_vec4(0x1a1a1a_ff);
-    theme.fg_color = #run hex_to_vec4(0xABABAB_ff);
-    theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
-    theme.placeholder_color = #run hex_to_vec4(0xABABAB_ff);
+    theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
+    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
+    theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
     //if process {
         //theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
     //}
 
-    w := 400.0; // @Tempoary
+    w := window_width * 0.5 - em(2.0, font); // @Tempoary
     k := window_height * .2;
 
     h := cast(float, font.character_height * 2.0);
@@ -605,8 +605,8 @@ draw_find_global_text_dialog :: () {
     list_rect.h = 1.5*k;
 
     linp_theme := List_Input.DEFAULT_THEME;
-    linp_theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
-    linp_theme.current_item_bg_color = #run whiten(hex_to_vec4(0x101520_ff), .05);
+    linp_theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x3a_4a_7a_8a);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
 
     if fgt_input.typed {

@@ -38,7 +38,6 @@ update_find_global_text_dialog :: () {
             if (error_string.count) {
                 log_error("PROCESS STDERR:\n%\n", error_string);
             }
-
             output_string_to_options(output_string, eof);
         }
     }
@@ -50,7 +49,7 @@ output_string_to_options :: (out_str: string, eof: bool) {
     using find_global_text_dialog;
     
     if !out_str.count return;
-    
+
     remainder := join(parser_buffer, out_str, separator="",, temp);
     while remainder {
         found, left, right := split_from_left(remainder, #char "\n");
@@ -71,7 +70,13 @@ output_string_to_options :: (out_str: string, eof: bool) {
         if slices.count < 3 continue;
 
         file := slices[0];
+        //line_no := slices[1];
         path_overwrite_separators(file, #char "/");
+
+        t := slices[2];
+        t2 := trim(t);
+        memmove(t.data, t2.data, t2.count);
+        line.count -= t2.data-t.data;
 
         opt := array_add(*options);
         modify_string(*opt.label, line);

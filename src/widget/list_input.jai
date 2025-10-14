@@ -137,10 +137,12 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
         _y: s64 = xx (y+ch*.25);
         if opt.label_prefix {
             ts := opt.label_prefix_styled;
+            if !ts.font_override ts.font_override = font;
             draw_text(_x + ts.x_offset, _y + ts.y_offset, ts);
         }
         
         ts := opt.label_styled;
+        if !ts.font_override ts.font_override = font;
         draw_text(_x + ts.x_offset, _y + ts.y_offset, ts);
     }
 
