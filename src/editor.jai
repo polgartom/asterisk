@@ -393,7 +393,7 @@ slice :: inline (buffer: *Buffer, start_ptr: *u8, end_ptr: *u8) -> string {
 to_string :: inline (buffer: *Buffer) -> string {
     s: string = ---;
     s.count = buffer.count;
-    s.data = buffer.data;
+    s.data  = buffer.data;
     return s;
 }
 
@@ -406,7 +406,6 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     if desired_size >= buffer.allocated {
         new_size := buffer.allocated + desired_size;
         new_size  = Align(new_size, BUFFER_PAGE_SIZE);
-
         new_data := cast(*u8)c_malloc(xx new_size);
         assert(new_data != null);
         zero_memory(new_data, new_size);
@@ -421,7 +420,6 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
 
         {
             // Allocates colors
-
             new_colors_data := cast(*Color)c_malloc(xx new_size);
             assert(new_colors_data != null);
             memset(new_colors_data, cast(u8)Color.TEXT_DEFAULT, buffer.allocated);
@@ -463,24 +461,19 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
 batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
     assert(history_index >= 0);
     assert(history_index < history.count);
-    
-    h := history[history_index];
 
+    h := history[history_index];
     batch: [] Buffer_History;
     batch.data = history.data + history_index;
     batch.count = 1;
-
+    
     if h.type == .INSERT {
-        should_alphanum := is_alphanum(h.text[0]);
-        start_index := history_index;
-        list := array_view(history, 0, history_index);
+        expect_alphanum := is_alphanum(h.text[0]);
+        start_index     := history_index;
+        list            := array_view(history, 0, history_index);
         for #v2 < list {
             if it.type != h.type break;
-            if should_alphanum {
-                if !is_alphanum(it.text[0]) break;
-            } else {
-                if is_alphanum(it.text[0]) break;
-            }
+            if expect_alphanum ^ is_alphanum(it.text[0]) break;
             start_index = it_index;
         }
 
@@ -489,18 +482,14 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         nochars := utf8_character_count(h.text);
         if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
         
-        should_alphanum := is_alphanum(h.text[0]);
-        start_index := history_index;
-        list := array_view(history, 0, history_index);
+        expect_alphanum := is_alphanum(h.text[0]);
+        start_index     := history_index;
+        list            := array_view(history, 0, history_index);
         for #v2 < list {
             if it.type != h.type break;
             nochars = utf8_character_count(it.text);
             if nochars != 1 break;
-            if should_alphanum {
-                if !is_alphanum(it.text[0]) break;
-            } else {
-                if is_alphanum(it.text[0]) break;
-            }
+            if expect_alphanum ^ is_alphanum(it.text[0]) break;
             start_index = it_index;
         }
 
@@ -513,48 +502,36 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
 batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
     assert(history_index >= 0);
     assert(history_index < history.count);
-    
-    h := history[history_index];
 
+    h := history[history_index];
     batch: [] Buffer_History;
     batch.data = history.data + history_index;
     batch.count = 1;
 
     if h.type == .INSERT {
-        should_alphanum := is_alphanum(h.text[0]);
-        end_index := history_index;
-        list := advance(history, history_index);
-        
+        expect_alphanum := is_alphanum(h.text[0]);
+        end_index       := history_index;
+        list            := advance(history, history_index);
         for list {
             if it.type != h.type break;
-            if should_alphanum {
-                if !is_alphanum(it.text[0]) break;
-            } else {
-                if is_alphanum(it.text[0]) break;
-            }
+            if expect_alphanum ^ is_alphanum(it.text[0]) break;
             end_index += 1;
         }
-
         batch = array_view(history, history_index, end_index-history_index);
     } else if h.type == .DELETE {
         nochars := utf8_character_count(h.text);
         if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
     
-        should_alphanum := is_alphanum(h.text[0]);
-        end_index := history_index;
-        list := advance(history, history_index);
+        expect_alphanum := is_alphanum(h.text[0]);
+        end_index       := history_index;
+        list            := advance(history, history_index);
         for list {
             if it.type != h.type break;
             nochars = utf8_character_count(it.text);
             if nochars != 1 break;
-            if should_alphanum {
-                if !is_alphanum(it.text[0]) break;
-            } else {
-                if is_alphanum(it.text[0]) break;
-            }
+            if expect_alphanum ^ is_alphanum(it.text[0]) break;
             end_index += 1;
         }
-
         batch = array_view(history, history_index, end_index-history_index);
     }
 
@@ -577,10 +554,8 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                 }
 
                 shift_left(editor, buffer, to, from);
-
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
-
                 history_index -= 1;
 
             case .DELETE;
@@ -590,12 +565,10 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                     reset_history(buffer);
                     return;
                 }
-
-                insert_text_at(editor, buffer, to, h.text, history=false);
                 
+                insert_text_at(editor, buffer, to, h.text, history=false);
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
-
                 history_index -= 1;
 
             case .REPLACE;
@@ -608,11 +581,9 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                 }
 
                 replace_text_at(editor, buffer, Range.{start, end}, h.old_text, history=false);
-                
                 editor.cursor = h.cursor;
                 clamp_cursor(*editor.cursor, buffer.count);
                 editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
-
                 history_index -= 1;
 
                 // We don't want to change these type of undos
@@ -638,11 +609,9 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 }
 
                 insert_text_at(editor, buffer, to, h.text, history=false);
-
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to + h.text.count, horizontal=true);
                 Clamp(*editor.cursor.pos, 0, buffer.count);
-
                 history_index += 1;
 
             case .DELETE;
@@ -656,11 +625,9 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 }
 
                 shift_left(editor, buffer, to, from);
-
                 editor.cursor = h.cursor;
                 set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
                 Clamp(*editor.cursor.pos, 0, buffer.count);
-
                 history_index += 1;
 
             case .REPLACE;
@@ -674,13 +641,11 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 }
 
                 replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
-                
                 editor.cursor = h.cursor;
                 clamp_cursor(*editor.cursor, buffer.count);
                 editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
-
                 history_index += 1;
-
+                
                 // We don't want to change these type of redos
 
             case .UNDEFINED;
@@ -788,16 +753,12 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             defer free(_input);
 
             normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
-            
             spaces := talloc_string(tab_size);
             for spaces { spaces[it_index] = " "; } 
             final_text := replace(_input, "\t", spaces);
             defer free(final_text);
-
             insert_text_at(editor, buffer, 0, final_text, history=false);
-
             buffer.unsaved = false;
-
             buffer.last_writetime = file_modtime_and_size(filepath);
         }
 
@@ -819,14 +780,10 @@ buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
     if input {
         normalize_line_endings(*input); // Converts any \r\n into \n, overwriting the original data.
         replace_text_at(editor, buffer, .{start=0, end=buffer.count}, input, history=true);
-        
         unsaved = false; // Because this is the up to date version of the buffer
-
         last_writetime = file_modtime_and_size(filepath);
     }
-
     commit_buffer_changes(buffer, force=true);
-
     return true;
 }
 
@@ -847,7 +804,6 @@ buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
     }
 
     unsaved = false;
-
     exists_on_disk = true;
     last_writetime = file_modtime_and_size(filepath);
 
@@ -858,10 +814,8 @@ save_buffer :: (using buffer: *Buffer) -> bool {
     if !filepath {
         path, ok := dialog_get_save_file_name();
         if !ok return false;
-
         modify_string(*filepath, path);
         path_unify_sepa(filepath);
-        
         modify_string(*filepath_os_sepa, path);
     }
 
@@ -890,19 +844,16 @@ close_buffer :: (buffer: *Buffer) {
     FindNewBuffer :: (e: *Editor) -> *Buffer {
         for b: buffers {
             if b == e.active_buffer continue;
-
             if b.initialized {
                 if b.exists_on_disk {
                     return b;
                 }
-
                 editor_uses_the_buffer := false;
                 for editors {
                     if it.active_buffer == b {
                         editor_uses_the_buffer = true;
                     }
                 }
-
                 if !editor_uses_the_buffer return b;
             }
         }
@@ -914,7 +865,6 @@ close_buffer :: (buffer: *Buffer) {
         if e.active_buffer == buffer {
             b := FindNewBuffer(e);
             commit_buffer_changes(b, force=true);
-            
             change_active_buffer(e, b);
         }
     }
@@ -956,7 +906,6 @@ buffer_end :: inline (buffer: *Buffer) -> *u8 {
 
 get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     assert(active_editor != null && active_editor.active_buffer != null);
-    
     return active_editor, active_editor.active_buffer;
 }
 
@@ -971,7 +920,6 @@ create_buffer :: () -> *Buffer {
     
     buffer := New(Buffer);
     buffer.id = id;
-    
     array_add(*buffers, buffer);
 
     return buffer;
@@ -987,7 +935,6 @@ create_readonly_buffer :: (name: string) -> *Buffer {
     fmt_name := sprint("* % *", name);
     defer free(fmt_name);
     modify_string(*b.name, fmt_name);
-
     commit_buffer_changes(b, true);
 
     return b;
@@ -996,9 +943,7 @@ create_readonly_buffer :: (name: string) -> *Buffer {
 change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
     current_buffer := editor.active_buffer;
     if current_buffer == next_buffer return;
-
     editor_index := get_editor_index(editor);
-
     if current_buffer {
         current_buffer.cursor_backup[editor_index] = editor.cursor; // Backing up the current cursor
     }
@@ -1020,9 +965,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     if r.w == 0 || r.h == 0 return;
     
     // Viewport (X)
-
     x_threshold := em(1.0, r_font) * 2;
-
     mx := get_cursor_x(buffer, *editor.cursor);
     mx = cast(s64)(mx - editor.left_offset - r.w);
 
@@ -1042,19 +985,15 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             anim_x.target = target;
             anim_x.duration = animation_duration;
             anim_x.started_at = cast(float) current_time;
-
             editor.x_scroll_anim = anim_x;        
         } else {
             editor.left_offset = target;
-        
             editor.x_scroll_anim.active = false;
         }
     }
 
     // Viewport (Y)
-
     y_threshold := fnt_get_line_height() * 6;
-    
     my := fnt_get_line_height(find_row_index(buffer, editor.cursor.pos));
     my = r.h - my + editor.top_offset;
 
@@ -1074,11 +1013,9 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             anim_y.target = target;
             anim_y.duration = animation_duration;
             anim_y.started_at = cast(float)current_time;
-
             editor.y_scroll_anim = anim_y;
         } else {
             editor.top_offset = target;
-
             editor.y_scroll_anim.active = false;
         }
     }
@@ -1088,23 +1025,19 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {
     assert(buffer.initialized, "buffer: %\n", buffer.*);
-
     index := find_row_index(buffer, byte_pos);
     assert(index < row_table.count, "buffer: %\n", buffer.*);
-
     return row_table[index];
 }
 
 find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
     if byte_pos == 0 return 0;
-
     assert(row_table.count != 0);
     for row, row_index: row_table {
         if byte_pos <= row.end {
             return row_index;
         }
     }
-
     return row_table.count-1;
 }
 
@@ -1112,35 +1045,29 @@ first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s6
     line_height := fnt_get_line_height();
     start_row: s64 = xx (editor.top_offset / line_height);
     start_row = clamp(start_row - 1, 0, row_table.count-1);
-
     return start_row;
 }
 
 last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
     viewport_h := window_height-footer_height*2; // @Hacky
-
     line_height := fnt_get_line_height();
     end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);
     end_row = clamp(end_row+1, 0, row_table.count-1);
-
     return end_row;
 }
 
 first_visible_row :: inline (editor: *Editor, buffer: *Buffer) -> Row_Info {
     index := first_visible_row_index(editor, buffer);;
-    
     return buffer.row_table[index];
 }
 
 last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info {
     index := last_visible_row_index(editor, buffer);
-
     return buffer.row_table[index];
 }
 
 byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
-
     row := find_row(buffer, byte_pos);
     col := 0;
     pos := row.start;
@@ -1148,20 +1075,16 @@ byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
         col += 1;
         pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
     }
-
     return col;
 }
 
 get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
     editor, buffer := get_active_editor_and_buffer();
-
     if y_is_relative {
         y += editor.top_offset;
     }
-
     approx_index := cast(s64)floor(y / fnt_get_line_height());
     if (approx_index > buffer.row_table.count - 1) || (approx_index < 0) return -1;
-
     return approx_index;
 }
 
@@ -1173,7 +1096,6 @@ get_cursor_x :: inline (buffer: *Buffer, cursor: *Cursor, font: *Simp.Dynamic_Fo
 
     cx := 0;
     defer cursor.x_cache = cx; // @Temporary
-
     row := find_row(buffer, cursor.pos);
     if row.start == cursor.pos return 0;
 
@@ -1282,14 +1204,11 @@ BUFFER_PAGE_SIZE :: 4096;
 
 Editor :: struct {
     active_buffer: *Buffer;
-
     top_offset  := 0.0;
     left_offset := 0.0;
-
     cursor: Cursor;
     y_scroll_anim: Anim;
     x_scroll_anim: Anim;
-
     rect_for_draw: Rect;
     visible := false;
 }
@@ -1301,31 +1220,25 @@ Buffer :: struct {
     count:     s64;
     allocated: s64;
 
-    name: string;
-    readonly := false;
-
-    history: [..] Buffer_History;
-    history_index: s64 = -1;
-
-    cursor_backup: [editors.count] Cursor;
-
-    colors: [] Color;
-
+    initialized := false;
     dirty := false;
     unsaved := false;
-    modtime: float64;
+    readonly := false;
+    should_reload_from_disk := false;
+    exists_on_disk := false;
 
+    colors: [] Color;
     row_table: [..] Row_Info;
-
+    cursor_backup: [editors.count] Cursor;
+    history: [..] Buffer_History;
+    history_index: s64 = -1;
+    language: Language = .PLAIN_TEXT; // @Todo: It's mainly for the system buffers like logs or console output etc..
+    
+    name: string;
     filepath: string;
     filepath_os_sepa: string; // keep this for comparisons
-    exists_on_disk: bool;
+    modtime: float64;
     last_writetime: Apollo_Time;
-    should_reload_from_disk: bool;
-
-    // @Todo: It's mainly for the system buffers like logs or console output etc..
-    language: Language = .PLAIN_TEXT;
-    initialized := false;
 
     // For measurements
     tokenization_time: float64 = 0.0;
@@ -1338,7 +1251,6 @@ Buffer_History :: struct {
     range: Range;
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
-    
     modtime: float64;
 
     Type :: enum u8 {

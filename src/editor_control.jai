@@ -1,9 +1,9 @@
 // [Core]
 
 Quit :: () {
-
     should_open_dialog := false;
     for buffers {
+        log("> unsaved: %\n", it.unsaved);
         if it.unsaved {
             should_open_dialog = true;
             break;
@@ -17,19 +17,17 @@ Quit :: () {
 
     // @Todo: Linux
     #if OS == .WINDOWS {
-        Win :: #import "Windows";
-        U :: #import "Windows_Utf8";
-        
-        modal_text := U.utf8_to_wide("Some buffers are unsaved, do you want to save them?"); // @Cleanup: Can we do this at compile-time?
-        
-        result := Win.MessageBoxW(window, modal_text, modal_text, Win.MB_YESNOCANCEL | Win.MB_ICONWARNING);
+        // @Todo @Bug This won't work because the WM_QUIT is sent and handled (probably), so the MessageBoxW will return 0!
+        modal_text := utf8_to_wide("Some buffers are unsaved, do you want to save them?"); // @Cleanup: Can we do this at compile-time?
+        result := MessageBoxW(window, modal_text, modal_text, MB_YESNOCANCEL | MB_ICONWARNING);
+        log("result: % ; text: %\n", result);
         if result == {
-            case Win.IDYES;
-                    for buffers {
-                        if it.unsaved then save_buffer(it);
-                    }
-            case Win.IDNO;      // We don't want to save the buffer so close it!
-            case Win.IDCANCEL; 
+            case IDYES;
+                for buffers {
+                    if it.unsaved then save_buffer(it);
+                }
+            case IDNO;      // We don't want to save the buffer so close it!
+            case IDCANCEL; 
                 return;         // We don't want to close the buffer!
         };
     }

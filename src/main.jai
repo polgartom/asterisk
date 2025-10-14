@@ -113,8 +113,8 @@ main :: () {
             register_widget_event(event);
 
             if event.type == .QUIT {
+                // Show the save or discard file message!
                 Quit();
-                break;
             }
 
             // This prevents some crazy situations like those in Adobe Premiere Pro. For example,
@@ -192,6 +192,13 @@ main :: () {
         }
 
         draw_frame();
+
+        // if 1 {
+        //     c := map_color_to_vec4(.BACKGROUND);
+        //     Simp.clear_render_target(c.x, c.y, c.z, c.w);
+        //     draw_global_debug_info(make_rect(0,0,window_width, window_height));
+        // }
+        // swap_buffers();
         
         array_reset(*debug_infos);
         reset_temporary_storage();

@@ -22,7 +22,7 @@ Text input:
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
     
-- Why does junk history accumulate when Ctrl+Enter is pressed?
+- Why does junk history accumulate when Ctrl+Enter is pressed? --->> !because we insert texts individually, see InsertLine() and InsertLineBelow() for example
 
 ------------------------------------------------
 
