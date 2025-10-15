@@ -42,6 +42,16 @@ whiten :: (color: Vector4, amount: float) -> Vector4 {
     return result;
 }
 
+is_bright :: (color: Vector4) -> bool {
+    // color.rgb in 0..1 range
+    r := color.x;
+    g := color.y;
+    b := color.z;
+
+    luminance := 0.2126*r + 0.7152*g + 0.0722*b;
+    return luminance > 0.5;
+}
+
 COLOR_MAP_SIZE :: #run enum_highest_value(Color) + 1;
 COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 

@@ -226,8 +226,10 @@ uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    vec4 texture_sample = texture(text_sampler, TextureCoords);
-    color = vec4(iterated_color.xyz, texture_sample.a * iterated_color.a); // text_color * texture_sample;
+    float a = pow(texture(text_sampler, TextureCoords).a, 1.0/2.2);
+    color = vec4(iterated_color.rgb, a * iterated_color.a);
+    // vec4 texture_sample = texture(text_sampler, TextureCoords);
+    // color = vec4(iterated_color.rgb, texture_sample.a * iterated_color.a); // text_color * texture_sample;
 }
 #endif // FRAGMENT_SHADER
 END

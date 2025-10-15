@@ -106,13 +106,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     if editor.cursor.moved {
         editor.cursor.moved = false;
-
         scroll_to_cursor(editor, editor.cursor, animation_duration=0.08);
     }
 
     draw_selection(editor, buffer, r);
 
-    // Draw text
+    // Draw Code
     if buffer.count {
         using editor;
         using buffer;
