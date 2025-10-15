@@ -557,7 +557,7 @@ draw_find_global_text_dialog :: () {
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
-    theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
+    theme.border_color = #run hex_to_vec4(0x573a7aff);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
@@ -566,6 +566,7 @@ draw_find_global_text_dialog :: () {
     //}
 
     w := window_width * 0.5 - em(2.0, font); // @Tempoary
+    w = max(w, 400);
     k := window_height * .2;
 
     h := cast(float, font.character_height * 2.0);
@@ -605,8 +606,8 @@ draw_find_global_text_dialog :: () {
     list_rect.h = 1.5*k;
 
     linp_theme := List_Input.DEFAULT_THEME;
-    linp_theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
-    linp_theme.current_item_bg_color = #run hex_to_vec4(0x3a_4a_7a_8a);
+    linp_theme.border_color = #run hex_to_vec4(0x573a7aff);
+    linp_theme.current_item_bg_color = #run hex_to_vec4(0x573a7a_8a);
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
 
     if fgt_input.typed {
@@ -680,9 +681,8 @@ draw_find_text_dialog :: () {
         r.y -= r.h + 5 + weight*2;
         r.w *= .30;
 
-        Simp.set_shader_for_color(true);
-        Simp.immediate_quad(r.x - weight, r.y - weight, r.x + r.w + weight, r.y+r.h + weight, theme.bg_color);
-
+        Simp.set_shader_for_rect();
+        Simp.immediate_quad_with_radius(r.x - weight, r.y - weight, r.x + r.w + weight, r.y+r.h + weight, theme.bg_color, radius=r_rect_radius);
         hint := tprint("%/%", current_occurrence+1, occurences.count);
         x := r.x + r.w*.5 - measure_text_width(font, hint)*.5;
         label(xx x, xx (r.y+r.h*.5-ch*.3), hint, font, theme.fg_color);
@@ -770,12 +770,11 @@ draw_goto_line_dialog :: () {
     // @Temporary: We don't want to set those values on every frame, right?
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-    theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
+    // theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
     theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
-    
-    theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
+    theme.border_color = #run hex_to_vec4(0xff_ff_ff_40);
     
     line, ok := get_goto_line_dialog_value();
     if ok && is_valid_line(buffer, line) {

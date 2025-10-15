@@ -300,6 +300,33 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4) {
     put_vertex(*v[5], .{x0, y1}, color,  0, 1);
 }
 
+immediate_quad_with_radius :: (x0: float, y0: float, x1: float, y1: float, color: Vector4, radius: float) {
+    put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, bounds: Vector4, color: Vector4, u: float, v: float) {
+        position.xy  = p;
+        position.z   = 0;
+        tangent      = bounds;
+        color_scale  = color;
+        normal       = .{z=1};
+        uv0.x        = u;
+        uv0.y        = v;
+        uv1          = .{};
+    }
+
+    CheckSpace(6);
+
+    bounds := Vector4.{x0,x1,y0,y1};
+
+    put_vertex(*v[0], .{x1, y0}, bounds, color,  1, 0);
+    put_vertex(*v[1], .{x0, y0}, bounds, color,  0, 0);
+    put_vertex(*v[2], .{x1, y1}, bounds, color,  1, 1);
+
+    put_vertex(*v[3], .{x1, y1}, bounds, color,  1, 1);
+    put_vertex(*v[4], .{x0, y0}, bounds, color,  0, 0);
+    put_vertex(*v[5], .{x0, y1}, bounds, color,  0, 1);
+
+    glUniform1f(glGetUniformLocation(shader_rect.gl_handle, "radius"), radius);
+}
+
 // Four 2D points making an arbitrary quad, plus a color,
 // and optional uv coordinates for mapping a texture:
 immediate_quad :: (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color := Vector4.{1,1,1,1},

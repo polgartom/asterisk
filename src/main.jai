@@ -355,6 +355,7 @@ footer_height: float;
 line_height := 0.0;    // @Todo
 letter_spacing := 0.0; // @Todo
 tab_size := 4;
+r_rect_radius := 8.0;
 
 mode := Program_Mode.EDITOR;
 Program_Mode :: enum u8 { EDITOR; WIDGET; };

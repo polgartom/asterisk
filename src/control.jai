@@ -3,7 +3,6 @@
 Quit :: () {
     should_open_dialog := false;
     for buffers {
-        log("> unsaved: %\n", it.unsaved);
         if it.unsaved {
             should_open_dialog = true;
             break;

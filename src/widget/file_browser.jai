@@ -38,7 +38,8 @@ _draw_file_browser :: () {
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    w := 400.0; // @Tempoary
+    w := window_width * 0.4; // @Tempoary
+    w = max(w, 400);
     k := window_height * .1;
     
     h := cast(float, font.character_height * 2.0);

@@ -130,11 +130,11 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
     b   := r.y;
     t   := r.y + r.h;
 
-    Simp.set_shader_for_color(true);
+    Simp.set_shader_for_rect();
     
     weight :: 2; // border weight
-    Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color); // border
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color); // input background
+    Simp.immediate_quad_with_radius(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color, radius=r_rect_radius); // border
+    Simp.immediate_quad_with_radius(r.x, b, r.x + r.w, t, theme.bg_color, radius=r_rect_radius); // input background
 
     left := r.x + left_pad;
     center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
@@ -179,7 +179,6 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
 
     {
         // Draw cursor
-
         Simp.set_shader_for_color(true);
 
         left = left - left_pad + 5.0;

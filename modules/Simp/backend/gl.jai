@@ -180,6 +180,9 @@ backend_init_shaders :: () {
     shader_color_with_blend.gl_handle   = shader_color.gl_handle;
     shader_color_with_blend.alpha_blend = true;
 
+    shader_rect.gl_handle   = get_shader_program(SHADER_RECT);
+    shader_rect.alpha_blend = true;
+
     shader_text.gl_handle   = get_shader_program(SHADER_TEXT);
     shader_text.alpha_blend = true;
 
@@ -230,25 +233,78 @@ void main () {
 END
 
 
+SHADER_RECT :: #string END
+OUT_IN vec4 iterated_color;
+
+#ifdef VERTEX_SHADER
+in vec3 vert_position;
+in vec4 vert_color;
+in vec4 vert_tangent; // (x0, x1, y0, y1)
+
+uniform mat4 projection;
+
+out vec2 local_pos;
+flat out vec4 rect_bounds;
+
+void main() {
+    gl_Position = projection * vec4(vert_position.xy, 0.0, 1.0);
+    local_pos = vert_position.xy;
+    rect_bounds = vert_tangent;
+    iterated_color = vert_color;
+}
+#endif // VERTEX_SHADER
+
+
+#ifdef FRAGMENT_SHADER
+in vec2 local_pos;
+flat in vec4 rect_bounds;
+out vec4 color;
+
+uniform float radius;
+
+void main() {
+    float x0 = rect_bounds.x;
+    float x1 = rect_bounds.y;
+    float y0 = rect_bounds.z;
+    float y1 = rect_bounds.w;
+
+    vec2 size = vec2(x1 - x0, y1 - y0);
+    vec2 center = vec2((x0 + x1) * 0.5, (y0 + y1) * 0.5);
+    vec2 p = abs(local_pos - center);
+    vec2 inner = (size * 0.5) - vec2(radius);
+
+    float dist = length(max(p - inner, 0.0)) - radius;
+    float alpha = 1.0 - smoothstep(0.0, fwidth(dist), dist);
+
+    if (alpha <= 0.0)
+        discard;
+
+    color = vec4(iterated_color.rgb, iterated_color.a * alpha);
+}
+
+#endif // FRAGMENT_SHADER
+END
+
 SHADER_COLOR :: #string END
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec4 vert_position;
+in vec4 vert_position; // (x1, x2, y1, y2)
 in vec4 vert_color;
 
 uniform mat4 projection;
 
 void main() {
+    // Compute vertex position
     gl_Position = projection * vec4(vert_position.xy, 0.0, 1.0);
-    iterated_color    = vert_color;
+    iterated_color = vert_color;
 }
 #endif // VERTEX_SHADER
 
 #ifdef FRAGMENT_SHADER
 out vec4 color;
 
-void main () {
+void main() {
     color = iterated_color;
 }
 #endif // FRAGMENT_SHADER

@@ -23,6 +23,15 @@ set_shader_for_color :: (enable_blend := false) {
     }
 }
 
+set_shader_for_rect :: () {
+    CheckInit();
+    shader := *shader_rect;
+    if state.current_shader != shader {
+        immediate_set_shader(shader);
+        set_projection();
+    }
+}
+
 set_shader_for_text :: () {
     CheckInit();
     if state.current_shader != *shader_text {
@@ -46,6 +55,7 @@ set_shader_for_images :: (texture: *Texture) {
 
 shader_text:   Shader;
 shader_color:  Shader;
+shader_rect:  Shader;
 shader_color_with_blend:  Shader;
 shader_sprite_right_handed: Shader;
 shader_sprite_left\_handed: Shader;

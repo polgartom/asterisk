@@ -48,13 +48,12 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
     // Draw the container box
-    Simp.set_shader_for_color(true);
-    
-    weight :: 2.0;
-    Simp.immediate_quad(r.x-weight, b-weight, r.x + r.w + weight, t + weight, theme.border_color); // border
-    
-    Simp.immediate_quad(r.x, b, r.x + r.w, t, theme.bg_color);
-    
+    thickness :: 2.0; // border thickness
+    Simp.set_shader_for_rect();
+    Simp.immediate_quad_with_radius(r.x-thickness, b-thickness, r.x + r.w + thickness, t + thickness, theme.border_color, radius=r_rect_radius); // border
+    Simp.immediate_quad_with_radius(r.x, b, r.x + r.w, t, theme.bg_color, radius=r_rect_radius);
+    Simp.immediate_flush();
+
     if !options.count {
         left   := r.x + left_pad * 1.5;
         bottom := b + ch*.5; // center
