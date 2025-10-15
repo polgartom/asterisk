@@ -73,11 +73,6 @@ output_string_to_options :: (out_str: string, eof: bool) {
         //line_no := slices[1];
         path_overwrite_separators(file, #char "/");
 
-        t := slices[2];
-        t2 := trim(t);
-        memmove(t.data, t2.data, t2.count);
-        line.count -= t2.data-t.data;
-
         opt := array_add(*options);
         modify_string(*opt.label, line);
         
