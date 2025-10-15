@@ -1,16 +1,25 @@
 init_fonts :: () {
     font_data: string;
 
-    if font_name {
-        ok, font_data= := table_find(*loaded_fonts, font_name);
+    if font_family {
+        ok, font_data= := table_find(*loaded_fonts, font_family);
         if !ok {
-            found, filepath := find_font_by_name(font_name);    
+            found := false;
+            filepath: string;
+            ext, found_ext := path_extension(font_family);
+            if ext && found_ext {
+                found = file_exists(font_family);
+                filepath = font_family;
+            } else {
+                found, filepath = find_font_by_name(font_family);
+            }
+
             if found {
                 font_data, ok = File.read_entire_file(filepath);
-                if ok table_add(*loaded_fonts, font_name, font_data);
+                if ok table_add(*loaded_fonts, font_family, font_data);
             } else {
-                log_error("Unable to locate '%' font. If the font is installed then maybe it's not ttf, which is currently the only supported format.\n", font_name);
-                free_string(*font_name); // do not try next time
+                log_error("Unable to locate '%' font. If the font is installed then maybe it's not ttf, which is currently the only supported format.\n", font_family);
+                free_string(*font_family); // do not try next time
             }
         }
     }
@@ -125,7 +134,7 @@ r_font:       *Simp.Dynamic_Font;
 r_font_sm:    *Simp.Dynamic_Font;
 r_font_icons: *Simp.Dynamic_Font;
 
-font_name: string;
+font_family: string;
 font_size: u8 = 14;
 font_size_sm: u8 = 13; // change this dynamically based on the dpi and the font_size
 

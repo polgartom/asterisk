@@ -152,15 +152,14 @@ parse_style_section :: (file_data: string) -> bool {
             key, rhs := break_by_colon(line);
 
             if key == {
-                // @Todo
-                case "font_name";
+                case "font_family";
                     val := trim(rhs);
                     if !val {
                         log_error("Invalid font name ('%') given after the '%' key specifier!\n", rhs, key);
                         continue;
                     }
-                    modify_string(*font_name, val,, allocator=context.default_allocator);
-                    // ll("font_name: '%' | found: % | filepath: %\n", val, found, filepath);
+                    path_unify_sepa(font_family); // maybe its a path
+                    modify_string(*font_family, val,, allocator=context.default_allocator);
                 case "font_size";
                     val, success, rem := string_to_int(rhs, base=10, u8);
                     if !success || rem {
