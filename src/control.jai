@@ -305,27 +305,28 @@ move_right_word :: ($subword_mode: bool) {
     // - When moving left we must first "step back" one character, because the cursor is visually *after* the character.
     // - When moving right we can start scanning immediately from the current character, since the cursor is visually *before* it.
     // In both cases, the goal is to stop at the first boundary between token types (whitespace, separator, alphanumeric).
-
-    pos  := cursor.pos;
-    char := buffer.data[pos];
+    
+    pos      := cursor.pos;
+    next_pos := cursor.pos;
+    char     := buffer.data[pos];
 
     if is_whitespace(char) {
         // Whitespaces
-        while pos {
+        while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
             if !is_whitespace(c) break;
         }
     } else if is_separator(char) {
         // Tokens like (){}$...
-        while pos {
+        while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
             if !is_separator(c, subword_mode) || is_whitespace(c) break;
         }
     } else {
         // Alphanum
-        while pos {
+        while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
             if is_separator(c, subword_mode) break;
