@@ -107,9 +107,10 @@ main :: () {
         wait_for_this_key_to_release: *u32; // Key_Code
 
         ctrl_released := false;
+        mouse_scrolled_on_frame = .none;
 
         for event : events_this_frame {
-            // ll("%\n", event);
+            ll("%\n", event);
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -149,6 +150,10 @@ main :: () {
                     c := character_utf32_to_utf8(event.utf32,, allocator=temporary_allocator);
                     insert_text_at_cursor(editor, buffer, *editor.cursor, c);
                 }
+
+                if event.type == .MOUSE_WHEEL {
+                    mouse_scrolled_on_frame = ifx event.wheel_delta < 0 then .down else .up;
+                }
             }
         }
 
@@ -161,6 +166,12 @@ main :: () {
 
         for buffers {
             commit_buffer_changes(it);
+        }
+
+        if mouse_scrolled_on_frame != .none {
+            e := get_active_editor_and_buffer();
+            if      mouse_scrolled_on_frame == .up   then scroll_up(e);
+            else if mouse_scrolled_on_frame == .down then scroll_down(e);
         }
 
         for *editor: editors {
@@ -365,6 +376,8 @@ keymap_set:    Keymap_Set;
 core_keymap:   *Keymap;
 editor_keymap: *Keymap;
 widget_keymap: *Keymap;
+
+mouse_scrolled_on_frame: enum u8 {none; up; down;};
 
 cursor_shape := Cursor_Shape.BLOCK;
 cursor_line_indicator := Cursor_Line_Indicator.FILLED;

@@ -963,7 +963,6 @@ change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
 
 scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float = 0.08) {
     assert(editor.active_buffer != null);
-
     buffer := editor.active_buffer;
     r := editor.rect_for_draw;
     if r.w == 0 || r.h == 0 return;
@@ -1023,6 +1022,50 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             editor.y_scroll_anim.active = false;
         }
     }
+
+    redraw_requested = true;
+}
+
+scroll_up :: (editor: *Editor) {
+    assert(editor.active_buffer != null);
+    buffer := editor.active_buffer;
+    r := editor.rect_for_draw;
+    if r.w == 0 || r.h == 0 return; // ???
+
+    first_ri := buffer.row_table.count-1;
+    first_visible_ri := first_visible_row_index(editor, buffer);
+    if first_visible_ri == first_ri return;
+    
+    target_ri := first_visible_row_index(editor, buffer);
+    target_ri -= 3;
+    if target_ri < 0 then target_ri = 0;
+
+    // Viewport (Y)
+    target := fnt_get_line_height(target_ri);
+    editor.top_offset = target;
+    editor.y_scroll_anim.active = false;
+
+    redraw_requested = true;
+}
+
+scroll_down :: (editor: *Editor) {
+    assert(editor.active_buffer != null);
+    buffer := editor.active_buffer;
+    r := editor.rect_for_draw;
+    if r.w == 0 || r.h == 0 return; // ???
+
+    last_ri := buffer.row_table.count-1;
+    last_visible_ri := last_visible_row_index(editor, buffer);
+    if last_visible_ri == last_ri return;
+    
+    target_ri := first_visible_row_index(editor, buffer);
+    target_ri += 4+1;
+    Clamp(*target_ri, 0, last_ri);
+
+    // Viewport (Y)
+    target := fnt_get_line_height(target_ri);
+    editor.top_offset = target;
+    editor.y_scroll_anim.active = false;
 
     redraw_requested = true;
 }
