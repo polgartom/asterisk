@@ -797,6 +797,16 @@ draw_global_debug_info :: (r: Rect) {
         last_rendering_time,
     );
 
+    {
+        e := get_active_editor_and_buffer();
+        PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
+    }
+
+    {
+        mx, my, ok := get_mouse_pointer_position();
+        PrintDev("[mouse] x:% y:%\n", mx, my);
+    }
+
     row := 1;
     max := 0;
     line_height := fnt_get_line_height();

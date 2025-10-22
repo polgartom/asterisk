@@ -110,7 +110,7 @@ main :: () {
         mouse_scrolled_on_frame = .none;
 
         for event : events_this_frame {
-            ll("%\n", event);
+            // ll("%\n", event);
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -141,6 +141,10 @@ main :: () {
                 ctrl_released = true;
             }
 
+            if event.type == .MOUSE_WHEEL {
+                mouse_scrolled_on_frame = ifx event.wheel_delta < 0 then .down else .up;
+            }
+
             if mode == .EDITOR {
                 if event.type == .TEXT_INPUT && !event.ctrl_pressed {
                     editor, buffer := get_active_editor_and_buffer(); // @Temporary
@@ -149,10 +153,6 @@ main :: () {
                     
                     c := character_utf32_to_utf8(event.utf32,, allocator=temporary_allocator);
                     insert_text_at_cursor(editor, buffer, *editor.cursor, c);
-                }
-
-                if event.type == .MOUSE_WHEEL {
-                    mouse_scrolled_on_frame = ifx event.wheel_delta < 0 then .down else .up;
                 }
             }
         }
@@ -168,7 +168,7 @@ main :: () {
             commit_buffer_changes(it);
         }
 
-        if mouse_scrolled_on_frame != .none {
+        if mode == .EDITOR && mouse_scrolled_on_frame != .none {
             e := get_active_editor_and_buffer();
             if      mouse_scrolled_on_frame == .up   then scroll_up(e);
             else if mouse_scrolled_on_frame == .down then scroll_down(e);
