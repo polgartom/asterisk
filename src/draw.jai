@@ -1,3 +1,5 @@
+LEFT_PADDING :: 5;
+
 draw_frame :: () {
     c := map_color_to_vec4(.BACKGROUND);
     Simp.clear_render_target(c.x, c.y, c.z, c.w);
@@ -7,11 +9,8 @@ draw_frame :: () {
     x, y, width, height := get_dimensions(window, true);
 
     rect := make_rect(0.0, 0.0, xx width, xx height);
-
-    LEFT_PADDING :: 5;
     _, rect = cut_left(rect, LEFT_PADDING);
 
-    // @Todo: Fix the footer visual
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
         sepa_rect := right;
@@ -68,6 +67,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     defer reset_color_intensity();
     
     r, footer_r := cut_top(rect, window_height-footer_height);
+    footer_r = expand_x(footer_r, LEFT_PADDING); // hacky
 
     editor.rect_for_draw = r;
 
@@ -152,58 +152,50 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     {
         // Draw footer
 
-        push_scissor(footer_r);
-        defer pop_scissor();
+        //push_scissor(footer_r);
+        //defer pop_scissor();
 
         footer := footer_r;
         Simp.set_shader_for_color(true);
 
-        font := r_font_sm;
-
         fg_color := map_color_to_vec4(.FOOTER_TEXT);
-        bg_color := map_color_to_vec4(.FOOTER_BACKGROUND);
+        bg_color := map_color_to_vec4(.FOOTER_BACKGROUND, apply_intensity=false);
         if active_editor != editor {
-            bg_color = map_color_to_vec4(.FOOTER_BACKGROUND_DARKEN);
+            bg_color = map_color_to_vec4(.FOOTER_BACKGROUND_DARKEN, apply_intensity=false);
         }
-
+        
         // Footer shape
         Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.h, bg_color);
 
         width := 0;
         left := footer.x + 10;
-        center := font_calc_y_center_insert_point(footer, font.character_height);
+        center := font_calc_y_center_insert_point(footer, r_font_sm.character_height);
 
         {
             // Draw buffer's file info
-            using buffer;
-
-            info_text: string = ---;
-
-            if readonly { // scratch buffer
-                info_text = name;
-
-            } else {
-                path := filepath;
-                if !path path = "Untitled";
-                if filepath {
-                    path = filepath;
+            b := buffer;
+            info_text := b.name;
+            if !b.readonly {
+                path := "Untitled";
+                if b.filepath {
+                    path = b.filepath;
                     workdir := get_workdir();
                     if begins_with(path, workdir) {
                         advance(*path, workdir.count + 1); // +1 for the path separator
                         assert(path.count > 0);
                     }
                 }
-
+    
                 info_text = tprint(
                     "%1%2%3",
                     path,
-                    ifx !exists_on_disk then " <new>" else "",
-                    ifx unsaved         then "*"      else "",
+                    ifx !b.exists_on_disk then " <new>" else "",
+                    ifx b.unsaved         then "*"      else "",
                 );
             }
 
-            width = Simp.prepare_text(font, info_text);
-            Simp.draw_prepared_text(font, xx left, xx center, fg_color);
+            width = Simp.prepare_text(r_font_sm, info_text);
+            Simp.draw_prepared_text(r_font_sm, xx left, xx center, fg_color);
 
             left += width;
         }
@@ -213,15 +205,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         row := find_row_index(buffer, editor.cursor.pos) + 1;
         col := byte_pos_to_row_col_index(buffer, editor.cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
-
-        row_col_info := tprint("%\% Ln % Col %", total_row_percent, row, col);
-        if show_debug_info {
-            row_col_info = tprint("% Pos %", row_col_info, editor.cursor.pos);
-        }
-
-        RIGHT_PAD :: 1.1;
-        width = Simp.prepare_text(font, row_col_info);
-        Simp.draw_prepared_text(font, xx (footer.x + footer.w - width * RIGHT_PAD), xx center, fg_color);
+        row_col_info := tprint("%\% Ln % Col % Byte %", total_row_percent, row, col, editor.cursor.pos);
+        
+        width = Simp.prepare_text(r_font_sm, row_col_info);
+        x := cast(s64, footer.x + footer.w - width * 1.1); // 1.1 is the padding
+        y := cast(s64, center);
+        Simp.draw_prepared_text(r_font_sm, x, y, fg_color);
     }
 
 }

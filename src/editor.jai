@@ -598,6 +598,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == history.count-1 return;
 
     redos := batch_up_redos(history, history_index+1);
+
     for #v2 h: redos {
         if h.type == {
             case .INSERT;
@@ -642,8 +643,11 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
 
                 replace_text_at(editor, buffer, Range.{start, end}, h.text, history=false);
                 editor.cursor = h.cursor;
-                clamp_cursor(*editor.cursor, buffer.count);
-                editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
+                to := end + h.text.count - (end - start);
+                if to > buffer.count then to = buffer.count;
+                set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
+                // clamp_cursor(*editor.cursor, buffer.count);
+                // editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
                 history_index += 1;
                 
                 // We don't want to change these type of redos

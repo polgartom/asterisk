@@ -4,12 +4,20 @@ reset_color_intensity :: () {
     context.color_intensity = v4(1.0);
 }
 
-map_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return COLOR_MAP[cast(s64) color] * context.color_intensity;
+map_color_to_vec4 :: inline (color: Color, $apply_intensity := true) -> Vector4 {
+    #if apply_intensity {
+        return COLOR_MAP[cast(s64) color] * context.color_intensity;
+    } else {
+        return COLOR_MAP[cast(s64) color];
+    }
 }
 
-map_default_color_to_vec4 :: inline (color: Color) -> Vector4 {
-    return DEFAULT_COLOR_MAP[cast(s64) color] * context.color_intensity;
+map_default_color_to_vec4 :: inline (color: Color, $apply_intensity := true) -> Vector4 {
+    #if apply_intensity {
+        return DEFAULT_COLOR_MAP[cast(s64) color] * context.color_intensity;
+    } else {
+        return DEFAULT_COLOR_MAP[cast(s64) color];
+    }
 }
 
 darken :: (color: Vector4, amount: float) -> Vector4 {
