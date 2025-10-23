@@ -84,11 +84,9 @@ output_string_to_options :: (out_str: string, eof: bool) {
             colors.count = line.count;
             memset(colors.data, cast(u8)Color.TEXT_DEFAULT, colors.count);
         
-            i := find_index_from_left_nocase(slices[2], fgt_input.text);
-            if i != -1 {
-                offset := slices[2].data - slices[0].data;
-                offset += i;
-                for offset..min(offset + fgt_input.text.count, colors.count)-1 {
+            offset := find_index_from_left_nocase(line, fgt_input.text);
+            if offset != -1 {
+                for offset..min(offset + fgt_input.text.count, line.count)-1 {
                     colors[it] = .COLOR_GREEN;
                 }
             }
