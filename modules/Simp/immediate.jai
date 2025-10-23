@@ -314,7 +314,12 @@ immediate_quad_with_radius :: (x0: float, y0: float, x1: float, y1: float, color
 
     CheckSpace(6);
 
-    bounds := Vector4.{x0,x1,y0,y1};
+    bounds := Vector4.{
+        min(x0,x1),
+        max(x0,x1),
+        min(y0,y1),
+        max(y0,y1),
+    };
 
     put_vertex(*v[0], .{x1, y0}, bounds, color,  1, 0);
     put_vertex(*v[1], .{x0, y0}, bounds, color,  0, 0);
