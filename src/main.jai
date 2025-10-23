@@ -179,7 +179,7 @@ main :: () {
 
         if mode == .EDITOR {
             if mouse_scrolled_on_frame != .none {
-                mx, my, ok := get_mouse_pointer_position();
+                mx, my, ok := get_mouse_pointer_position_right_handed();
                 if ok for *e: editors {
                     if !e.visible continue;
                     // @Improve @Todo The rect_for_draw already contains the paddings so it won't if the mouse cursor on the paddings' area.
@@ -193,14 +193,18 @@ main :: () {
             }
             
             if mouse_down {
-                mx, my, ok := get_mouse_pointer_position();
+                // @Cleanup It's confusing that we have to check whether the mouse pointer is inside the rect using right-handed coordinates,
+                // but later, when determining the desired row index, we need to perform a similar check using left-handed coordinates.
+                mx, my, ok := get_mouse_pointer_position(right_handed=true);
                 if ok for *e: editors {
                     if !e.visible continue;
                     if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
                         active_editor = e;
+                        mx, my, ok := get_mouse_pointer_position(right_handed=false);
                         pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
+                        //log("> pos: '%'\n", pos);
                         if pos != -1 {
-                            //c := get_character_as_string_at(e.active_buffer, xx pos);
+                            c := get_character_as_string_at(e.active_buffer, xx pos);
                             //log("> clicked on: '%'\n", c);
                             set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                         }
@@ -272,6 +276,11 @@ get_dpi_scale :: (window: Window_Type) -> float {
         LD :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
         return LD.get_dpi_scaling_factor(window);
     }
+}
+
+get_mouse_pointer_position_right_handed :: inline () -> s64, s64, bool {
+    mx, my, ok := get_mouse_pointer_position(right_handed=true);
+    return mx, my, ok;
 }
 
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {

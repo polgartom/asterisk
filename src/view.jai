@@ -136,7 +136,7 @@ get_quad :: (using r: Rect, snap_coordinates := false) -> (p0: Vector2, p1: Vect
 }
 
 is_point_in_rect :: (r: Rect, p: Vector2) -> bool {
-    return (p.x >= r.x && p.x <= r.x+r.w) && (p.y >= r.y && p.y <= r.y+r.h); 
+    return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
 }
 
 intersect :: (a: Rect, b: Rect) -> Rect {

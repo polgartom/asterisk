@@ -1042,6 +1042,7 @@ scroll_up :: (editor: *Editor) {
 
     // Viewport (Y)
     target := fnt_get_line_height(target_ri);
+    
     editor.top_offset = target;
     editor.y_scroll_anim.active = false;
 

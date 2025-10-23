@@ -31,15 +31,27 @@ draw_frame :: () {
     if mode == .WIDGET {
         draw_widgets();
     }
-
+    
     if show_debug_info {
+        /*
+        mx, my, ok := get_mouse_pointer_position_right_handed();
+        if ok {
+            r := active_editor.rect_for_draw;
+            PrintDev("[rect_for_draw] x:% y:% w:% h:%\n", r.x,r.y,r.w,r.h);
+            if is_point_in_rect(r, Vector2.{xx mx, xx my}) {
+                draw_quad(r, map_color_to_vec4(.TEXT_UNDER_INACTIVE_CURSOR));
+            }
+        }
+        */
+
+    
         // b := active_editor.active_buffer;
         // for b.history {
         //     PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
         // }
 
         draw_global_debug_info(active_editor.rect_for_draw);
-        //draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
+        draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
 
     swap_buffers();
@@ -802,7 +814,7 @@ draw_global_debug_info :: (r: Rect) {
     }
 
     {
-        mx, my, ok := get_mouse_pointer_position();
+        mx, my, ok := get_mouse_pointer_position_right_handed();
         PrintDev("[mouse] x:% y:%\n", mx, my);
     }
 
@@ -1034,7 +1046,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     Simp.set_shader_for_color(true);
     buffer := editor.active_buffer;
     
-    mx, my, ok := get_mouse_pointer_position();
+    mx, my, ok := get_mouse_pointer_position(right_handed=false);
     if mx < 0 || my < 0 || !ok return;
     
     approx_row_index := cast(s64)floor((my + editor.top_offset) / fnt_get_line_height());
@@ -1044,7 +1056,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     //log("> '%'\n", rs);
     ch := r_font.character_height;
     bottom := (r.h+r.y) - fnt_get_line_height(approx_row_index+1) + editor.top_offset;
-    Simp.immediate_quad(r.x, bottom, r.x + r.w, bottom + ch, Vector4.{.1, .75, .31, .20});
+    Simp.immediate_quad(r.x, bottom, r.x + r.w, bottom + ch, Vector4.{.1, .49, 1.0, .1});
     
     left := cast(float32)LEFT_PADDING;
     while rs.count {
