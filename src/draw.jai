@@ -26,8 +26,6 @@ draw_frame :: () {
     } else {
         draw_editor(*editors[0], rect);
     }
-
-    //draw_debug_mouse_character_selection(active_editor, rect);
     
     // Widgets
     if mode == .WIDGET {
@@ -41,6 +39,7 @@ draw_frame :: () {
         // }
 
         draw_global_debug_info(active_editor.rect_for_draw);
+        //draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
 
     swap_buffers();
@@ -423,7 +422,7 @@ draw_command_browser :: () {
     r.y += 5.0; 
 
     tinp := command_browser.self_text_input;
-    update_text_input(tinp, r, font, placeholder="Switch to buffer", theme=theme);
+    update_text_input(tinp, r, font, placeholder="> Run command", theme=theme);
     r.y -= 5.0; 
 
     options: [..] List_Input.Option(*Editor_Command);
@@ -1033,56 +1032,37 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
 
 draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     Simp.set_shader_for_color(true);
-    
     buffer := editor.active_buffer;
-
-    mx, my, ok := get_mouse_pointer_position(right_handed=false);
-    if (ok) {
-        row_index := get_row_index_from_y_px(xx my, y_is_relative=true);
-        if row_index != -1 {
-            row_str := get_row_as_string(buffer, row_index);
-            width := measure_text_width(r_font, row_str);
-            bottom  := (r.h+r.y) - fnt_get_line_height(row_index+1) + editor.top_offset;
-            ch      := r_font.character_height;
-            Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
-        }
-
-        approx_row := cast(s64)floor((my+editor.top_offset) / fnt_get_line_height());
-
-        first := first_visible_row_index(editor, buffer);
-        last  := last_visible_row_index(editor, buffer);
-        for i: first..last {
-            if i == approx_row {
-                s := get_row_as_string(buffer, i);
-
-                ch      := r_font.character_height;
-                bottom  := (r.h+r.y) - fnt_get_line_height(approx_row+1) + editor.top_offset;
-                // width   := Simp.prepare_text(r_font, s);
-                // Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), xx width, bottom - (ch/2-(ch*0.2)), Vector4.{.3, .21, .21, .5});
-
-                cw := 0;
-                left := 0.0;
-                while s.count {
-                    cw = Simp.get_character_width_in_pixels(r_font, s.data, .LEFT_JUSTIFIED);
-                    if cast(float)mx <= left break;
-
-                    left += cw;
-
-                    bytes := 1 + trailingBytesForUTF8[s[0]];
-                    s = advance(s, bytes);
-                }
-
-                if cw == 0 {
-                    cw = r_font.em_width;
-                    Simp.immediate_quad(0.0, bottom + (ch-ch*0.1), cast(float)cw, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
-                } else {
-                    Simp.immediate_quad(left-cw, bottom + (ch-ch*0.1), left, bottom - (ch/2-(ch*0.2)), Vector4.{1.0, .5, .3, .9});
-                }
-
-                break;
-            }
-        }
+    
+    mx, my, ok := get_mouse_pointer_position();
+    if mx < 0 || my < 0 || !ok return;
+    
+    approx_row_index := cast(s64)floor((my + editor.top_offset) / fnt_get_line_height());
+    if approx_row_index >= buffer.row_table.count return;
+    
+    rs := get_row_as_string(buffer, approx_row_index);
+    //log("> '%'\n", rs);
+    ch := r_font.character_height;
+    bottom := (r.h+r.y) - fnt_get_line_height(approx_row_index+1) + editor.top_offset;
+    Simp.immediate_quad(r.x, bottom, r.x + r.w, bottom + ch, Vector4.{.1, .75, .31, .20});
+    
+    left := cast(float32)LEFT_PADDING;
+    while rs.count {
+        if cast(float, mx-r.x+editor.left_offset) <= left break;
+        cw := Simp.get_character_width_in_pixels(r_font, rs.data, .LEFT_JUSTIFIED);
+        left += cw;
+        bytes := 1 + trailingBytesForUTF8[rs[0]];
+        rs = advance(rs, bytes);
     }
+    if rs {
+        //log(">> '%'\n", string.{count=1 + trailingBytesForUTF8[rs[0]], data=rs.data});
+    } else {
+        // We on the line separator character (after the last character of the row)
+    }
+    
+    //log("r: %\n", r.x);
+    left = r.x - LEFT_PADDING + left - editor.left_offset;
+    Simp.immediate_quad(left, bottom, left + r_font.em_width, bottom + ch, Vector4.{.5, .15, .21, .9});
 }
 
 draw_quad :: (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Vector4) {

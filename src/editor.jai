@@ -1125,6 +1125,44 @@ byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     return col;
 }
 
+// @Cleanup: Better name!!!
+byte_pos_from_mouse_xy :: (editor: *Editor, buffer: *Buffer, mx: s64, my: s64) -> s64 {
+    if mx < 0 || my < 0 return -1;
+
+    approx_row_index := cast(s64)floor((my + editor.top_offset) / fnt_get_line_height());
+    if approx_row_index >= buffer.row_table.count return -1;
+    
+    rect := editor.rect_for_draw;
+    rs := get_row_as_string(buffer, approx_row_index);
+    ch := r_font.character_height;
+    left := cast(float32)LEFT_PADDING; // @cleanup
+    bottom := (rect.h + rect.y) - fnt_get_line_height(approx_row_index+1) + editor.top_offset;
+    
+    ptr := rs.data;
+    while rs.count {
+        if cast(float, mx - rect.x + editor.left_offset) <= left break;
+        cw := Simp.get_character_width_in_pixels(r_font, rs.data, .LEFT_JUSTIFIED);
+        left += cw;
+        bytes := 1 + trailingBytesForUTF8[rs[0]];
+        rs = advance(rs, bytes);
+        ptr += bytes;
+    }
+    
+    idx := ptr - buffer.data;
+    Clamp(*idx, 0, buffer.count);
+    
+    return idx;
+    
+    /*
+    if rs {
+        log(">> '%'\n", string.{count=1 + trailingBytesForUTF8[rs[0]], data=rs.data});
+        return true;
+    } else {
+        return false, -1; // @Todo
+    }
+    */
+}
+
 get_row_index_from_y_px :: (y: float, y_is_relative := false) -> (row_index: s64) {
     editor, buffer := get_active_editor_and_buffer();
     if y_is_relative {
@@ -1215,8 +1253,10 @@ init_editor_buffers :: (files_from_cmdline: [] string) {
     active_editor.visible = true;
     if files_from_cmdline.count == 2 {
         // @Temporary
-        open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
-        open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
+        b := open_file_or_create_empty_buffer(*editors[0], files_from_cmdline[0]);
+        change_active_buffer(*editors[0], b);
+        b = open_file_or_create_empty_buffer(*editors[1], files_from_cmdline[1]);
+        change_active_buffer(*editors[1], b);
 
         editors[0].visible = true;
         editors[1].visible = true;

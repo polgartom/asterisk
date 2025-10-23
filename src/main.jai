@@ -107,10 +107,11 @@ main :: () {
         wait_for_this_key_to_release: *u32; // Key_Code
 
         ctrl_released := false;
+        //mouse_down = false;
         mouse_scrolled_on_frame = .none;
 
         for event : events_this_frame {
-            // ll("%\n", event);
+            ll("%\n", event);
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -140,9 +141,17 @@ main :: () {
             if event.key_code == .CTRL && !event.key_pressed {
                 ctrl_released = true;
             }
+            
+            if event.key_code == .SHIFT {
+                vk_shift_down = cast(bool, event.key_pressed);
+            }
 
             if event.type == .MOUSE_WHEEL {
                 mouse_scrolled_on_frame = ifx event.wheel_delta < 0 then .down else .up;
+            }
+            
+            if event.key_code == .MOUSE_BUTTON_LEFT {
+                mouse_down = cast(bool, event.key_pressed);
             }
 
             if mode == .EDITOR {
@@ -168,10 +177,36 @@ main :: () {
             commit_buffer_changes(it);
         }
 
-        if mode == .EDITOR && mouse_scrolled_on_frame != .none {
-            e := get_active_editor_and_buffer();
-            if      mouse_scrolled_on_frame == .up   then scroll_up(e);
-            else if mouse_scrolled_on_frame == .down then scroll_down(e);
+        if mode == .EDITOR {
+            if mouse_scrolled_on_frame != .none {
+                mx, my, ok := get_mouse_pointer_position();
+                if ok for *e: editors {
+                    if !e.visible continue;
+                    // @Improve @Todo The rect_for_draw already contains the paddings so it won't if the mouse cursor on the paddings' area.
+                    // Also the rect_for_draw include the editor footer rect.
+                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                        if      mouse_scrolled_on_frame == .up   then scroll_up(e);
+                        else if mouse_scrolled_on_frame == .down then scroll_down(e);
+                        break;
+                    }
+                }
+            }
+            
+            if mouse_down {
+                mx, my, ok := get_mouse_pointer_position();
+                if ok for *e: editors {
+                    if !e.visible continue;
+                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                        active_editor = e;
+                        pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
+                        if pos != -1 {
+                            //c := get_character_as_string_at(e.active_buffer, xx pos);
+                            //log("> clicked on: '%'\n", c);
+                            set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
+                        }
+                    }
+                }
+            }
         }
 
         for *editor: editors {
@@ -377,6 +412,8 @@ core_keymap:   *Keymap;
 editor_keymap: *Keymap;
 widget_keymap: *Keymap;
 
+vk_shift_down := false;
+mouse_down := false; // @Temporary
 mouse_scrolled_on_frame: enum u8 {none; up; down;};
 
 cursor_shape := Cursor_Shape.BLOCK;
