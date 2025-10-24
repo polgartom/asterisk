@@ -177,6 +177,8 @@ main :: () {
             commit_buffer_changes(it);
         }
 
+        os_set_cursor(.CUR_ARROW);
+
         if mode == .EDITOR {
             if mouse_scrolled_on_frame != .none {
                 mx, my, ok := get_mouse_pointer_position_right_handed();
@@ -192,20 +194,20 @@ main :: () {
                 }
             }
             
-            if mouse_down {
-                // @Cleanup It's confusing that we have to check whether the mouse pointer is inside the rect using right-handed coordinates,
-                // but later, when determining the desired row index, we need to perform a similar check using left-handed coordinates.
-                mx, my, ok := get_mouse_pointer_position(right_handed=true);
-                if ok for *e: editors {
-                    if !e.visible continue;
-                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+            // @Cleanup It's confusing that we have to check whether the mouse pointer is inside the rect using right-handed coordinates,
+            // but later, when determining the desired row index, we need to perform a similar check using left-handed coordinates.
+            mx, my, ok := get_mouse_pointer_position(right_handed=true);
+            if ok for *e: editors {
+                if !e.visible continue;
+                if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                    
+                    os_set_cursor(.CUR_BEAM);
+                    
+                    if mouse_down {
                         active_editor = e;
                         mx, my, ok := get_mouse_pointer_position(right_handed=false);
                         pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
-                        //log("> pos: '%'\n", pos);
                         if pos != -1 {
-                            c := get_character_as_string_at(e.active_buffer, xx pos);
-                            //log("> clicked on: '%'\n", c);
                             set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                         }
                     }
@@ -430,6 +432,37 @@ cursor_line_indicator := Cursor_Line_Indicator.FILLED;
 
 Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
 Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
+
+OS_Cursor_Kind :: enum u8 {
+    CUR_NONE  :: 0;
+    CUR_ARROW :: 1;
+    CUR_BEAM  :: 2;
+    CUR_WAIT  :: 3;
+}
+
+os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
+    // LoadCursorA() loads the cursor resource only if it has not been loaded; otherwise, it retrieves the handle to the existing resource.
+    // see: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadcursora
+    cur_rsrc_name := win32_cursor_resource_name_from_kind(kind);
+    handle := LoadCursorA(null /* HINSTANCE */, cur_rsrc_name);
+    if handle == null {
+        error_code := GetLastError();
+        log_error("Failed to load the cursor! error code: '%'\n", error_code);
+        return false;
+    }
+    
+    SetCursor(handle); // If there was no previous cursor, the return value is null.
+    return true;
+}
+
+win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
+    if kind == {
+        case .CUR_ARROW; return IDC_ARROW;
+        case .CUR_BEAM;  return IDC_IBEAM;
+        case .CUR_WAIT;  return IDC_WAIT;
+    };
+    return null;
+}
 
 ////////////////////////////////
 // Debug
