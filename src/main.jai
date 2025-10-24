@@ -66,24 +66,25 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested {
-            wait_for_event();
+            //wait_for_event();
         }
-
-        update_window_events();
-        clear_widget_events();
-
+        
         redraw_requested = false;
 
         frame += 1;
         current_time = seconds_since_init();
         frame_dt = current_time - last_time;
         last_time = seconds_since_init();
+        frame_start_time_ms = ms_since_init();
 
         second_elapsed = false;
         if last_time - last_second_time > 1.0 {
             last_second_time = last_time;
             second_elapsed = true;
         }
+
+        update_window_events();
+        clear_widget_events();
 
         for get_window_resizes() {
             Simp.update_window(it.window);
@@ -105,13 +106,13 @@ main :: () {
         }
 
         wait_for_this_key_to_release: *u32; // Key_Code
-
         ctrl_released := false;
         
         mouse_scrolled_on_frame = .none;
         mouse_was_down = mouse_down;
         mouse_clicked = false;
-        mouse_dbl_clicked_on_frame = false;
+        mouse_was_dbl_clicked = mouse_dbl_clicked;
+        mouse_dbl_clicked = false;
 
         for event : events_this_frame {
             //ll("%\n", event);
@@ -157,20 +158,21 @@ main :: () {
                 // @Cleanup
                 mouse_down = cast(bool, event.key_pressed);
                 if mouse_down {
-                    mouse_down_last_time_ms = ms_since_init();
+                    mouse_down_last_time_ms = frame_start_time_ms;
                 } else {
+                    // @Todo We should account for cases where the cursor moves beyond a certain range, as this should "invalidate" mouse clicks.
+                    
                     // Maybe it's double click if we clicked on the previous frame and the interval between clicks was less than 250.0ms. 
-                    if !mouse_dbl_clicked && (ms_since_init() - mouse_clicked_last_time_ms) <= 300.0 { // Windows default is 500 ms, many games use 250–350 ms.
-                        mouse_dbl_clicked = true;
-                        mouse_dbl_clicked_on_frame = true;
-                        mouse_dbl_clicked_last_time_ms = ms_since_init();
-                    } else {
-                        mouse_dbl_clicked = false;
+                    if (frame_start_time_ms - mouse_clicked_last_time_ms) <= 300.0 { // Windows default is 500 ms, many games use 250–350 ms.
+                        if (frame_start_time_ms - mouse_dbl_clicked_last_time_ms) > 300.0 { // mouse double click cooldown
+                            mouse_dbl_clicked = true;
+                            mouse_dbl_clicked_last_time_ms = frame_start_time_ms;
+                        }
                     }
                 
-                    if (ms_since_init() - mouse_down_last_time_ms) <= 200.0 { // Max allowed delay between press and release → 150–250 ms (Most systems use around 200 ms.)
+                    if (frame_start_time_ms - mouse_down_last_time_ms) <= 200.0 { // Max allowed delay between press and release → 150–250 ms (Most systems use around 200 ms.)
                         mouse_clicked = true;
-                        mouse_clicked_last_time_ms = ms_since_init();
+                        mouse_clicked_last_time_ms = frame_start_time_ms;
                     }
                 }                
             }
@@ -186,16 +188,13 @@ main :: () {
                 }
             }
         }
-        
-        /*
-        if mouse_dbl_clicked && (ms_since_init() - mouse_clicked_last_time_ms) > 300.0 {
-            mouse_dbl_clicked = false;
-        }
-        */
-        
-        if click_action_cooldown_active && (ms_since_init() - click_action_cooldown_start_time_ms) > 200.0 {
+                
+        //click_action_cooldown_active = false;
+                /*
+        if click_action_cooldown_active && (frame_start_time_ms - click_action_cooldown_start_time_ms) > 200.0 {
             click_action_cooldown_active = false;
         }
+        */
 
         // log("clicked: % ; dbl_clicked: % ; down: % ; was_down: %\n", mouse_clicked, mouse_dbl_clicked, mouse_down, mouse_was_down);
 
@@ -226,11 +225,10 @@ main :: () {
                 if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
                     os_set_cursor(.CUR_BEAM);
                     
-                    if !click_action_cooldown_active {
-                        if mouse_dbl_clicked_on_frame {
+                    //if !click_action_cooldown_active {
+                        if mouse_dbl_clicked {
                             SelectSimilarCharacters();
-                            click_action_cooldown_active = true;
-                            click_action_cooldown_start_time_ms = ms_since_init();
+                            // start_click_action_cooldown();
                         } else if mouse_down {
                             active_editor = e;
                             mx, my, ok := get_mouse_pointer_position(right_handed=false);
@@ -238,10 +236,8 @@ main :: () {
                             if pos != -1 {
                                 set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                             }
-                            //click_action_cooldown_active = true;
-                            //click_action_cooldown_start_time_ms = ms_since_init();
                         }
-                    }                    
+                    //}                    
                 }
             }
         }
@@ -326,6 +322,44 @@ get_mouse_pointer_position_right_handed :: inline () -> s64, s64, bool {
     mx, my, ok := get_mouse_pointer_position(right_handed=true);
     return mx, my, ok;
 }
+
+#if OS == .WINDOWS {
+    os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
+        // set_custom_cursor_handling(true);
+    
+        cursor_resource_name := win32_cursor_resource_name_from_kind(kind);
+        if cursor_resource_name == null return false;
+        
+        handle := LoadCursorA(null /* HINSTANCE */, cursor_resource_name); // Loads the cursor resource if not already loaded; otherwise returns its handle.
+        if handle == null {
+            error_code := GetLastError();
+            log_error("Failed to load the cursor! error code: '%'\n", error_code);
+            return false;
+        }
+        
+        SetCursor(handle);
+        os_current_cursor_kind = kind;
+        
+        return true;
+    }
+    
+    win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
+        if kind == {
+            case .CUR_ARROW; return IDC_ARROW;
+            case .CUR_BEAM;  return IDC_IBEAM;
+            case .CUR_WAIT;  return IDC_WAIT;
+        };
+        return null;
+    }
+}
+
+/*
+start_click_action_cooldown :: () {
+    assert(click_action_cooldown_active != true, "");
+    click_action_cooldown_active = true;
+    click_action_cooldown_start_time_ms = frame_start_time_ms;
+}
+*/
 
 measure_text_width :: inline (font: *Simp.Dynamic_Font, text: string) -> s64 {
     return Simp.prepare_text(font, text);
@@ -442,6 +476,7 @@ last_time: float64 = 0.0;
 frame_dt: float64 = 0.0;
 second_elapsed := false;
 frametime: float64;
+frame_start_time_ms: float64;
 last_simulation_time : float64;
 last_showed_sim_time : float64;
 last_rendering_time  : float64;
@@ -475,10 +510,10 @@ mouse_clicked := false;
 mouse_clicked_last_time_ms: float64;
 mouse_dbl_clicked := false;
 mouse_dbl_clicked_last_time_ms: float64;
-mouse_dbl_clicked_on_frame := false;
+mouse_was_dbl_clicked := false;
 
-click_action_cooldown_active := false;
-click_action_cooldown_start_time_ms: float64;
+//click_action_cooldown_active := false;
+//click_action_cooldown_start_time_ms: float64;
 
 cursor_shape := Cursor_Shape.BLOCK;
 cursor_line_indicator := Cursor_Line_Indicator.FILLED;
@@ -493,34 +528,6 @@ OS_Cursor_Kind :: enum u8 {
     CUR_ARROW :: 1;
     CUR_BEAM  :: 2;
     CUR_WAIT  :: 3;
-}
-
-#if OS == .WINDOWS {
-    os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
-        // set_custom_cursor_handling(true);
-
-        cur_rsrc_name := win32_cursor_resource_name_from_kind(kind); 
-        handle := LoadCursorA(null /* HINSTANCE */, cur_rsrc_name); // Loads the cursor resource if not already loaded; otherwise returns its handle.
-        if handle == null {
-            error_code := GetLastError();
-            log_error("Failed to load the cursor! error code: '%'\n", error_code);
-            return false;
-        }
-            
-        SetCursor(handle);
-        os_current_cursor_kind = kind;
-        
-        return true;
-    }
-
-    win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
-        if kind == {
-            case .CUR_ARROW; return IDC_ARROW;
-            case .CUR_BEAM;  return IDC_IBEAM;
-            case .CUR_WAIT;  return IDC_WAIT;
-        };
-        return null;
-    }
 }
 
 ////////////////////////////////

@@ -116,8 +116,11 @@ is_digit :: inline (c: u32) -> bool{
     return (c >= #char "0" && c <= #char "9");
 }
 
-is_alphanum :: inline (c: u32) -> bool {
-    return is_alpha(c) || is_digit(c) || c == #char "_";
+is_alphanum :: inline (c: u32, $include_underscore := true) -> bool {
+    #if include_underscore {
+        if c == #char "_" return true;
+    }
+    return is_alpha(c) || is_digit(c);
 }
 
 is_whitespace :: inline (c: u32) -> bool {
@@ -130,12 +133,30 @@ is_line_end :: inline (c: u32) -> bool {
     return c == #char "\n";
 }
 
+is_printable :: (c: u8) -> bool {
+    // True for any character from space to tilde (DEL not included).
+    return c >= 0x20 && c < 0x7F;
+}
+
+is_ctrl :: (c: u8) -> bool {
+    return !is_printable(c);
+} 
+
 is_hex_digit :: (c: u32) -> bool {
     return (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F") || (c >= #char "0" && c <= #char "9");
 }
 
 is_upper :: inline (char: u8) -> bool {
     return char >= #char "A" && char <= #char "Z";
+}
+
+Character_Type :: enum u8 { ctrl; alphanum; symbol; space; };
+get_character_type :: (c: u8) -> Character_Type {
+    if trailingBytesForUTF8[1] != 0 return .alphanum; // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!
+    if is_alphanum(c)   return .alphanum;
+    if c == #char " "   return .space;
+    if !is_printable(c) return .ctrl;
+    return .symbol;
 }
 
 to_snake_case_copy :: (s: string) -> string {
@@ -374,3 +395,4 @@ get_enum_by_name :: ($t: Type, name: string) -> (_enum: t, success: bool) {
 
 #import "String";
 #import "Math";
+#import "Unicode";

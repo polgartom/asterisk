@@ -1074,27 +1074,24 @@ SelectSimilarCharacters :: () {
     pos := byte_pos_from_mouse_xy(editor, buffer, mx, my);
     if pos == -1 return;
     
-    expect_alphanum := is_alphanum(s[pos]);
-    
-    // Scan to left
+    expected := get_character_type(s[pos]);
+    if expected == .ctrl return;
+        
     idx := pos;
-    while idx {
+    while idx { // Scan to left
         idx = prev_char_byte_offset(buffer, idx);
-        // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!
-        multibyte := !!trailingBytesForUTF8[s[idx]];
-        if !(multibyte || is_alphanum(s[idx]) == expect_alphanum) break;
+        if get_character_type(s[idx]) != expected break;
         editor.cursor.sel = idx;
     }    
     
     idx = pos;
-    while idx {
+    while idx <= buffer.count-1 { // Scan to right
         idx = next_character_pos(buffer, idx);
-        // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!
-        multibyte := !!trailingBytesForUTF8[s[idx]];
-        if !(multibyte || is_alphanum(s[idx]) == expect_alphanum) break;
+        editor.cursor.pos = idx;
+        if get_character_type(s[idx]) != expected break;
     }
     
-    set_cursor_pos(buffer, *editor.cursor, idx, horizontal=true, with_selection=false);
+    editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 }
 
 SelectAll :: () {
