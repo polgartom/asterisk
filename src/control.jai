@@ -1063,6 +1063,40 @@ ExtendSelectionByToken :: () {
     // @Incomplete: Currently, we are working with one cursor instance per buffer
 }
 
+SelectSimilarCharacters :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+        
+    s := to_string(buffer);
+    if !s return;
+    
+    mx, my, ok := get_mouse_pointer_position(right_handed=false);
+    pos := byte_pos_from_mouse_xy(editor, buffer, mx, my);
+    if pos == -1 return;
+    
+    expect_alphanum := is_alphanum(s[pos]);
+    
+    // Scan to left
+    idx := pos;
+    while idx {
+        idx = prev_char_byte_offset(buffer, idx);
+        // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!
+        multibyte := !!trailingBytesForUTF8[s[idx]];
+        if !(multibyte || is_alphanum(s[idx]) == expect_alphanum) break;
+        editor.cursor.sel = idx;
+    }    
+    
+    idx = pos;
+    while idx {
+        idx = next_character_pos(buffer, idx);
+        // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!
+        multibyte := !!trailingBytesForUTF8[s[idx]];
+        if !(multibyte || is_alphanum(s[idx]) == expect_alphanum) break;
+    }
+    
+    set_cursor_pos(buffer, *editor.cursor, idx, horizontal=true, with_selection=false);
+}
+
 SelectAll :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;

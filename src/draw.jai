@@ -51,7 +51,7 @@ draw_frame :: () {
         // }
 
         draw_global_debug_info(active_editor.rect_for_draw);
-        draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
+        //draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
 
     swap_buffers();
