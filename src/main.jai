@@ -495,36 +495,32 @@ OS_Cursor_Kind :: enum u8 {
     CUR_WAIT  :: 3;
 }
 
-os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
-    // On Windows we need to call this procedure on every frame...
+#if OS == .WINDOWS {
+    os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
+        // set_custom_cursor_handling(true);
 
-    cur_rsrc_name := win32_cursor_resource_name_from_kind(kind); 
-    handle := LoadCursorA(null /* HINSTANCE */, cur_rsrc_name); // Loads the cursor resource if not already loaded; otherwise returns its handle.
-    if handle == null {
-        error_code := GetLastError();
-        log_error("Failed to load the cursor! error code: '%'\n", error_code);
-        return false;
-    }
+        cur_rsrc_name := win32_cursor_resource_name_from_kind(kind); 
+        handle := LoadCursorA(null /* HINSTANCE */, cur_rsrc_name); // Loads the cursor resource if not already loaded; otherwise returns its handle.
+        if handle == null {
+            error_code := GetLastError();
+            log_error("Failed to load the cursor! error code: '%'\n", error_code);
+            return false;
+        }
+            
+        SetCursor(handle);
+        os_current_cursor_kind = kind;
         
-    SetCursor(handle);
-    
-    // The cursor changes only when it moves, so it has to simulate a movement.
-    p := POINT.{};
-    GetCursorPos(*p);
-    SetCursorPos(p.x, p.y);
-    
-    os_current_cursor_kind = kind;
-    
-    return true;
-}
+        return true;
+    }
 
-win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
-    if kind == {
-        case .CUR_ARROW; return IDC_ARROW;
-        case .CUR_BEAM;  return IDC_IBEAM;
-        case .CUR_WAIT;  return IDC_WAIT;
-    };
-    return null;
+    win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
+        if kind == {
+            case .CUR_ARROW; return IDC_ARROW;
+            case .CUR_BEAM;  return IDC_IBEAM;
+            case .CUR_WAIT;  return IDC_WAIT;
+        };
+        return null;
+    }
 }
 
 ////////////////////////////////
