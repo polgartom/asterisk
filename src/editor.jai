@@ -995,7 +995,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             anim_x.start  = editor.left_offset;
             anim_x.target = target;
             anim_x.duration = animation_duration;
-            anim_x.started_at = cast(float) current_time;
+            anim_x.started_at = frame_time64;
             editor.x_scroll_anim = anim_x;        
         } else {
             editor.left_offset = target;
@@ -1023,7 +1023,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             anim_y.start  = editor.top_offset;
             anim_y.target = target;
             anim_y.duration = animation_duration;
-            anim_y.started_at = cast(float)current_time;
+            anim_y.started_at = frame_time64;
             editor.y_scroll_anim = anim_y;
         } else {
             editor.top_offset = target;

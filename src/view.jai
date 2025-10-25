@@ -179,7 +179,7 @@ Anim :: struct {
     active: bool;
     start: float;
     target: float;
-    started_at: float;
+    started_at: float64;
     duration: float;
     elapsed: float64;
 }

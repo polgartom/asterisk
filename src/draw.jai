@@ -87,7 +87,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     if editor.y_scroll_anim.active {
         using editor.y_scroll_anim;
 
-        t := (current_time - started_at) / duration;
+        t := (frame_time64 - started_at) / duration;
         t = clamp(t, 0.0, 1.0);
         distance := (target - start);
         // v := start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
@@ -103,7 +103,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     if editor.x_scroll_anim.active {
         using editor.x_scroll_anim;
 
-        t := (current_time - started_at) / duration;
+        t := (frame_time64 - started_at) / duration;
         t = clamp(t, 0.0, 1.0);
         distance := (target - start);
         v := start + cast(float)(distance * t);
@@ -583,7 +583,7 @@ draw_find_global_text_dialog :: () {
         color := #run hex_to_vec4(0x6a2a2a_ff);
         
         t := .6;
-        blend_factor := sin(TAU * (xx current_time) * t);
+        blend_factor := sin(TAU * cast(float, frame_time64) * t);
         blend_factor += 0.0;
         blend_factor *= t;
         Clamp(*blend_factor, 0, 1);
@@ -788,35 +788,13 @@ draw_goto_line_dialog :: () {
 }
 
 draw_global_debug_info :: (r: Rect) {
-    // Simp.immediate_flush();
+    Simp.immediate_begin();
+    
+    e := get_active_editor_and_buffer();
+    PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
 
-    // FPS
-    ct := seconds_since_init();
-    if second_elapsed {
-        frametime = (ct - last_time); // frametime
-        fps       = 1/frametime;
-        last_showed_sim_time = last_simulation_time;
-        last_rendering_time = (ct-last_time)*1000;
-    }
-
-    PrintDev("%fps %ms %sec | dt: % sim: %ms draw: %ms\n", 
-        formatFloat(fps, trailing_width=0),
-        formatFloat(frametime*1000, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO),
-        formatFloat(last_time, trailing_width=2, zero_removal=FormatFloat.Zero_Removal.NO),
-        frame_dt, 
-        last_showed_sim_time,
-        last_rendering_time,
-    );
-
-    {
-        e := get_active_editor_and_buffer();
-        PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
-    }
-
-    {
-        mx, my, ok := get_mouse_pointer_position_right_handed();
-        PrintDev("[mouse] x:% y:%\n", mx, my);
-    }
+    mx, my, ok := get_mouse_pointer_position_right_handed();
+    PrintDev("[mouse] x:% y:%\n", mx, my);
 
     row := 1;
     max := 0;
@@ -836,6 +814,8 @@ draw_global_debug_info :: (r: Rect) {
 
         if ln then row += 1;
     }
+    
+    Simp.immediate_flush();
 }
 
 ////////////////////////////////

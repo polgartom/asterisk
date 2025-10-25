@@ -61,27 +61,26 @@ main :: () {
     init_fonts();
     footer_height = r_font_sm.character_height*1.5; // @Temporary
 
-    last_time = seconds_since_init();
-    last_second_time: float64 = 0.0;
+    last_second_time: Apollo_Time;
 
     while !should_quit {
-        if !redraw_requested {
-            wait_for_event();
+        if !redraw_requested wait_for_event();
+        
+        current_time = current_time_monotonic();
+        frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
+        frame_time = current_time_monotonic();
+        frame_time64 = to_float64_seconds(frame_time);
+        
+        frame_start_time_ms = ms_since_init();
+        frame += 1;
+
+        second_elapsed = false;
+        if to_float64_seconds(frame_time - last_second_time) > 1 {
+            last_second_time = current_time;
+            second_elapsed = true;
         }
         
         redraw_requested = false;
-
-        frame += 1;
-        current_time = seconds_since_init();
-        frame_dt = current_time - last_time;
-        last_time = seconds_since_init();
-        frame_start_time_ms = ms_since_init();
-
-        second_elapsed = false;
-        if last_time - last_second_time > 1.0 {
-            last_second_time = last_time;
-            second_elapsed = true;
-        }
 
         update_window_events();
         clear_widget_events();
@@ -292,6 +291,12 @@ main :: () {
         
         array_reset(*debug_infos);
         reset_temporary_storage();
+        
+        if to_float64_seconds(current_time_monotonic() - frame_time) <= QUICK_FRAME_DT {
+            // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
+            sleep_milliseconds(2);
+        }
+        
         // sleep_milliseconds(6); // @Temporary
     }
 } @NoProfile
@@ -471,11 +476,15 @@ redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
 frame := 0;
 fps: float64;
 
-current_time: float64 = 0.0;
-last_time: float64 = 0.0;
-frame_dt: float64 = 0.0;
+MAX_FRAME_DT:   float64 : (1.0 / 60);
+QUICK_FRAME_DT: float64 : (1.0 / 300);
+
+frame_time: Apollo_Time;
+frame_time64: float64;
+frame_dt: float64;
+current_time: Apollo_Time;
+
 second_elapsed := false;
-frametime: float64;
 frame_start_time_ms: float64;
 last_simulation_time : float64;
 last_showed_sim_time : float64;

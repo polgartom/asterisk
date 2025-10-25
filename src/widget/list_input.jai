@@ -83,13 +83,13 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value + ((b+y_off*2) - target + y_off);
                 _anim.duration = 0.07;
-                _anim.started_at = cast(float)current_time;
+                _anim.started_at = frame_time64;
             } else if target >= top_threshold {
                 _anim.active = true;
                 _anim.start  = scroll_value;
                 _anim.target = scroll_value - (target - top_threshold + y_off);
                 _anim.duration = 0.07;
-                _anim.started_at = cast(float)current_time;
+                _anim.started_at = frame_time64;
             }
         }
     }
@@ -97,7 +97,7 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     if _anim.active {
         using _anim;
 
-        t := (current_time - started_at) / duration;
+        t := (frame_time64 - started_at) / duration;
         t = clamp(t, 0.0, 1.0);
         distance := (target - start);
         v := start + cast(float)(distance * t);
