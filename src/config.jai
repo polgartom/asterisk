@@ -105,8 +105,9 @@ parse_keymap_section :: (file_data: string) {
         return load_from_handler(set, null, *handler);
     }
 
+    // @Todo: Show an error message what is wrong instead of an assertion!
     success := load_from_memory(*keymap_set, keymap_data);
-    assert(success);
+    //assert(success);
 }
 
 parse_style_section :: (file_data: string) -> bool {

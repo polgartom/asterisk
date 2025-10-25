@@ -64,7 +64,9 @@ main :: () {
     last_second_time: Apollo_Time;
 
     while !should_quit {
-        if !redraw_requested wait_for_event();
+        if !redraw_requested && wait_os_event_before_redraw {
+            wait_for_event();
+        }
         
         current_time = current_time_monotonic();
         frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
@@ -470,9 +472,11 @@ executable_args: struct { workdir: string; };
 window: Window_Type;
 window_width  := 1200;
 window_height := 1200;
-dpi_scale := 1.0;
 should_quit := false;
+dpi_scale := 1.0;
 redraw_requested := true; // @Todo: Use this on WINDOWS and LINUX
+wait_os_event_before_redraw := true;
+
 frame := 0;
 fps: float64;
 

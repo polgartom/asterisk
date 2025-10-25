@@ -165,6 +165,10 @@ ToggleDevInfo :: () {
     show_debug_info = !show_debug_info;
 }
 
+ToggleWaitForEvent :: () {
+    wait_os_event_before_redraw = !wait_os_event_before_redraw;
+}
+
 move_up_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -1196,6 +1200,7 @@ register_keymap_procedures :: () {
 
     // Editor
     Add(editor_keymap, ToggleDevInfo);
+    Add(editor_keymap, ToggleWaitForEvent);
 
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);

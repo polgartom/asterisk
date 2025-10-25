@@ -228,7 +228,8 @@ uniform vec4 text_color;
 void main () {
     vec4 tex = texture(text_sampler, TextureCoords);
     //float linear_alpha = pow(tex.a, 1.0/2.2); // gamma correction
-    float linear_alpha = pow(tex.a, 1.0/1.4); // gamma correction
+    //float linear_alpha = pow(tex.a, 1.0/1.4); // gamma correction
+    float linear_alpha = pow(tex.a, 1.0/(96.0/72.0)); // gamma correction
     color = vec4(iterated_color.rgb, iterated_color.a * linear_alpha);
 }
 #endif // FRAGMENT_SHADER

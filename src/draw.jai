@@ -790,6 +790,9 @@ draw_goto_line_dialog :: () {
 draw_global_debug_info :: (r: Rect) {
     Simp.immediate_begin();
     
+    PrintDev("[frame] %\n", frame);
+    PrintDev("[flags] wait_os_event_before_redraw: %\n", wait_os_event_before_redraw);
+
     e := get_active_editor_and_buffer();
     PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
 
