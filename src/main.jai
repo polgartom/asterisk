@@ -66,7 +66,7 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested {
-            //wait_for_event();
+            wait_for_event();
         }
         
         redraw_requested = false;
