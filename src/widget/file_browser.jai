@@ -57,8 +57,6 @@ _draw_file_browser :: () {
 
     array_reset_keeping_memory(*options);
 
-    // @Todo: Handle multiple drives
-
     path := path_strip_filename(tinp.text);
     if !platform_path_equals(path, current_dir) {
         modify_string(*current_dir, path);
@@ -92,7 +90,7 @@ _draw_file_browser :: () {
     }
     
     quick_sort(options, (a, b) => cast(s64) (utf8_character_count(b.label) - utf8_character_count(a.label))); // prefer shorter files 
-    quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));                                     // prefer directories over files
+    quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));                                   // prefer directories over files
 
     list_rect := r;
     list_rect.h = 1.5*k;
@@ -103,8 +101,7 @@ _draw_file_browser :: () {
     linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
     
     if tinp.typed {
-        linp.scroll_value = 0.0;
-        linp.selected_index = -1;
+        reset_list_input(linp);
     }
     
     if linp.selected_index == -1 linp.selected_index = 0;
@@ -125,7 +122,7 @@ _draw_file_browser :: () {
             close_current_widget();
         }
         
-        linp.selected_index = 0;
+        reset_list_input(linp);
     }
     
 }

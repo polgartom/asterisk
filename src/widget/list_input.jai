@@ -150,6 +150,11 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     return input;
 }
 
+reset_list_input :: (using input: *List_Input) {
+    input.scroll_value = 0.0;
+    input.selected_index = 0;
+}
+
 #scope_file
 
 _anim: Anim;
