@@ -26,9 +26,13 @@ init_fonts :: () {
 
     if !font_data then font_data = BAKED_FONT_DEFAULT.data;
 
+    delta := font_size - DEFAULT_FONT_SIZE;
+    font_size_sm = DEFAULT_SMALL_FONT_SIZE + delta;
+    font_size_icon = DEFAULT_FONT_SIZE + delta;
+
     r_font       = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size*dpi_scale));
     r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size_sm*dpi_scale));
-    r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size*dpi_scale));
+    r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size_icon*dpi_scale));
     assert(r_font != null && r_font_sm != null && r_font_icons != null);
 
     #if 0 {
@@ -158,12 +162,17 @@ r_font_sm:    *Simp.Dynamic_Font;
 r_font_icons: *Simp.Dynamic_Font;
 
 font_family: string;
-font_size: u8 = 14;
-font_size_sm: u8 = 13; // change this dynamically based on the dpi and the font_size
+font_size: u8 = DEFAULT_FONT_SIZE;
+font_size_sm: u8 = DEFAULT_SMALL_FONT_SIZE; // change this dynamically based on the dpi and the font_size
+font_size_icon: u8 = DEFAULT_ICON_FONT_SIZE;
 
 file_icon_md_width := 0;
 folder_icon_md_width := 0;
 folder_open_icon_md_width := 0;
+
+DEFAULT_FONT_SIZE :: 14;
+DEFAULT_SMALL_FONT_SIZE :: 13;
+DEFAULT_ICON_FONT_SIZE :: 14;
 
 PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);
 CASE_SENSITIVE_ICON :: #run fontawesome_utf32_to_utf8(0xf031);
