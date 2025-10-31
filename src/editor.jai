@@ -1035,6 +1035,8 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
 }
 
 scroll_up :: (editor: *Editor) {
+    // @Todo: Handle the touchpad scrolling!
+
     assert(editor.active_buffer != null);
     buffer := editor.active_buffer;
     r := editor.rect_for_draw;
@@ -1042,14 +1044,12 @@ scroll_up :: (editor: *Editor) {
 
     first_ri := buffer.row_table.count-1;
     first_visible_ri := first_visible_row_index(editor, buffer);
-    if first_visible_ri == first_ri return;
-    
     target_ri := first_visible_row_index(editor, buffer);
     target_ri -= 3;
     if target_ri < 0 then target_ri = 0;
 
     // Viewport (Y)
-    target := fnt_get_line_height(target_ri);
+    target := ifx target_ri == 0 then 0 else fnt_get_line_height(target_ri) + r_font.default_line_spacing;
     
     editor.top_offset = target;
     editor.y_scroll_anim.active = false;
@@ -1058,6 +1058,8 @@ scroll_up :: (editor: *Editor) {
 }
 
 scroll_down :: (editor: *Editor) {
+    // @Todo: Handle the touchpad scrolling! 
+
     assert(editor.active_buffer != null);
     buffer := editor.active_buffer;
     r := editor.rect_for_draw;
@@ -1065,14 +1067,18 @@ scroll_down :: (editor: *Editor) {
 
     last_ri := buffer.row_table.count-1;
     last_visible_ri := last_visible_row_index(editor, buffer);
-    if last_visible_ri == last_ri return;
+    if last_visible_ri == last_ri {
+        if editor.top_offset + editor.rect_for_draw.h > fnt_get_line_height(last_ri) + r_font.default_line_spacing {
+            return;
+        }
+    }
     
     target_ri := first_visible_row_index(editor, buffer);
-    target_ri += 4+1;
+    target_ri += 3;
     Clamp(*target_ri, 0, last_ri);
 
     // Viewport (Y)
-    target := fnt_get_line_height(target_ri);
+    target := fnt_get_line_height(target_ri) + r_font.default_line_spacing; // add the line spacing so we get the bottom position of the row
     editor.top_offset = target;
     editor.y_scroll_anim.active = false;
 
@@ -1105,7 +1111,7 @@ first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s6
 }
 
 last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
-    viewport_h := window_height-footer_height*2; // @Hacky
+    viewport_h := editor.rect_for_draw.h;// window_height-footer_height*2; // @Hacky
     line_height := fnt_get_line_height();
     end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);
     end_row = clamp(end_row+1, 0, row_table.count-1);
