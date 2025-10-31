@@ -226,11 +226,36 @@ uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    vec4 tex = texture(text_sampler, TextureCoords);
-    //float linear_alpha = pow(tex.a, 1.0/2.2); // gamma correction
-    //float linear_alpha = pow(tex.a, 1.0/1.4); // gamma correction
-    float linear_alpha = pow(tex.a, 1.0/(96.0/72.0)); // gamma correction
-    color = vec4(iterated_color.rgb, iterated_color.a * linear_alpha);
+
+    float dist = texture(text_sampler, TextureCoords).a;
+    float w = fwidth(dist);
+
+    // horizontal screen-space UV per pixel
+    float dx = dFdx(TextureCoords.x);
+
+    // Subpixel offsets for R, G, B
+    vec3 offset = vec3(-1.0, 0.0, 1.0) * (dx * 0.333);
+
+    vec3 rgb;
+    rgb.r = texture(text_sampler, TextureCoords + vec2(offset.r, 0.0)).a;
+    rgb.g = texture(text_sampler, TextureCoords + vec2(offset.g, 0.0)).a;
+    rgb.b = texture(text_sampler, TextureCoords + vec2(offset.b, 0.0)).a;
+
+    // smooth threshold per channel
+    vec3 alpha = smoothstep(0.5 - w, 0.5 + w, rgb);
+
+    // combine channels
+    color = vec4(iterated_color.rgb, dot(alpha, vec3(1.0/3.0)));
+
+    // vec2 pixel_width = (dFdx(TextureCoords), dFdy(TextureCoords)); 
+    // float dist = texture(text_sampler, TextureCoords).a;
+    // float w = fwidth(dist)*.5;
+    // float alpha = smoothstep(0.5 - w, 0.5 + w, dist);
+    // // float alpha = dist > 0.5 ? 1.0 : 0.0;
+    // float linear_alpha = pow(alpha, 1.0/(96.0/72.0));
+    // color = vec4(iterated_color.rgb, iterated_color.a*linear_alpha);
+
+    // if (color.a < 0.01) discard;
 }
 #endif // FRAGMENT_SHADER
 END
