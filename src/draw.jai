@@ -43,13 +43,21 @@ draw_frame :: () {
             }
         }
         */
-
     
         // b := active_editor.active_buffer;
         // for b.history {
         //     PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
         // }
 
+/*
+        {
+            using r_font;
+            ls := r_font.default_line_spacing;
+            line_gap := r_font.default_line_spacing - abs(r_font.typical_descender) - abs(r_font.typical_ascender);
+            //log("> % ; %\n", ls, line_gap);
+        }
+*/
+        draw_font_metrics_debug(active_editor);
         draw_global_debug_info(active_editor.rect_for_draw);
         //draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
@@ -134,11 +142,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         start_row: s64 = xx (top_offset / line_height);
         start_row = clamp(start_row - 1, 0, row_table.count-1);
-
         end_row := last_visible_row_index(editor, buffer);
-
         color := map_color_to_vec4(.TEXT_DEFAULT);
-
         left_pad := cast(float32) r_font.em_width;
 
         push_scissor(r);
@@ -150,7 +155,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             if row.size == 0 continue;
 
             bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
-            
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
             draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
@@ -233,7 +237,6 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     Simp.set_shader_for_color(true);
 
     c  := *editor.cursor;
-
     row_index := find_row_index(buffer, c.pos);
     row := buffer.row_table[row_index];
     line_text := get_row_as_string(buffer, row);
@@ -243,7 +246,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     cw := em(1.0, r_font);
     ch := r_font.character_height;
 
-    bottom := (r.h + r.y) - fnt_get_line_height(row_index + 1) + editor.top_offset;
+    right_to_left_handed := (r.h + r.y); // so we calculate things from "the top"
+    baseline := right_to_left_handed - fnt_get_line_height(row_index + 1) + editor.top_offset;
 
     bg_color := map_color_to_vec4(.CURSOR);
     fg_color := map_color_to_vec4(.TEXT_UNDER_CURSOR);
@@ -258,40 +262,36 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
         line_indicator = .NONE;
     }
 
+    p1, p2 := fnt_top_bottom_from_baseline_for_quad(r_font, baseline);
+
     if #complete line_indicator == {
         case .NONE;
         case .FILLED;
+            // kacsa
             // Current line indicator shape
-            p1 := bottom + (ch-ch*0.1);
-            p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
-
             color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
             Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
         case .BORDERED;
-            p1 := bottom + (ch-ch*0.1);
-            p2 := bottom - (ch/2-(ch*0.2)) - 1.0;
-
             THICKNESS :: 2; // @Todo: Add to config
             border_color := #run hex_to_vec4(0xcccccc_1a); // map_color_to_vec4(.CURSOR_LINE_BACKGROUND); // @Todo: Add to config
-
             Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + THICKNESS, border_color); // top
             Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + THICKNESS, border_color); // bottom
     }
 
     if #complete shape == {
-        case .BLOCK;
-            Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
+        case .BLOCK;        
+            Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + cw), p2, bg_color);
             // Change character's color under the cursor
             if buffer.count {
                 character := get_character_as_string_at(buffer, xx c.pos);
                 Simp.prepare_text(r_font, character);
-                Simp.draw_prepared_text(r_font, xx cx, xx bottom, fg_color);
+                Simp.draw_prepared_text(r_font, xx cx, cast(s64, baseline), fg_color);
             }
         case .LINE;
-            Simp.immediate_quad(cast(float32)cx, bottom + (ch-ch*0.1), cast(float32)(cx + max(cw*.5, 3.0)), bottom - (ch/2-(ch*0.2)), bg_color);
+            Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + max(cw*.5, 3.0)), p2, bg_color);
 
         case .UNDERSCORE;
-            Simp.immediate_quad(cast(float32)cx, bottom, cast(float32)(cx + cw), bottom - (ch/2-(ch*0.2)), bg_color);
+            Simp.immediate_quad(cast(float32)cx, baseline, cast(float32)(cx + cw), p2, bg_color);
     }
 
     Simp.immediate_flush();
@@ -343,9 +343,9 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         if t2.count then width += Simp.prepare_text(r_font, t2);
                     else width += r_font.em_width;
 
-        bottom := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
-        // @Hacky We should add +.001 as a crude fix for some rounding issues because there is a very subtle gap if editor.top_offset is 0.0.
-        Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left+width, bottom - (ch*.5-(ch*0.2)), selection_color);
+        baseline := (r.h+r.y) - (line_height*(row_index+1)) + editor.top_offset;
+        p1, p2 := fnt_top_bottom_from_baseline_for_quad(r_font, baseline);
+        Simp.immediate_quad(left, p1, left+width, p2, selection_color);
     }
 
     ///////
@@ -390,10 +390,10 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
             text  = slice(text, 0, s.count);
             width := measure_text_width(r_font, text);
 
-            bottom := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
-
             //Simp.set_shader_for_color(true); // do we need this right here?
-            Simp.immediate_quad(left, bottom + (ch-ch*0.1)+.001, left + width, bottom - (ch*.5-(ch*0.2)), map_color_to_vec4(.TEXT_SELECTION_MATCH));
+            baseline := (r.h + r.y) - (line_height*(ri+1)) + editor.top_offset;
+            p1, p2 := fnt_top_bottom_from_baseline_for_quad(r_font, baseline);
+            Simp.immediate_quad(left, p1, left + width, p2, map_color_to_vec4(.TEXT_SELECTION_MATCH));
         }
     }
 
@@ -821,6 +821,38 @@ draw_global_debug_info :: (r: Rect) {
     Simp.immediate_flush();
 }
 
+draw_font_metrics_debug :: (editor: *Editor) {
+    r := editor.rect_for_draw;
+    
+    push_scissor(r);
+    defer pop_scissor();
+    
+    Simp.set_shader_for_color(true);
+    
+    c  := *editor.cursor;
+    row_index := find_row_index(editor.active_buffer, c.pos);
+    right_to_left_handed := (r.h + r.y); // so we calculate things from "the top"
+    baseline := right_to_left_handed - fnt_get_line_height(row_index + 1) + editor.top_offset;
+    // kacsa
+    p1 := baseline + r_font.typical_ascender;
+    p2 := baseline - abs(r_font.typical_descender); // the descender is negative value for some reason!!!
+    line_gap_from_baseline := r_font.default_line_spacing - abs(r_font.typical_ascender) - abs(r_font.typical_descender);
+    p3_top    := baseline + r_font.typical_ascender + line_gap_from_baseline;
+    p3_bottom := baseline - abs(r_font.typical_descender) - line_gap_from_baseline;
+    actual_line_gap := line_gap_from_baseline / 2; // ??? It seems we get the line_gap with this of the bottom or the top (both hopefully)
+    p4_top    := baseline + r_font.typical_ascender + actual_line_gap;
+    p4_bottom := baseline - abs(r_font.typical_descender) - actual_line_gap;
+    
+    //Simp.immediate_quad(r.x, p1, r.x + r.w, p1+1, #run hex_to_vec4(0x60_80_Af_ff)); // character_height
+    Simp.immediate_quad(r.x, p1, r.x + r.w, p1+1, #run hex_to_vec4(0x60_80_Af_ff)); // ascender
+    Simp.immediate_quad(r.x, baseline, r.x + r.w, baseline+1, #run hex_to_vec4(0xff_00_20_5a)); // baseline
+    Simp.immediate_quad(r.x, p2, r.x + r.w, p2+1, #run hex_to_vec4(0x20_ff_00_5a)); // descender
+    Simp.immediate_quad(r.x, p3_top, r.x + r.w, p3_top+1, #run hex_to_vec4(0x80_80_F0_8a)); // line_gap_from_baseline
+    Simp.immediate_quad(r.x, p3_bottom, r.x + r.w, p3_bottom+1, #run hex_to_vec4(0x80_80_F0_8a)); // line_gap_from_baseline
+    Simp.immediate_quad(r.x, p4_top, r.x + r.w, p4_top+1, #run hex_to_vec4(0xF0_80_F0_8a)); // line_gap (top)
+    Simp.immediate_quad(r.x, p4_bottom, r.x + r.w, p4_bottom+1, #run hex_to_vec4(0xF0_80_F0_8a)); // line_gap (bottom)
+}
+
 ////////////////////////////////
 //~ 
 
@@ -930,12 +962,6 @@ draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(r_font, s);
     Simp.draw_prepared_text(r_font, left, bottom, color);
     return w;
-}
-
-draw_character_height_aware_rect :: (font: *Simp.Dynamic_Font, left: float32, width: float32, bottom: float32, color: Vector4) {
-    ch := font.character_height;
-
-    Simp.immediate_quad(left, bottom + (ch-ch*0.1), left+width, bottom - (ch/2-(ch*0.2)), color);
 }
 
 draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {

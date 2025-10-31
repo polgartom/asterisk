@@ -71,6 +71,14 @@ fnt_get_line_height :: inline (row: s64 = 1, font: *Simp.Dynamic_Font = null) ->
     return row * (font.default_line_spacing + line_height*dpi_scale);
 }
 
+fnt_top_bottom_from_baseline_for_quad :: (using font: *Simp.Dynamic_Font, baseline: float32) -> top: float32, bottom: float32 {
+    line_gap := abs(default_line_spacing) - abs(typical_ascender) - abs(typical_descender);  // the descender is negative value for some reason!
+    top := baseline + abs(typical_ascender) + (line_gap / 2.0);
+    //bottom := baseline - abs(typical_descender);
+    bottom := baseline - abs(typical_descender) - (line_gap / 2.0);
+    return top, bottom;
+}
+
 em :: (x: float, font: *Simp.Dynamic_Font) -> float {
     if font return font.em_width * x;
     return 1;  // In case we get null fonts from the user.
