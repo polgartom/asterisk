@@ -1116,7 +1116,7 @@ scroll_right :: (editor: *Editor) {
     if cast(s64, target + r.w) < cast(s64)max_width {
         editor.left_offset = target;
         redraw_requested = true;
-    } else {
+    } else if xx max_width > editor.left_offset + r.w {
         max_possible_x := max_width - r.w;
         editor.left_offset = max_possible_x;
     }

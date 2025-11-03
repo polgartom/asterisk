@@ -26,9 +26,11 @@ init_fonts :: () {
 
     if !font_data then font_data = BAKED_FONT_DEFAULT.data;
 
-    delta := font_size - DEFAULT_FONT_SIZE;
-    font_size_sm = DEFAULT_SMALL_FONT_SIZE + delta;
-    font_size_icon = DEFAULT_FONT_SIZE + delta;
+    delta := cast(int, font_size) - DEFAULT_FONT_SIZE;
+    assert(DEFAULT_SMALL_FONT_SIZE + delta > 0);
+    assert(DEFAULT_FONT_SIZE + delta > 0);
+    font_size_sm   = cast(u8, DEFAULT_SMALL_FONT_SIZE + delta);
+    font_size_icon = cast(u8, DEFAULT_FONT_SIZE + delta);
 
     r_font       = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size*dpi_scale));
     r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size_sm*dpi_scale));
