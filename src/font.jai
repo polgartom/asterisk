@@ -88,47 +88,47 @@ em :: (x: float, font: *Simp.Dynamic_Font) -> float {
     return 1;  // In case we get null fonts from the user.
 }
 
-find_font_by_name :: (name: string, allocator := temp) -> bool, string {
-    // Copied from Focus editor
-
-    // We would like to use `EnumFontFamiliesExA()` so we can filter out fonts that are
-    // not monospace. However it only enumerates fonts that have been loaded in GDI via
-    // `AddFontResourceEx()` which doesn't include fonts installed in the user specific
-    // location (`%LocalAppData%\Microsoft\Windows\Fonts`) by default.
-    //
-    // Instead of spamming `AddFontResourceEx()` calls we just take file names straight
-    // from he registry.
-
-    hkeys  : []HKEY   = .[HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE];
-    styles : []string = .[" Regular", ""];
-    types  : []string = .[" (TrueType)", ""];
-    key    : string   = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts\0";  // Needs '\0' at the end so we can pass it to RegGetValueA()
-    for hkey : hkeys {
-        for style : styles {
-            for type : types {
-                buff: [1024]u8;
-                size: DWORD = buff.count - 1;
-
-                value := sprint("%1%2%3\0", name, style, type);  // Needs '\0' at the end so we can pass it to RegGetValueA()
-                defer free(value);
-
-                ret := RegGetValueA(hkey, key.data, value.data, RRF_RT_REG_SZ, null, buff.data, *size);
-                if ret != 0 continue;
-
-                path := to_string(buff.data, size);
-                if !is_absolute_path(path) {
-                    full_path := tprint("%/%", get_fonts_path(), path);
-                    return true, copy_string(full_path,, allocator = allocator);
+#if OS == .WINDOWS {
+    find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+        // Copied from Focus editor
+    
+        // We would like to use `EnumFontFamiliesExA()` so we can filter out fonts that are
+        // not monospace. However it only enumerates fonts that have been loaded in GDI via
+        // `AddFontResourceEx()` which doesn't include fonts installed in the user specific
+        // location (`%LocalAppData%\Microsoft\Windows\Fonts`) by default.
+        //
+        // Instead of spamming `AddFontResourceEx()` calls we just take file names straight
+        // from he registry.
+    
+        hkeys  : []HKEY   = .[HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE];
+        styles : []string = .[" Regular", ""];
+        types  : []string = .[" (TrueType)", ""];
+        key    : string   = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts\0";  // Needs '\0' at the end so we can pass it to RegGetValueA()
+        for hkey : hkeys {
+            for style : styles {
+                for type : types {
+                    buff: [1024]u8;
+                    size: DWORD = buff.count - 1;
+    
+                    value := sprint("%1%2%3\0", name, style, type);  // Needs '\0' at the end so we can pass it to RegGetValueA()
+                    defer free(value);
+    
+                    ret := RegGetValueA(hkey, key.data, value.data, RRF_RT_REG_SZ, null, buff.data, *size);
+                    if ret != 0 continue;
+    
+                    path := to_string(buff.data, size);
+                    if !is_absolute_path(path) {
+                        full_path := tprint("%/%", get_fonts_path(), path);
+                        return true, copy_string(full_path,, allocator = allocator);
+                    }
+                    return true, copy_string(path,, allocator = allocator);
                 }
-                return true, copy_string(path,, allocator = allocator);
             }
         }
+    
+        return false, "";
     }
 
-    return false, "";
-}
-
-#if OS == .WINDOWS {
     get_fonts_path :: () -> string {
         // Copied from Focus editor
 
