@@ -154,10 +154,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             row := row_table[row_index];
             if row.size == 0 continue;
 
-            bottom := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
+            baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
-            draw_code(buffer, xx (left-left_offset), xx bottom, line_text);
+            draw_code(buffer, xx (left-left_offset), xx baseline, line_text);
         }
         
     }

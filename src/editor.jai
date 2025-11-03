@@ -1059,7 +1059,6 @@ scroll_up :: (editor: *Editor) {
 
 scroll_down :: (editor: *Editor) {
     // @Todo: Handle the touchpad scrolling! 
-
     assert(editor.active_buffer != null);
     buffer := editor.active_buffer;
     r := editor.rect_for_draw;
@@ -1083,6 +1082,44 @@ scroll_down :: (editor: *Editor) {
     editor.y_scroll_anim.active = false;
 
     redraw_requested = true;
+}
+
+scroll_left :: (editor: *Editor) {
+    buffer := editor.active_buffer;
+    assert(editor.active_buffer != null);
+    r := editor.rect_for_draw;
+    if r.w == 0 || r.h == 0 return; // ???
+    
+    target := editor.left_offset - r_font.em_width * 6;
+    if target < 0 target = 0;
+    editor.left_offset = target;
+    redraw_requested = true;
+}
+
+scroll_right :: (editor: *Editor) {
+    buffer := editor.active_buffer;
+    assert(editor.active_buffer != null);
+    r := editor.rect_for_draw;
+    if r.w == 0 || r.h == 0 return; // ???
+    
+    max_width := 0;
+    si := first_visible_row_index(editor, buffer);
+    ei := last_visible_row_index(editor, buffer);
+    for i: si..ei {
+        row := buffer.row_table[i];
+        str := get_row_as_string(buffer, row);
+        w := measure_text_width(r_font, str);
+        if w > max_width then max_width = w;
+    }
+    
+    target := editor.left_offset + r_font.em_width * 6;
+    if cast(s64, target + r.w) < cast(s64)max_width {
+        editor.left_offset = target;
+        redraw_requested = true;
+    } else {
+        max_possible_x := max_width - r.w;
+        editor.left_offset = max_possible_x;
+    }
 }
 
 find_row :: inline (using buffer: *Buffer, byte_pos: s64) -> Row_Info {

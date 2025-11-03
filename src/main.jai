@@ -211,8 +211,19 @@ main :: () {
                     // @Improve @Todo The rect_for_draw already contains the paddings so it won't if the mouse cursor on the paddings' area.
                     // Also the rect_for_draw include the editor footer rect.
                     if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
-                        if      mouse_scrolled_on_frame == .up   then scroll_up(e);
-                        else if mouse_scrolled_on_frame == .down then scroll_down(e);
+                        if mouse_scrolled_on_frame == .up {
+                            if vk_shift_down {
+                                scroll_left(e);
+                            } else {
+                                scroll_up(e);
+                            }
+                        } else if mouse_scrolled_on_frame == .down {
+                            if vk_shift_down {
+                                scroll_right(e);
+                            } else {
+                                scroll_down(e);  
+                            }
+                        }
                         break;
                     }
                 }
