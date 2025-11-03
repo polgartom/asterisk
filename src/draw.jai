@@ -85,7 +85,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     if !is_active(editor) context.color_intensity *= 0.90;
     defer reset_color_intensity();
     
-    r, footer_r := cut_top(rect, window_height-footer_height);
+    r, footer_r := cut_top(rect, window_height - get_footer_height());
     footer_r = expand_x(footer_r, LEFT_PADDING); // hacky
 
     editor.rect_for_draw = r;
@@ -184,7 +184,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         width := 0;
         left := footer.x + 10;
-        center := font_calc_y_center_insert_point(footer, r_font_sm.character_height);
+        baseline := footer.y + r_font_sm.y_offset_for_centering*1.25;
+
+        if (show_debug_info) {
+            Simp.immediate_quad(footer.x, footer.y+baseline, footer.x+footer.w, footer.y+baseline+1, .{1,0,0,.7});
+            Simp.immediate_quad(footer.x, footer.y+footer.h/2, footer.x+footer.w, footer.y+footer.h/2+1, .{0,.6,.8,.9});
+        }
 
         {
             // Draw buffer's file info
@@ -210,7 +215,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             }
 
             width = Simp.prepare_text(r_font_sm, info_text);
-            Simp.draw_prepared_text(r_font_sm, xx left, xx center, fg_color);
+            Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, fg_color);
 
             left += width;
         }
@@ -224,7 +229,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
         width = Simp.prepare_text(r_font_sm, row_col_info);
         x := cast(s64, footer.x + footer.w - width * 1.1); // 1.1 is the padding
-        y := cast(s64, center);
+        y := cast(s64, baseline);
         Simp.draw_prepared_text(r_font_sm, x, y, fg_color);
     }
 
@@ -653,7 +658,7 @@ draw_find_text_dialog :: () {
 
         r := make_rect(
             ed_r.x + ed_r.w - width - pad,
-            ed_r.h - footer_height,
+            ed_r.h - get_footer_height(),
             width,
             xx font.character_height * 2.0,
         );
@@ -761,7 +766,7 @@ draw_goto_line_dialog :: () {
 
     r := make_rect(
         ed_r.x + ed_r.w - width - pad,
-        ed_r.h - footer_height,
+        ed_r.h - get_footer_height(),
         width,
         xx font.character_height * 2.0,
     );
@@ -802,7 +807,7 @@ draw_global_debug_info :: (r: Rect) {
     row := 1;
     max := 0;
     line_height := fnt_get_line_height();
-    bottom: float32 = footer_height + line_height;
+    bottom: float32 = get_footer_height() + line_height;
 
     for #v2 < debug_infos {
         s := it;
@@ -833,7 +838,6 @@ draw_font_metrics_debug :: (editor: *Editor) {
     row_index := find_row_index(editor.active_buffer, c.pos);
     right_to_left_handed := (r.h + r.y); // so we calculate things from "the top"
     baseline := right_to_left_handed - fnt_get_line_height(row_index + 1) + editor.top_offset;
-    // kacsa
     p1 := baseline + r_font.typical_ascender;
     p2 := baseline - abs(r_font.typical_descender); // the descender is negative value for some reason!!!
     line_gap_from_baseline := r_font.default_line_spacing - abs(r_font.typical_ascender) - abs(r_font.typical_descender);

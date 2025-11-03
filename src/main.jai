@@ -59,7 +59,6 @@ main :: () {
     load_project_config();
     init_editor_buffers(files_from_cmdline);
     init_fonts();
-    footer_height = r_font_sm.character_height*1.5; // @Temporary
 
     last_second_time: Apollo_Time;
 
@@ -446,6 +445,11 @@ ms_since_init :: inline () -> float64 {
     return seconds_since_init() * 1000;
 }
 
+get_footer_height :: inline() -> float32 {
+    assert(r_font_sm != null);
+    return r_font_sm.default_line_spacing * 1.25;
+}
+
 wait_for_event :: () {
     // @Todo: Wayland SDL
     #if OS == .WINDOWS {
@@ -509,7 +513,7 @@ executable_dir: string;
 config_dir:     string;
 working_dir:    string;
 
-footer_height: float;
+//footer_height: float;
 line_height := 0.0;    // @Todo
 letter_spacing := 0.0; // @Todo
 tab_size := 4;
