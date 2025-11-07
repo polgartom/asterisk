@@ -248,7 +248,7 @@ main :: () {
                                 set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                             }
                         }
-                    //}                    
+                    //}
                 }
             }
         }

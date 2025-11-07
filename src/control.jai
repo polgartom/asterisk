@@ -1045,29 +1045,34 @@ ExtendSelectionByToken :: () {
     using buffer;
 
     s := to_string(buffer);
-    advance(*s, editor.cursor.pos);
-
     if !s return;
-    if !is_alphanum(s[0]) return;
-
-    t := s;
-    while t {
-        if is_separator(t[0], include_underscore=false) {
-            ident := slice(buffer, editor.cursor.pos, t.data - s.data);
-            set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + ident.count, horizontal=true, with_selection=false);
-            break;
-        }
-
-        advance(*t, 1 + trailingBytesForUTF8[t[0]]);
+    
+    pos := editor.cursor.pos;
+    if pos == buffer.count {
+        pos = prev_char_byte_offset(buffer, pos);
+    }
+    
+    if !is_alphanum(s[pos]) {
+        last_pos := pos;
+        pos = prev_char_byte_offset(buffer, pos);
+        if pos == last_pos || !is_alphanum(s[pos]) return;
     }
 
-    // In this case, no separator was found, so we use "eof" as a separator to select the last alphanumeric word in the buffer.
-    if t.data == buffer.data + buffer.count {
-        ident := slice(buffer, editor.cursor.pos, t.data - s.data);
-        set_cursor_pos(buffer, *editor.cursor, editor.cursor.pos + ident.count, horizontal=true, with_selection=false);
+    idx := pos;
+    while idx { // Scan to left
+        idx = prev_char_byte_offset(buffer, idx);
+        if get_character_type(s[idx]) != .alphanum break;
+        editor.cursor.sel = idx;
+    }    
+    
+    idx = pos;
+    while idx <= buffer.count-1 { // Scan to right
+        idx = next_character_pos(buffer, idx);
+        editor.cursor.pos = idx;
+        if idx == buffer.count break;
+        if get_character_type(s[idx]) != .alphanum break;
     }
-
-    // @Incomplete: Currently, we are working with one cursor instance per buffer
+    
 }
 
 SelectSimilarCharacters :: () {
@@ -1095,6 +1100,7 @@ SelectSimilarCharacters :: () {
     while idx <= buffer.count-1 { // Scan to right
         idx = next_character_pos(buffer, idx);
         editor.cursor.pos = idx;
+        if idx == buffer.count break;
         if get_character_type(s[idx]) != expected break;
     }
     

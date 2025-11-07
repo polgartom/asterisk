@@ -28,6 +28,8 @@ free_string :: (target: *string) {
 }
 
 modify_string :: (target: *string, new_value: string) {    
+    assert(context.allocator.proc != temporary_allocator.proc, "NONO");
+
     if target.count free(target.*);
     target.* = copy_string(new_value);
 }

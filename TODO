@@ -87,3 +87,21 @@ draw_find_global_text_dialog      K:\Programming\asterisk\.\src\draw.jai:606
 draw_widgets                      K:\Programming\asterisk\.\src\draw.jai:436
 draw_frame                        K:\Programming\asterisk\.\src\draw.jai:30
 main                              K:\Programming\asterisk\.\src\main.jai:295
+
+
+//
+
+The program crashed because of an access violation reading location 0xffffffffffffffff.
+
+Printing the stack trace:
+handle_exception                  C:\jai\modules\Runtime_Support_Crash_Handler.jai:356
+... (skipping OS-internal procedures)
+allocate_small                    C:\jai\modules\Default_Allocator\module.jai:1294
+allocate                          C:\jai\modules\Default_Allocator\module.jai:1466
+allocator_proc                    C:\jai\modules\Default_Allocator\module.jai:38
+alloc_string                      C:\jai\modules\Basic\module.jai:163
+modify_string                     K:\Programming\asterisk\src\common.jai:32
+add_history(type=1)               K:\Programming\asterisk\src\editor.jai:710
+insert_text_at(history=true)      K:\Programming\asterisk\src\editor.jai:27
+insert_text_at_cursor(history=true)  K:\Programming\asterisk\src\editor.jai:196
+main                              K:\Programming\asterisk\src\main.jai:187
