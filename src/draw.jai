@@ -175,9 +175,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         push_scissor(r);
         defer pop_scissor();
         
-        context.draw_invisible_characters = draw_invisible_characters;
-        defer context.draw_invisible_characters = false;
-
         // Draw lines
         for row_index: start_row..end_row {
             row := row_table[row_index];
@@ -1021,20 +1018,13 @@ draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
     
     Simp.set_shader_for_text();
-    Simp.immediate_begin();
     
-    if context.draw_invisible_characters {
-        draw_generated_quads(buffer, text, font, draw_invisible_characters=true);
-    } else {
-        draw_generated_quads(buffer, text, font, draw_invisible_characters=false);
-    }
-    
-    Simp.immediate_flush();
+    draw_generated_quads(buffer, text, font);
 
     return width;
 }
 
-draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font, $draw_invisible_characters := false) {
+draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
@@ -1071,11 +1061,6 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
     t := text;
     index := t.data - buffer.data;
 
-    #if draw_invisible_characters {
-        invisible_character_color := map_color_to_vec4(.TEXT_INVISIBLE_CHARACTER);
-        //log("invisible_character_color: %", invisible_character_color);
-    }
-
     for quad, i: quads {
         page := quad.glyph.page;
         map  := *page.texture;
@@ -1100,12 +1085,6 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
 
         color := map_color_to_vec4(buffer.colors[index]);
         
-        #if draw_invisible_characters {
-            if buffer.data[index] == #char " " {
-                color = invisible_character_color;
-            }
-        }
-
         inline draw_letter_quad(font, quad, color);
 
         t.data += 1 + trailingBytesForUTF8[t[0]];

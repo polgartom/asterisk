@@ -865,9 +865,9 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32
     if success  return data;
     
     //log("draw_invisible_characters: %\n", context.draw_invisible_characters);
-    if context.draw_invisible_characters {
-        if utf32 == #char " " then utf32 = #char "•";
-    }
+    //if context.draw_invisible_characters {
+    //    if utf32 == #char " " then utf32 = #char "•";
+    //}
 
     face := font.private1;  // XXX Why not using?
 
