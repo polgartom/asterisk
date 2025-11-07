@@ -1146,14 +1146,14 @@ find_row_index :: (using buffer: *Buffer, byte_pos: s64) -> s64 {
     return row_table.count-1;
 }
 
-first_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
+first_visible_row_index :: (editor: *Editor, using buffer: *Buffer) -> s64 {
     line_height := fnt_get_line_height();
     start_row: s64 = xx (editor.top_offset / line_height);
     start_row = clamp(start_row - 1, 0, row_table.count-1);
     return start_row;
 }
 
-last_visible_row_index :: inline (editor: *Editor, using buffer: *Buffer) -> s64 {
+last_visible_row_index :: (editor: *Editor, using buffer: *Buffer) -> s64 {
     viewport_h := editor.rect_for_draw.h;// window_height-footer_height*2; // @Hacky
     line_height := fnt_get_line_height();
     end_row: s64 = xx ((editor.top_offset + viewport_h) / line_height);

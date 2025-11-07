@@ -186,7 +186,7 @@ parse_style_section :: (file_data: string) -> bool {
                         continue;
                     }
                     line_height = val;
-                    
+                                        
                 case "cursor_shape";
                     val, ok := get_enum_by_name(Cursor_Shape, rhs);
                     if !ok {
@@ -202,6 +202,16 @@ parse_style_section :: (file_data: string) -> bool {
                         continue;
                     }
                     cursor_line_indicator = val;
+                    
+                case "show_line_numbers";
+                    if rhs == "true" || rhs == "1" {
+                        show_line_numbers = true;
+                    } else if rhs == "false" || rhs == "0" {
+                        show_line_numbers = false;
+                    } else {
+                        log_error("Unable to parse the boolean value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
                     
                 case;
                     log_error("Unknown UI parameter '%'!\n", key);

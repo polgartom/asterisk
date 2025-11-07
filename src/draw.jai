@@ -57,7 +57,7 @@ draw_frame :: () {
 */
         draw_font_metrics_debug(active_editor);
         draw_global_debug_info(active_editor.rect_for_draw);
-        draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
+        // draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
 
     swap_buffers();
@@ -80,20 +80,42 @@ swap_buffers :: () {
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect) {
+    buffer := editor.active_buffer;
+
     if !is_active(editor) context.color_intensity *= 0.90;
     defer reset_color_intensity();
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
-    amount := LEFT_PADDING;
-    if show_line_numbers {
-        amount = measure_text_width(r_font, "12345") * 1.1; // @Temporary;
+    // Draw line numbers
+    if buffers.count && show_line_numbers {    
+        t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
+        w := measure_text_width(r_font_sm, t) * 1.25;
+        line_numbers_rect, r= := cut_left(r, w);
+        rect := line_numbers_rect;
+        
+        Simp.set_shader_for_color(true);
+        Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
+        Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR));
+        
+        Simp.set_shader_for_text();
+        
+        line_height := fnt_get_line_height();
+        start_row := first_visible_row_index(editor, buffer);
+        end_row   := last_visible_row_index(editor, buffer);
+        for ri: start_row..end_row {
+            t := tprint("%", formatInt(ri+1, digits_per_comma=0));
+            baseline := (rect.h + rect.y) - (line_height*(ri+1)) + top_offset;
+            w := Simp.prepare_text(r_font_sm, t);
+            left := rect.x + (rect.w/2 - w/2);
+            c := map_color_to_vec4(.TEXT_DIMMED);
+            Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
+        }
     }
     
-    line_numbers_rect, r= := cut_left(r, amount);
-    editor.rect_for_draw = r;
+    _, r= := cut_left(r, LEFT_PADDING);
 
-    buffer := editor.active_buffer;
+    editor.rect_for_draw = r;
 
     if editor.y_scroll_anim.active {
         using editor.y_scroll_anim;
@@ -142,12 +164,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         rendered_rows := 0;
 
         line_height := fnt_get_line_height();
-
         start_row: s64 = xx (top_offset / line_height);
         start_row = clamp(start_row - 1, 0, row_table.count-1);
         end_row := last_visible_row_index(editor, buffer);
         color := map_color_to_vec4(.TEXT_DEFAULT);
-        left_pad := cast(float32) r_font.em_width;
 
         push_scissor(r);
         defer pop_scissor();
@@ -161,15 +181,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
             draw_code(buffer, xx (left-left_offset), xx baseline, line_text);
-        }
-        
-        // Draw Line numbers
-        if show_line_numbers {
-            rect := line_numbers_rect;
-            for row_index: start_row..end_row {
-                baseline := (rect.h + rect.y) - (line_height*(row_index+1)) + top_offset;
-                left := rect.x;
-            }
         }
     }
 
@@ -191,7 +202,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         }
         
         // Footer shape
-        Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.h, bg_color);
+        Simp.immediate_quad(footer.x, footer.y, footer.x + footer.w, footer.y + footer.h, bg_color);
 
         width := 0;
         left := footer.x + 10;

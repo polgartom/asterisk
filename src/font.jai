@@ -25,17 +25,32 @@ init_fonts :: () {
     }
 
     if !font_data then font_data = BAKED_FONT_DEFAULT.data;
+    
+    // :DifferentFontSizeRasterHack @Cleanup @Todo
+    // The Simp is caching the font data based on the font_data[0] memory address,
+    // so if we want to make a new raster with not the same font size we need to copy that font data, omg...
+    modify_string(*font_data_sm, font_data);
 
     delta := cast(int, font_size) - DEFAULT_FONT_SIZE;
     assert(DEFAULT_SMALL_FONT_SIZE + delta > 0);
     assert(DEFAULT_FONT_SIZE + delta > 0);
     font_size_sm   = cast(u8, DEFAULT_SMALL_FONT_SIZE + delta);
-    font_size_icon = cast(u8, DEFAULT_FONT_SIZE + delta);
+    font_size_icon = cast(u8, DEFAULT_ICON_FONT_SIZE + delta);
 
     r_font       = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size*dpi_scale));
-    r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size_sm*dpi_scale));
+    r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data_sm, cast(int)(font_size_sm*dpi_scale));
     r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size_icon*dpi_scale));
     assert(r_font != null && r_font_sm != null && r_font_icons != null);
+
+    #if 0 {
+        auto_release_temp(); // I just don't want to pollute the temporary allocator accumulated by the tprint() calls, maybe it's a stupid thing to do!
+        for digit: 0x30..0x39 {
+             w := measure_text_width(r_font, tprint("%", digit));
+             if w > r_font_largest_digit_width {
+                 r_font_largest_digit_width = w;
+             }
+        }
+    }
 
     #if 0 {
         // Measure the fonts widths for X-axis scroll
@@ -172,7 +187,9 @@ file_icon_md_width := 0;
 folder_icon_md_width := 0;
 folder_open_icon_md_width := 0;
 
-DEFAULT_FONT_SIZE :: 14;
+r_font_largest_digit_width := 0;
+
+DEFAULT_FONT_SIZE :: 15;
 DEFAULT_SMALL_FONT_SIZE :: 13;
 DEFAULT_ICON_FONT_SIZE :: 14;
 
@@ -189,6 +206,7 @@ FOLDER_OPEN_ICON    :: #run fontawesome_utf32_to_utf8(0xf07c);
 BAKED_FONT_DEFAULT :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
 BAKED_FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
+font_data_sm: string;
 loaded_fonts: Table(string, string);
 
 fonts_dir_default: string;

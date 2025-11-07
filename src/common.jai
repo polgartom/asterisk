@@ -83,6 +83,16 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1, false;
 }
 
+count_int_digits :: (num: int) -> int {
+    count := 0;
+    while true {
+        num /= 10;
+        count += 1;
+        if num == 0 break;
+    }
+    return count;
+}
+
 is_separator :: inline (c: u8, $include_underscore := true) -> bool {
     #if include_underscore {
         if c == #char "_" return true;
