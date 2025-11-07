@@ -51,6 +51,18 @@ SwitchOrSplitEditorPanel :: () {
     if !editors[1].visible {
         editors[1].visible = true;
         active_editor = *editors[1];
+        
+        {
+            anim: Anim;
+            anim.active = true;
+            anim.start  = 0.0;
+            anim.target = 1.0;
+            anim.duration = 0.08;
+            anim.started_at = frame_time64;
+            
+            editors[1].width_anim = anim;
+        }    
+        
         return;
     }
 
@@ -61,6 +73,17 @@ SwitchOrSplitEditorPanel :: () {
 HideSecondEditorPanel :: () {
     active_editor = *editors[0];
     editors[1].visible = false;
+    
+    {
+        anim: Anim;
+        anim.active = true;
+        anim.start  = 1.0;
+        anim.target = 0.0;
+        anim.duration = 0.08;
+        anim.started_at = frame_time64;
+        
+        editors[1].width_anim = anim;
+    }    
 }
 
 CreateBuffer :: () {

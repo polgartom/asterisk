@@ -1360,13 +1360,17 @@ BUFFER_PAGE_SIZE :: 4096;
 
 Editor :: struct {
     active_buffer: *Buffer;
+    cursor: Cursor;
+    
+    visible := false;
+        
+    rect_for_draw: Rect;
     top_offset  := 0.0;
     left_offset := 0.0;
-    cursor: Cursor;
+    
+    width_anim:    Anim;
     y_scroll_anim: Anim;
     x_scroll_anim: Anim;
-    rect_for_draw: Rect;
-    visible := false;
 }
 
 Buffer :: struct {

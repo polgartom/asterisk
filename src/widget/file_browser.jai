@@ -55,7 +55,7 @@ _draw_file_browser :: () {
     target_width := max(window_width * 0.4, 400); // @Tempoary
     target_height := k * 1.5;
     w := 0;
-    h := 0;
+    h := target_height;
     
     {
         using open_animation;
@@ -68,12 +68,11 @@ _draw_file_browser :: () {
             v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
             //v = start + cast(float)(distance * t); // lerp
             if t == 1.0 then active = false;
+            
+            redraw_requested = true;
         }
         
         w = cast(s64, target_width * v);
-        h = cast(s64, target_height * v);
-        
-        redraw_requested = true;
     }
         
     text_input_height := cast(float, font.character_height * 2.0);

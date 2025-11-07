@@ -12,6 +12,20 @@ draw_frame :: () {
 
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
+
+        v := 1.0;
+        if editors[1].width_anim.active {
+            using editors[1].width_anim;
+            
+            t := (frame_time64 - started_at) / duration;
+            t = clamp(t, 0.0, 1.0);
+            distance := (target - start);
+            v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            if t == 1.0 then active = false;
+            
+            redraw_requested = true;
+        }
+        right = cut_right(right, floor(right.w*v));
         sepa_rect := right;
 
         draw_editor(*editors[0], left);
@@ -22,7 +36,23 @@ draw_frame :: () {
         Simp.immediate_quad(sepa_rect.x - 1.0, sepa_rect.y, sepa_rect.x + 1.0, sepa_rect.h + sepa_rect.y, c);
         
     } else {
-        draw_editor(*editors[0], rect);
+        v := 0.0;
+        if editors[1].width_anim.active {
+            using editors[1].width_anim;
+            
+            t := (frame_time64 - started_at) / duration;
+            t = clamp(t, 0.0, 1.0);
+            distance := (target - start);
+            v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            if t == 1.0 then active = false;
+            
+            redraw_requested = true;
+        }
+        
+        right, left := cut_right(rect, rect.w/2*v);
+        
+        draw_editor(*editors[0], left);
+        draw_editor(*editors[1], right);
     }
     
     // Widgets
@@ -595,7 +625,7 @@ draw_find_global_text_dialog :: () {
     target_width := max(window_width * 0.5 - em(2.0, font), 400); // @Tempoary
     target_height := k * 1.5;
     w := 0;
-    h := 0;
+    h := target_height;
 
     {
         using open_animation;
@@ -608,10 +638,11 @@ draw_find_global_text_dialog :: () {
             v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
             //v = start + cast(float)(distance * t); // lerp
             if t == 1.0 then active = false;
+            
+            redraw_requested = true;
         }
         
         w = cast(s64, target_width * v);
-        h = cast(s64, target_height * v);
         
         redraw_requested = true;
     }
@@ -1185,5 +1216,6 @@ set_scissor :: (r: Rect) {
 
     Simp.set_scissor(x0, y0, x1, y1);
 }
+
 
 scissor_stack: [..] Rect;
