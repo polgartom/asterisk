@@ -85,7 +85,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
-    _, r= := cut_left(r, LEFT_PADDING);
+    amount := LEFT_PADDING;
+    if show_line_numbers {
+        amount = measure_text_width(r_font, "12345") * 1.1; // @Temporary;
+    }
+    
+    line_numbers_rect, r= := cut_left(r, amount);
     editor.rect_for_draw = r;
 
     buffer := editor.active_buffer;
@@ -158,6 +163,14 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             draw_code(buffer, xx (left-left_offset), xx baseline, line_text);
         }
         
+        // Draw Line numbers
+        if show_line_numbers {
+            rect := line_numbers_rect;
+            for row_index: start_row..end_row {
+                baseline := (rect.h + rect.y) - (line_height*(row_index+1)) + top_offset;
+                left := rect.x;
+            }
+        }
     }
 
     draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);

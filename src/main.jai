@@ -518,6 +518,7 @@ line_height := 0.0;
 letter_spacing := 0.0; // @Todo: Config
 tab_size := 4;
 r_rect_radius := 8.0;
+show_line_numbers := true;
 
 mode := Program_Mode.EDITOR;
 Program_Mode :: enum u8 { EDITOR; WIDGET; };
