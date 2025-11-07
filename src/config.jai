@@ -213,6 +213,16 @@ parse_style_section :: (file_data: string) -> bool {
                         continue;
                     }
                     
+                case "draw_invisible_characters";
+                if rhs == "true" || rhs == "1" {
+                        draw_invisible_characters = true;
+                    } else if rhs == "false" || rhs == "0" {
+                        draw_invisible_characters = false;
+                    } else {
+                        log_error("Unable to parse the boolean value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
+                    
                 case;
                     log_error("Unknown UI parameter '%'!\n", key);
             };

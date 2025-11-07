@@ -174,6 +174,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         push_scissor(r);
         defer pop_scissor();
+        
+        context.draw_invisible_characters = draw_invisible_characters;
+        defer context.draw_invisible_characters = false;
 
         // Draw lines
         for row_index: start_row..end_row {
@@ -589,14 +592,36 @@ draw_find_global_text_dialog :: () {
     //if process {
         //theme.border_color = #run hex_to_vec4(0x2a2a2a_ff);
     //}
-
-    w := window_width * 0.5 - em(2.0, font); // @Tempoary
-    w = max(w, 400);
+    
     k := window_height * .2;
 
-    h := cast(float, font.character_height * 2.0);
+    target_width := max(window_width * 0.5 - em(2.0, font), 400); // @Tempoary
+    target_height := k * 1.5;
+    w := 0;
+    h := 0;
+
+    {
+        using open_animation;
+        
+        v := open_animation.target;
+        if active {
+            t := (frame_time64 - started_at) / duration;
+            t = clamp(t, 0.0, 1.0);
+            distance := (target - start);
+            v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            //v = start + cast(float)(distance * t); // lerp
+            if t == 1.0 then active = false;
+        }
+        
+        w = cast(s64, target_width * v);
+        h = cast(s64, target_height * v);
+        
+        redraw_requested = true;
+    }
+
+    text_input_height := cast(float, font.character_height * 2.0);
     b := cast(float, window_height - k*.1);
-    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r := make_rect(ed_r.x - pad, b - text_input_height, ed_r.w, text_input_height);
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
@@ -628,15 +653,15 @@ draw_find_global_text_dialog :: () {
     r.y -= 5.0; 
 
     list_rect := r;
-    list_rect.h = 1.5*k;
+    list_rect.h = xx h;
 
     linp_theme := List_Input.DEFAULT_THEME;
     linp_theme.border_color = #run hex_to_vec4(0x573a7aff);
     linp_theme.current_item_bg_color = #run hex_to_vec4(0x573a7a_8a);
-    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
+    linp := list_input(list_rect, fgt_list_input_ui_id, options, font, theme=linp_theme);
 
     if fgt_input.typed {
-        linp.selected_index = 0;
+        reset_list_input(find_global_text_dialog);
     }
 
     if linp.entered && options.count {
@@ -991,17 +1016,25 @@ draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
 
 draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     font := r_font;
-    
+
     width := Simp.prepare_text(font, text, 0);
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
     
     Simp.set_shader_for_text();
-    draw_generated_quads(buffer, text, font);
+    Simp.immediate_begin();
+    
+    if context.draw_invisible_characters {
+        draw_generated_quads(buffer, text, font, draw_invisible_characters=true);
+    } else {
+        draw_generated_quads(buffer, text, font, draw_invisible_characters=false);
+    }
+    
+    Simp.immediate_flush();
 
     return width;
 }
 
-draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
+draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font, $draw_invisible_characters := false) {
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
@@ -1038,6 +1071,11 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
     t := text;
     index := t.data - buffer.data;
 
+    #if draw_invisible_characters {
+        invisible_character_color := map_color_to_vec4(.TEXT_INVISIBLE_CHARACTER);
+        //log("invisible_character_color: %", invisible_character_color);
+    }
+
     for quad, i: quads {
         page := quad.glyph.page;
         map  := *page.texture;
@@ -1061,6 +1099,12 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
         }
 
         color := map_color_to_vec4(buffer.colors[index]);
+        
+        #if draw_invisible_characters {
+            if buffer.data[index] == #char " " {
+                color = invisible_character_color;
+            }
+        }
 
         inline draw_letter_quad(font, quad, color);
 

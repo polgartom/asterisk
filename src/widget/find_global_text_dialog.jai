@@ -5,6 +5,10 @@ open_find_global_text_dialog :: () {
         fgt_input = create_text_input(cast(u64, #location()));
     }
 
+    fgt_list_input_ui_id = cast(u64, #location());
+    
+    reset_list_input(find_global_text_dialog);
+
     init_string_builder(*output_builder);
     init_string_builder(*error_builder);
 
@@ -14,6 +18,17 @@ open_find_global_text_dialog :: () {
 
     switch_editor_mode(.WIDGET);
     active_widget = Find_Global_Text_Dialog;
+
+    {
+        anim: Anim;
+        anim.active = true;
+        anim.start  = 0.0;
+        anim.target = 1.0;
+        anim.duration = .08;
+        anim.started_at = frame_time64;
+        
+        open_animation = anim;
+    }    
 
 }
 
@@ -43,6 +58,12 @@ update_find_global_text_dialog :: () {
     }
 }
 
+reset_list_input :: (using dialog: Find_Global_Text_Dialog) {
+    list_input := find_or_create_list_input(fgt_list_input_ui_id);
+    list_input.scroll_value = 0.0;
+    list_input.selected_index = 0;
+}
+
 #scope_file
 
 output_string_to_options :: (out_str: string, eof: bool) {
@@ -70,6 +91,11 @@ output_string_to_options :: (out_str: string, eof: bool) {
         if slices.count < 3 continue;
 
         file := slices[0];
+        if !file {
+            log_error("The slices[0] is empty! How??\n");
+            continue; // Crash ???
+        }
+        
         //line_no := slices[1];
         path_overwrite_separators(file, #char "/");
 
@@ -201,7 +227,7 @@ start_find_process :: (text: string) {
         assert(kill_find_process() == true);
     }
 
-    ll(">> %\n", command);
+    //ll(">> %\n", command);
 
     process = New(Process);
     success := create_process(process, args=..command, get_workdir(), capture_and_return_output=true, .NEVER_QUOTE, kill_process_if_parent_exits = false);
@@ -290,5 +316,8 @@ Find_Global_Text_Dialog :: struct {
     };
 
     fgt_input: *Text_Input;
+    fgt_list_input_ui_id: u64 = 0;
     options: [..] List_Input.Option(Result);
+    
+    open_animation: Anim;
 }

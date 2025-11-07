@@ -860,11 +860,14 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
 
 // @Hack XXXXXXXXXX Major Hack... we don't know how to convert glyph IDs to utf32, so for now we store some glyphs by negative-glyph-index in the hash table.  These may be dupes of entries we already have in there as utf32.  We ought to fix this!
 
-find_or_create_glyph :: (using font: *Dynamic_Font,
-                         utf32: u32, glyph_index: u32, hash_key: int) -> *Glyph_Data {
-
+find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32, hash_key: int) -> *Glyph_Data {
     success, data := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
+    
+    //log("draw_invisible_characters: %\n", context.draw_invisible_characters);
+    if context.draw_invisible_characters {
+        if utf32 == #char " " then utf32 = #char "•";
+    }
 
     face := font.private1;  // XXX Why not using?
 
@@ -879,29 +882,6 @@ find_or_create_glyph :: (using font: *Dynamic_Font,
     
     FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_NORMAL);
 
-/*
-    error := FT_Set_Pixel_Sizes(face, 0, cast(u32) font.character_height);    // XXX WHy not using?
-    assert(!error);
-
-
-    if utf32 {
-        glyph_index = FT_Get_Char_Index(face, utf32);
-        if !glyph_index {
-            log_error("Unable to find a glyph in font '%' for utf32 character %.\n", font.name, utf32);
-            glyph_index = glyph_index_for_unknown_character;
-            // print("assigning glyph_index %\n", glyph_index);
-        }
-
-        if glyph_index {
-            error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-            assert(!error);
-        }
-    } else {
-        assert(glyph_index >= 0);
-        error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-        assert(!error);
-    }
-*/
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
     data.utf32 = utf32;
     data.glyph_index_within_font = glyph_index;
