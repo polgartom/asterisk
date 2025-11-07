@@ -252,6 +252,27 @@ is_multibyte_char :: inline (c: *u8) -> bool {
 
 #scope_export
 
+language_from_file_extension :: (ext: string) -> Language {
+    if ext == {
+        case "jai"; return .JAI;
+        case "c"; #through; case "h"; #through;
+        case "cpp"; #through; case "hpp"; #through;
+        case "cxx"; 
+            return .C_STYLE;
+    };
+    
+    return .PLAIN_TEXT;
+}
+
+language_kind_to_string :: (lang: Language) -> string {
+    if lang == {
+        case .C_STYLE; return "C";
+        case .JAI;     return "Jai";
+    };
+    
+    return "Text";
+}
+
 Token_Type :: enum {
     UNKNOWN             :: 0;
     IDENTIFIER          :: 1;

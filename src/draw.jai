@@ -223,9 +223,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         row := find_row_index(buffer, editor.cursor.pos) + 1;
         col := byte_pos_to_row_col_index(buffer, editor.cursor.pos) + 1;
         total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
-        row_col_info := tprint("%\% Ln % Col % Byte %", total_row_percent, row, col, editor.cursor.pos);
+        text := tprint("%\% Ln % Col % Byte %  %", total_row_percent, row, col, editor.cursor.pos, language_kind_to_string(buffer.language));
         
-        width = Simp.prepare_text(r_font_sm, row_col_info);
+        width = Simp.prepare_text(r_font_sm, text);
         x := cast(s64, footer.x + footer.w - width * 1.1); // 1.1 is the padding
         y := cast(s64, baseline);
         Simp.draw_prepared_text(r_font_sm, x, y, fg_color);

@@ -777,6 +777,9 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
         commit_buffer_changes(buffer, force=true);
     }
 
+    ext := path_extension(buffer.filepath);
+    buffer.language = language_from_file_extension(ext);
+
     return buffer;
 }
 
@@ -829,10 +832,13 @@ save_buffer :: (using buffer: *Buffer) -> bool {
         modify_string(*filepath, path);
         path_unify_sepa(filepath);
         modify_string(*filepath_os_sepa, path);
+        
+        ext := path_extension(path);
+        language = language_from_file_extension(ext);
     }
 
     ok := buffer_write_to_disk(buffer);
-    
+        
     {
         // @Temporary: We could flag the buffer, like .BUFFER_EDITOR_CONFIG or .BUFFER_PROJECT_CONFIG
         // Also we should put this in file watcher procedure
