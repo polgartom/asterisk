@@ -1096,6 +1096,7 @@ ExtendSelectionByToken :: () {
         if get_character_type(s[idx]) != .alphanum break;
     }
     
+    editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
 }
 
 SelectSimilarCharacters :: () {
