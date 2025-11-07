@@ -161,6 +161,7 @@ parse_style_section :: (file_data: string) -> bool {
                     }
                     path_unify_sepa(font_family); // maybe its a path
                     modify_string(*font_family, val,, allocator=context.default_allocator);
+                    
                 case "font_size";
                     val, success, rem := string_to_int(rhs, base=10, u8);
                     if !success || rem {
@@ -168,27 +169,40 @@ parse_style_section :: (file_data: string) -> bool {
                         continue;
                     }
                     font_size = val;
+                    
                 case "tab_size";
                     val, success, rem := string_to_int(rhs, base=10, u8);
                     if !success || rem {
                         log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
                         continue;
                     }
+                    // @Todo: :VirtualTabSize
                     tab_size = max(1, val);
+                    
+                case "line_height";
+                    val, success, rem := string_to_float(rhs);
+                    if !success || rem {
+                        log_error("Unable to parse the numeric value ('%') given after the '%' key specifier!\n", rhs, key);
+                        continue;
+                    }
+                    line_height = val;
+                    
                 case "cursor_shape";
                     val, ok := get_enum_by_name(Cursor_Shape, rhs);
                     if !ok {
                         log_error("'%' is an invalid cursor shape!\n", rhs);
-                        break;
+                        continue;
                     }
                     cursor_shape = val;
+                    
                 case "cursor_line_indicator";
                     val, ok := get_enum_by_name(Cursor_Line_Indicator, rhs);
                     if !ok {
                         log_error("'%' is an invalid cursor line indicator!\n", rhs);
-                        break;
+                        continue;
                     }
                     cursor_line_indicator = val;
+                    
                 case;
                     log_error("Unknown UI parameter '%'!\n", key);
             };

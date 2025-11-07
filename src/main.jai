@@ -514,8 +514,8 @@ config_dir:     string;
 working_dir:    string;
 
 //footer_height: float;
-line_height := 0.0;    // @Todo
-letter_spacing := 0.0; // @Todo
+line_height := 0.0;
+letter_spacing := 0.0; // @Todo: Config
 tab_size := 4;
 r_rect_radius := 8.0;
 

@@ -9,12 +9,10 @@ draw_frame :: () {
     x, y, width, height := get_dimensions(window, true);
 
     rect := make_rect(0.0, 0.0, xx width, xx height);
-    _, rect = cut_left(rect, LEFT_PADDING);
 
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
         sepa_rect := right;
-        _, right = cut_left(right, LEFT_PADDING);
 
         draw_editor(*editors[0], left);
         draw_editor(*editors[1], right);
@@ -59,7 +57,7 @@ draw_frame :: () {
 */
         draw_font_metrics_debug(active_editor);
         draw_global_debug_info(active_editor.rect_for_draw);
-        //draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
+        draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
 
     swap_buffers();
@@ -86,8 +84,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     defer reset_color_intensity();
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
-    footer_r = expand_x(footer_r, LEFT_PADDING); // hacky
-
+    
+    _, r= := cut_left(r, LEFT_PADDING);
     editor.rect_for_draw = r;
 
     buffer := editor.active_buffer;
@@ -1068,9 +1066,9 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     bottom := (r.h+r.y) - fnt_get_line_height(approx_row_index+1) + editor.top_offset;
     Simp.immediate_quad(r.x, bottom, r.x + r.w, bottom + ch, Vector4.{.1, .49, 1.0, .1});
     
-    left := cast(float32)LEFT_PADDING;
+    left := cast(float32)r.x;
     while rs.count {
-        if cast(float, mx-r.x+editor.left_offset) <= left break;
+        if cast(float, mx + editor.left_offset) <= left break;
         cw := Simp.get_character_width_in_pixels(r_font, rs.data, .LEFT_JUSTIFIED);
         left += cw;
         bytes := 1 + trailingBytesForUTF8[rs[0]];
@@ -1083,7 +1081,7 @@ draw_debug_mouse_character_selection :: (editor: *Editor, r: Rect) {
     }
     
     //log("r: %\n", r.x);
-    left = r.x - LEFT_PADDING + left - editor.left_offset;
+    left = left - editor.left_offset;
     Simp.immediate_quad(left, bottom, left + r_font.em_width, bottom + ch, Vector4.{.5, .15, .21, .9});
 }
 

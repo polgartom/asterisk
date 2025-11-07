@@ -1187,12 +1187,12 @@ byte_pos_from_mouse_xy :: (editor: *Editor, buffer: *Buffer, mx: s64, my: s64) -
     rect := editor.rect_for_draw;
     rs := get_row_as_string(buffer, approx_row_index);
     ch := r_font.character_height;
-    left := cast(float32)LEFT_PADDING; // @cleanup
+    left := cast(float32)rect.x;
     bottom := (rect.h + rect.y) - fnt_get_line_height(approx_row_index+1) + editor.top_offset;
     
     ptr := rs.data;
     while rs.count {
-        if cast(float, mx - rect.x + editor.left_offset) <= left break;
+        if cast(float, mx + editor.left_offset) <= left break;
         cw := Simp.get_character_width_in_pixels(r_font, rs.data, .LEFT_JUSTIFIED);
         left += cw;
         bytes := 1 + trailingBytesForUTF8[rs[0]];
