@@ -183,7 +183,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
             left := r.x;
             line_text := slice(buffer, row.end - row.size, row.size);
-            draw_code(buffer, xx (left-left_offset), xx baseline, line_text);
+            draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
         }
     }
 
@@ -1019,12 +1019,16 @@ draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     
     Simp.set_shader_for_text();
     
-    draw_generated_quads(buffer, text, font);
-
+    if context.draw_invisible_characters {
+        draw_generated_quads(buffer, text, font, draw_invisible_chars = true);
+    } else {
+        draw_generated_quads(buffer, text, font, draw_invisible_chars = false);
+    }
+    
     return width;
 }
 
-draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font) {
+draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font, $draw_invisible_chars := false) {
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
@@ -1060,6 +1064,10 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
 
     t := text;
     index := t.data - buffer.data;
+    
+    #if draw_invisible_chars {
+        invisible_char_color := map_color_to_vec4(.TEXT_INVISIBLE_CHARACTER);
+    }
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -1084,6 +1092,12 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
         }
 
         color := map_color_to_vec4(buffer.colors[index]);
+        
+        #if draw_invisible_chars {
+            if buffer.data[index] == #char " " {
+                color = invisible_char_color;
+            }
+        }
         
         inline draw_letter_quad(font, quad, color);
 

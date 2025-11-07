@@ -214,7 +214,7 @@ parse_style_section :: (file_data: string) -> bool {
                     }
                     
                 case "draw_invisible_characters";
-                if rhs == "true" || rhs == "1" {
+                    if rhs == "true" || rhs == "1" {
                         draw_invisible_characters = true;
                     } else if rhs == "false" || rhs == "0" {
                         draw_invisible_characters = false;

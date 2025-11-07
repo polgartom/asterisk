@@ -520,6 +520,7 @@ tab_size := 4;
 r_rect_radius := 8.0;
 show_line_numbers := true;
 draw_invisible_characters := false;
+#add_context draw_invisible_characters := false;
 
 mode := Program_Mode.EDITOR;
 Program_Mode :: enum u8 { EDITOR; WIDGET; };
