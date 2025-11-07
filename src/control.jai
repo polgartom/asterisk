@@ -280,7 +280,42 @@ MoveRight :: () {
     move_right_by_one_character();
 }
 
-move_left_word :: ($subword_mode: bool) {
+MoveLeftWord :: () {
+    // VSCode like movement
+    
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    cursor := *editor.cursor;    
+    pos := prev_character_pos(buffer, cursor.pos);
+    if cursor.pos == pos return;
+    
+    type := get_character_type(buffer.data[pos]);
+    start_type := type;
+    
+    while pos < buffer.count {
+        _pos := prev_character_pos(buffer, pos);
+        type = get_character_type(buffer.data[_pos]);
+        if type != start_type {
+            break;
+        }
+        pos = _pos;
+    }
+    
+    if type != start_type && type != .ctrl {
+        while pos < buffer.count {
+            _pos := prev_character_pos(buffer, pos);
+            if get_character_type(buffer.data[_pos]) != type {
+                break;
+            }
+            pos = _pos;
+        }
+    }
+    
+    set_cursor_pos(buffer, cursor, pos, horizontal=true);
+}
+
+MoveLeftWordSlow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
@@ -307,7 +342,7 @@ move_left_word :: ($subword_mode: bool) {
         while pos {
             i := prev_character_pos(buffer, pos);
             c := buffer.data[i];
-            if !is_separator(c, subword_mode) || is_whitespace(c) break;
+            if !is_separator(c) || is_whitespace(c) break;
             pos = i;
         }
     } else {
@@ -315,7 +350,7 @@ move_left_word :: ($subword_mode: bool) {
         while pos {
             i := prev_character_pos(buffer, pos);
             c := buffer.data[i];
-            if is_separator(c, subword_mode) break;
+            if is_separator(c) break;
             pos = i;
         }
     }
@@ -323,20 +358,48 @@ move_left_word :: ($subword_mode: bool) {
     set_cursor_pos(buffer, cursor, pos, horizontal=true);
 }
 
-move_right_word :: ($subword_mode: bool) {
+MoveRightWord :: inline () {
+    // VSCode like movement
+    
+    editor, buffer := get_active_editor_and_buffer();
+    using buffer;
+
+    cursor := *editor.cursor;
+    if cursor.pos == buffer.count return;
+    
+    pos := cursor.pos;
+    
+    type := get_character_type(buffer.data[pos]);
+    start_type := type;
+
+    while pos < buffer.count {
+        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
+        type = get_character_type(buffer.data[pos]);
+        if type != start_type {
+            break;
+        }
+    }
+    
+    if type != start_type && type != .ctrl {
+        while pos < buffer.count {
+            pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
+            if get_character_type(buffer.data[pos]) != type {
+                break;
+            }
+        }
+    }
+
+    set_cursor_pos(buffer, cursor, pos, horizontal=true);
+}
+
+MoveRightWordSlow :: inline () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
     cursor := *editor.cursor;
     if cursor.pos == buffer.count return;
 
-    // Moving right is conceptually different from moving left:
-    // - When moving left we must first "step back" one character, because the cursor is visually *after* the character.
-    // - When moving right we can start scanning immediately from the current character, since the cursor is visually *before* it.
-    // In both cases, the goal is to stop at the first boundary between token types (whitespace, separator, alphanumeric).
-    
     pos      := cursor.pos;
-    next_pos := cursor.pos;
     char     := buffer.data[pos];
 
     if is_whitespace(char) {
@@ -351,34 +414,18 @@ move_right_word :: ($subword_mode: bool) {
         while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
-            if !is_separator(c, subword_mode) || is_whitespace(c) break;
+            if !is_separator(c) || is_whitespace(c) break;
         }
     } else {
         // Alphanum
         while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
-            if is_separator(c, subword_mode) break;
+            if is_separator(c) break;
         }
     }
 
     set_cursor_pos(buffer, cursor, pos, horizontal=true);
-}
-
-MoveLeftWord :: inline () {
-    move_left_word(false);
-}
-
-MoveLeftSubword :: inline () {
-    move_left_word(true);
-}
-
-MoveRightWord :: inline () {
-    move_right_word(false);
-}
-
-MoveRightSubword :: inline () {
-    move_right_word(true);
 }
 
 move_viewport_up :: ($with_selection := true) {
@@ -858,7 +905,6 @@ ExpandSelectionLeft :: () {
     move_left_by_one_character(with_selection=false);
 }
 
-// HACKY!
 ExpandSelectionLeftByWord :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -866,10 +912,10 @@ ExpandSelectionLeftByWord :: () {
     tmp := editor.cursor.sel;
     defer editor.cursor.sel = tmp;
 
-    move_left_word(subword_mode=false);
+    // HACKY!
+    MoveLeftWordSlow();
 }
 
-// HACKY!
 ExpandSelectionRightbyWord :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -877,7 +923,8 @@ ExpandSelectionRightbyWord :: () {
     tmp := editor.cursor.sel;
     defer editor.cursor.sel = tmp;
 
-    move_right_word(subword_mode=false);
+    // HACKY!
+    MoveRightWordSlow();
 }
 
 ExpandSelectionViewPortUp :: () {
@@ -1259,9 +1306,9 @@ register_keymap_procedures :: () {
     Add(editor_keymap, MoveLeft);
     Add(editor_keymap, MoveRight);
     Add(editor_keymap, MoveLeftWord);
-    Add(editor_keymap, MoveLeftSubword);
+    Add(editor_keymap, MoveLeftWordSlow);
     Add(editor_keymap, MoveRightWord);
-    Add(editor_keymap, MoveRightSubword);
+    Add(editor_keymap, MoveRightWordSlow);
     Add(editor_keymap, ScrollViewPortUp);
     Add(editor_keymap, ScrollViewPortDown);
     Add(editor_keymap, GotoFirstCharOfCurrentRow);
