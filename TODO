@@ -68,29 +68,3 @@ Stack trace:
 make: *** [Makefile:9: run] Error 1
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-K:/Programming/asterisk/./src/draw.jai:533,13: Assertion failed: Invalid index: 2 ; options: [Option{Text_Style{
-    text = "/src/draw.jai";
-    colors = [];
-    default_colorv4 = Vector4{0.752941, 0.72549, 0.72549, 1};
-    font_override = null;
-    x_offset = 0;
-    y_offset = 0;
-  }, Text_Style{
-    text = "";
-    colors = [];
-    default_colorv4 = Vector4{0.752941, 0.72549, 0.72549, 1};
-    font_override = null;
-    x_offset = 0;
-    y_offset = 0;
-  }, "", 1e0_c7d3_06c0, 1}] ; buffers: [1e0_c7d3_0080, 1e0_c7d3_0210, 1e0_c7d3_03a0, 1e0_c7d3_06c0, 1e0_c7d3_0850, 1e0_c7d3_0b70, 1e0_c7d3_0d00, 1e0_c7d3_1020, 1e0_c7d3_11b0, 1e0_c7d3_1340, 1e0_c7d3_14d0, 1e0_c7d3_1660]
-
-
-Stack trace:
-C:/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
-C:/jai/modules/Basic/module.jai:87: assert_helper
-K:/Programming/asterisk/./src/draw.jai:533: draw_buffer_browser
-K:/Programming/asterisk/./src/draw.jai:412: draw_widgets
-K:/Programming/asterisk/./src/draw.jai:30: draw_frame
-K:/Programming/asterisk/./src/main.jai:295: main
-A breakpoint was hit, but no debugger is attached.
