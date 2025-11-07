@@ -220,17 +220,17 @@ void main() {
 #endif // VERTEX_SHADER
 
 #ifdef FRAGMENT_SHADER
-out vec4 color;
+layout(location = 0, index = 0) out vec4 color;
+layout(location = 0, index = 1) out vec4 colorMask;
 
 uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    vec4 tex = texture(text_sampler, TextureCoords);
-    //float linear_alpha = pow(tex.a, 1.0/2.2); // gamma correction
-    //float linear_alpha = pow(tex.a, 1.0/1.4); // gamma correction
-    float linear_alpha = pow(tex.a, 1.0/(96.0/72.0)); // gamma correction
-    color = vec4(iterated_color.rgb, iterated_color.a * linear_alpha);
+    vec4 texture_sample = texture(text_sampler, TextureCoords);
+    //color = vec4(iterated_color.xyz, texture_sample.a * iterated_color.a); // text_color * texture_sample;
+    color = vec4(iterated_color.xyz, pow(texture_sample.a, 1.0/1.333) * iterated_color.a); // gamma corrected version?
+    colorMask = vec4(texture_sample.rrr * color.a, 1.0);
 }
 #endif // FRAGMENT_SHADER
 END

@@ -43,7 +43,7 @@ isLegalUTF8 :: (source: *u8, length: s64) -> bool {
     if length == 0 return false;
     if length >  4  return false;
 
-	srcptr := source+length;
+    srcptr := source+length;
 
     if length >= 4 {
         a := <<srcptr;
@@ -234,7 +234,6 @@ init_fonts :: (_page_size_x: s32 = -1, _page_size_y: s32 = -1) {
 
     fonts_initted = true;
 
-    ft_library = New(FT_Library);
     error := FT_Init_FreeType(*ft_library);
     assert(!error);
 
@@ -277,7 +276,7 @@ make_loaded_font :: (name: string, data: [] u8) -> *Loaded_Font {
 
     error := FT_New_Memory_Face(ft_library, data.data, cast(s32) data.count,
                                 0, *face);
-    assert(error != xx FT_Err_Unknown_File_Format);
+    assert(error != xx FT_Err.Unknown_File_Format);
     assert(!error);
 
     if error return null;
@@ -518,7 +517,7 @@ load_font_part_2 :: (result: *Dynamic_Font, loaded_font: Loaded_Font, pixel_heig
         result.typical_descender = FT_ROUND(face.glyph.metrics.horiBearingY - face.glyph.metrics.height);
     }
 
-    e := FT_Select_Charmap(face, FT_ENCODING_UNICODE);
+    e := FT_Select_Charmap(face, .UNICODE);
 
     {
         success := set_unknown_character(result, 0xfffd);  // REPLACEMENT_CHARACTER
@@ -709,14 +708,14 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font,
         }
 
         array_add(*font.current_quads, quad);
-		sx += cast(float) info.advance;
+        sx += cast(float) info.advance;
 
     }
 }
 
 #scope_file
 
-ft_library    : *FT_Library;
+ft_library    : FT_Library;
 fonts_initted := false;
 
 // We probably should make different page sizes
@@ -869,10 +868,18 @@ find_or_create_glyph :: (using font: *Dynamic_Font,
 
     face := font.private1;  // XXX Why not using?
 
-    // @Move: Make this happen at font construction time.  @Speed.
-    // However we can't right now, because we share this face among
-    // multiple Dynamic_Fonts...
+    glyph_index := FT_Get_Char_Index(face, utf32);
+    if !glyph_index {
+        log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
+        glyph_index = glyph_index_for_unknown_character;
+    }
 
+    error := FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+    assert(!error);
+    
+    FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_NORMAL);
+
+/*
     error := FT_Set_Pixel_Sizes(face, 0, cast(u32) font.character_height);    // XXX WHy not using?
     assert(!error);
 
@@ -894,7 +901,7 @@ find_or_create_glyph :: (using font: *Dynamic_Font,
         error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
         assert(!error);
     }
-
+*/
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
     data.utf32 = utf32;
     data.glyph_index_within_font = glyph_index;
@@ -1298,7 +1305,8 @@ FT_ROUND :: inline (x: int) -> int {
 
 #scope_file
 
-#import "freetype255";
+//#import "freetype255";
+#import "freetype";
 #import "Hash_Table";
 #import "Hash";
 #import "Unicode";

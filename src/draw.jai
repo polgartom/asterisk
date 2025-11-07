@@ -984,16 +984,6 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
-    Simp.CheckInit();
-    quads := font.current_quads;
-
-    if state.current_shader Simp.immediate_flush();
-
-    Simp.immediate_begin();
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-
     draw_letter_quad :: inline (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
         page := quad.glyph.page;
 
@@ -1010,10 +1000,17 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
         inline Simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
     }
 
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1);
-
+    Simp.CheckInit();
+    //if state.current_shader Simp.immediate_flush();
+    Simp.set_shader_for_text();
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+    glEnable(GL_BLEND);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    quads := font.current_quads;
 
     last_texture: s64 = -1;
 
