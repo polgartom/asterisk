@@ -293,19 +293,19 @@ MoveLeftWord :: () {
     type := get_character_type(buffer.data[pos]);
     start_type := type;
     
-    while pos < buffer.count {
+    while pos != 0 {
         _pos := prev_character_pos(buffer, pos);
         type = get_character_type(buffer.data[_pos]);
-        if type != start_type {
+        if type != start_type || _pos == pos {
             break;
         }
         pos = _pos;
     }
     
     if type != start_type && type != .ctrl {
-        while pos < buffer.count {
+        while pos != 0 {
             _pos := prev_character_pos(buffer, pos);
-            if get_character_type(buffer.data[_pos]) != type {
+            if get_character_type(buffer.data[_pos]) != type || _pos == pos {
                 break;
             }
             pos = _pos;
