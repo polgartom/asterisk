@@ -164,7 +164,7 @@ insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor:
     spaces := talloc_string(tab_size);
     for spaces { spaces[it_index] = " "; } 
     text := replace(t, "\t", spaces);
-    defer free(t);
+    defer free(text);
 
     // @Todo: Validate if the input data is valid utf8!
 
