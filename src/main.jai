@@ -563,6 +563,7 @@ OS_Cursor_Kind :: enum u8 {
 // Debug
 
 show_debug_info := DEBUG;
+show_font_debug_info := false;
 debug_infos: [..] string;
 
 PrintDev :: (fmt: string, args: .. Any) #expand {

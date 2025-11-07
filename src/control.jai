@@ -163,7 +163,10 @@ Save :: () {
 
 ToggleDevInfo :: () {
     show_debug_info = !show_debug_info;
-}
+} @EditorCommand
+ToggleDevInfoFont :: () {
+    show_font_debug_info = !show_font_debug_info;
+} @EditorCommand
 
 ToggleWaitForEvent :: () {
     wait_os_event_before_redraw = !wait_os_event_before_redraw;
@@ -1200,6 +1203,7 @@ register_keymap_procedures :: () {
 
     // Editor
     Add(editor_keymap, ToggleDevInfo);
+    Add(editor_keymap, ToggleDevInfoFont);
     Add(editor_keymap, ToggleWaitForEvent);
 
     Add(editor_keymap, PrevBuffer);

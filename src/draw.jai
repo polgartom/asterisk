@@ -29,7 +29,7 @@ draw_frame :: () {
     if mode == .WIDGET {
         draw_widgets();
     }
-    
+        
     if show_debug_info {
         /*
         mx, my, ok := get_mouse_pointer_position_right_handed();
@@ -55,9 +55,12 @@ draw_frame :: () {
             //log("> % ; %\n", ls, line_gap);
         }
 */
-        draw_font_metrics_debug(active_editor);
         draw_global_debug_info(active_editor.rect_for_draw);
         // draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
+    }
+
+    if show_font_debug_info {
+        draw_font_metrics_debug(active_editor);        
     }
 
     swap_buffers();
@@ -208,7 +211,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         left := footer.x + 10;
         baseline := footer.y + r_font_sm.y_offset_for_centering*1.25;
 
-        if (show_debug_info) {
+        if show_font_debug_info {
             Simp.immediate_quad(footer.x, footer.y+baseline, footer.x+footer.w, footer.y+baseline+1, .{1,0,0,.7});
             Simp.immediate_quad(footer.x, footer.y+footer.h/2, footer.x+footer.w, footer.y+footer.h/2+1, .{0,.6,.8,.9});
         }
@@ -306,7 +309,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     }
 
     if #complete shape == {
-        case .BLOCK;        
+        case .BLOCK;
             Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + cw), p2, bg_color);
             // Change character's color under the cursor
             if buffer.count {
