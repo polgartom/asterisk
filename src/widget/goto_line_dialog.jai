@@ -10,7 +10,7 @@ open_goto_line_dialog :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Goto_Line_Dialog;
 
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 update_goto_line_dialog :: () {
     using goto_line_dialog;

@@ -541,7 +541,6 @@ draw_buffer_browser :: () {
     update_text_input(tinp, r, font, placeholder="Switch to buffer", theme=theme);
     r.y -= 5.0; 
 
-    if tinp.typed update_visible_options(*buffer_browser);
     options := buffer_browser.visible_options;
 
     list_rect := r;
@@ -550,11 +549,10 @@ draw_buffer_browser :: () {
     linp_theme := List_Input.DEFAULT_THEME;
     linp_theme.border_color = #run hex_to_vec4(0x30_25_0a_ff);
     linp_theme.current_item_bg_color = #run hex_to_vec4(0x30_25_0a_ff);
-    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
-
-    if tinp.typed then linp.scroll_value = 0.0;
-    if linp.selected_index == -1 then linp.selected_index = 0;
-
+    linp := list_input(list_rect, buffer_browser.bb_list_input_ui_id, options, font, theme=linp_theme);
+    
+    if tinp.typed update_visible_options(*buffer_browser);
+    
     if linp.entered && options.count {
         if linp.selected_index >= options.count || linp.selected_index < 0 {
             assert(false, "Invalid index: % ; options: % ; buffers: %\n", linp.selected_index, options, buffers);
@@ -564,8 +562,6 @@ draw_buffer_browser :: () {
         selected_option := options[linp.selected_index];
         buffer := selected_option.ref;
         change_active_buffer(active_editor, buffer);
-
-        linp.selected_index = -1;
 
         close_current_widget();
     }

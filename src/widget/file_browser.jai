@@ -22,7 +22,7 @@ open_file_browser :: () {
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
 
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 _draw_file_browser :: () {
     using file_browser;

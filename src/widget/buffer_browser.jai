@@ -6,6 +6,8 @@ open_buffer_browser :: () {
     } else {
         bb_text_input = create_text_input(cast(u64)#location());
     }
+    
+    bb_list_input_ui_id = cast(u64)#location();
 
     array_reset_keeping_memory(*options);
     array_reserve(*options, buffers.count);
@@ -42,7 +44,12 @@ open_buffer_browser :: () {
 }
 
 update_visible_options :: (using browser: *Buffer_Browser) {
-    assert(bb_text_input != null);
+    assert(bb_list_input_ui_id != 0 && bb_text_input != null);
+    
+    list_input := find_or_create_list_input(bb_list_input_ui_id);
+    list_input.selected_index = 0;
+    list_input.scroll_value = 0.0;
+    
     tinp := bb_text_input;
     
     array_reset_keeping_memory(*visible_options);
@@ -69,4 +76,5 @@ Buffer_Browser :: struct {
     visible_options: [..] List_Input.Option(*Buffer);
 
     bb_text_input: *Text_Input;
+    bb_list_input_ui_id: u64 = 0;
 }

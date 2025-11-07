@@ -1,13 +1,7 @@
 
 // The r: Rect's h (height) param represents the maximum height of the list.
 list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
-    
-    found, input := table_find(*inputs, ui_id);
-    if !found {
-        input = New(List_Input);
-        table_add(*inputs, ui_id, input);
-    }
-
+    input := find_or_create_list_input(ui_id);
     using input;
 
     moved := false;
@@ -148,6 +142,16 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     //PrintDev("options rendered: %\n", rendered);
 
     return input;
+}
+
+find_or_create_list_input :: (ui_id: u64) -> (input: *List_Input, created: bool) {
+    found, input := table_find(*inputs, ui_id);
+    if !found {
+        input = New(List_Input);
+        table_add(*inputs, ui_id, input);
+    }
+    
+    return input, !found;
 }
 
 reset_list_input :: (using input: *List_Input) {

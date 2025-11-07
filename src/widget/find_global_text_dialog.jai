@@ -15,7 +15,7 @@ open_find_global_text_dialog :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Find_Global_Text_Dialog;
 
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 close_find_global_text_dialog :: () {
     using find_global_text_dialog;

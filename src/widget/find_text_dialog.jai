@@ -12,7 +12,7 @@ open_find_text_dialog :: () {
 
     switch_editor_mode(.WIDGET);
     active_widget = Find_Text_Dialog;
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 find_occurences :: (_text: string) {
     using find_text_dialog;
