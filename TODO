@@ -3,10 +3,6 @@
 - Don't include the line separator when skipping words or tokens, e.g.: "(((( $$$$ \n". If we skip the whitespaces, we also skip the line separator — but we don't want that.
 - Better "find global text search"
 - Scrollbars
-- Mouse:
-    -> Move cursor to clicked point
-    -> Select text with
-    -> Scrolling
 - Alert messages
 - Use default keymap action for some action that not set
 - VSCode like "find file" widget
@@ -17,40 +13,11 @@ Text input:
     -> Overflow scroll
     -> Show selection
     -> History
-- Unable to find a glyph in font '' for utf32 character 10.
 [Config]
     - Which file extensions and directories are included, excluded
     - Specific keybindings for commands and so on...
     
 - Why does junk history accumulate when Ctrl+Enter is pressed? --->> !because we insert texts individually, see InsertLine() and InsertLineBelow() for example
-
-------------------------------------------------
-
-K:/Programming/asterisk/./src/draw.jai:614,13: Assertion failed: Invalid index: -1 ; options: [Option{Text_Style{
-    text = "src/config.jai:274:DEFAULT_CONFIG_FILE_DATA :: #run read_default_config_data(DEFAULT_CONFIG_FILENAME);";
-    colors = [TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT, TEXT_DEFAULT...];
-    default_colorv4 = Vector4{0.815686, 0.815686, 0.815686, 1};
-    font_override = null;
-    x_offset = 0;
-    y_offset = 0;
-  }, Text_Style{
-    text = "";
-    colors = [];
-    default_colorv4 = Vector4{0.815686, 0.815686, 0.815686, 1};
-    font_override = null;
-    x_offset = 0;
-    y_offset = 0;
-  }, "", Result{"src/config.jai", 274}, 0}] ; buffers: [2cf_93fb_0080, 2cf_93fb_0230, 2cf_93fb_03e0, 2cf_93fb_0590, 2cf_93fb_0740, 2cf_93fb_08f0, 2cf_93fb_0aa0, 2cf_93fb_0c50, 2cf_93fb_0e00]
-
-
-Stack trace:
-C:/jai/modules/Runtime_Support.jai:103: runtime_support_assertion_failed
-C:/jai/modules/Basic/module.jai:87: assert_helper
-K:/Programming/asterisk/./src/draw.jai:614: draw_find_global_text_dialog
-K:/Programming/asterisk/./src/draw.jai:403: draw_widgets
-K:/Programming/asterisk/./src/draw.jai:29: draw_frame
-K:/Programming/asterisk/./src/main.jai:242: main
-A breakpoint was hit, but no debugger is attached.
 
 ------------------------------------------------
 
@@ -67,7 +34,7 @@ Stack trace:
 /home/polgar/Programming/asterisk/././src/main.jai:225: main
 make: *** [Makefile:9: run] Error 1
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+------------------------------------------------
 
 The program crashed because of an access violation reading location 0xffffffffffffffff.
 
@@ -88,8 +55,7 @@ draw_widgets                      K:\Programming\asterisk\.\src\draw.jai:436
 draw_frame                        K:\Programming\asterisk\.\src\draw.jai:30
 main                              K:\Programming\asterisk\.\src\main.jai:295
 
-
-//
+------------------------------------------------
 
 The program crashed because of an access violation reading location 0xffffffffffffffff.
 
@@ -105,3 +71,20 @@ add_history(type=1)               K:\Programming\asterisk\src\editor.jai:710
 insert_text_at(history=true)      K:\Programming\asterisk\src\editor.jai:27
 insert_text_at_cursor(history=true)  K:\Programming\asterisk\src\editor.jai:196
 main                              K:\Programming\asterisk\src\main.jai:187
+
+K:\Programs\asterisk>.\dev.lnk
+The program crashed because of an access violation reading location 0x3f400000037.
+
+Printing the stack trace:
+handle_exception                  C:\jai\modules\Runtime_Support_Crash_Handler.jai:356
+... (skipping OS-internal procedures)
+allocate_small                    C:\jai\modules\Default_Allocator\module.jai:1294
+allocate                          C:\jai\modules\Default_Allocator\module.jai:1466
+reallocate                        C:\jai\modules\Default_Allocator\module.jai:1708
+allocator_proc                    C:\jai\modules\Default_Allocator\module.jai:42
+array_add(T=*Font_Line)           C:\jai\modules\Basic\Array.jai:265
+convert_to_temporary_glyphs       K:\Programming\asterisk\modules\Simp\font.jai:1054
+draw_code                         K:\Programming\asterisk\src\draw.jai:1017
+draw_editor                       K:\Programming\asterisk\src\draw.jai:186
+draw_frame                        K:\Programming\asterisk\src\draw.jai:25
+main                              K:\Programming\asterisk\src\main.jai:295
