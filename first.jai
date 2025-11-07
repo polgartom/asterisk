@@ -87,7 +87,7 @@ build :: () {
                 if phase == {
                     case .TYPECHECKED_ALL_WE_CAN;
                     case .POST_WRITE_EXECUTABLE;
-                        // set_icon(message);
+                        set_icon(message);
                 }
 
             case .COMPLETE;

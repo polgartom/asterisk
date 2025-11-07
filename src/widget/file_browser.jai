@@ -22,6 +22,18 @@ open_file_browser :: () {
     switch_editor_mode(.WIDGET);
     active_widget = File_Browser;
 
+    
+    {
+        anim: Anim;
+        anim.active = true;
+        anim.start  = 0.0;
+        anim.target = 1.0;
+        anim.duration = .08;
+        anim.started_at = frame_time64;
+        
+        open_animation = anim;
+    }
+
 }
 
 _draw_file_browser :: () {
@@ -38,20 +50,41 @@ _draw_file_browser :: () {
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
 
-    w := window_width * 0.4; // @Tempoary
-    w = max(w, 400);
     k := window_height * .1;
+
+    target_width := max(window_width * 0.4, 400); // @Tempoary
+    target_height := k * 1.5;
+    w := 0;
+    h := 0;
     
-    h := cast(float, font.character_height * 2.0);
+    {
+        using open_animation;
+        
+        v := open_animation.target;
+        if active {
+            t := (frame_time64 - started_at) / duration;
+            t = clamp(t, 0.0, 1.0);
+            distance := (target - start);
+            v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            //v = start + cast(float)(distance * t); // lerp
+            if t == 1.0 then active = false;
+        }
+        
+        w = cast(s64, target_width * v);
+        h = cast(s64, target_height * v);
+        
+        redraw_requested = true;
+    }
+        
+    text_input_height := cast(float, font.character_height * 2.0);
     b := cast(float, window_height - k*.1);
-    r := make_rect(ed_r.x-pad, b-h, ed_r.w, h);
+    r := make_rect(ed_r.x-pad, b - text_input_height, ed_r.w, text_input_height);
     r.x = window_width*.5 - w;
     r.w = w * 2.0;
     r.y += 5.0; 
 
     tinp := fb_text_input;
     update_text_input(tinp, r, font, theme=theme);
-    //label(xx(r.x-30), xx r.y, FOLDER_ICON, r_font_icons, theme.fg_color);
     
     r.y -= 5.0;
 
@@ -93,7 +126,7 @@ _draw_file_browser :: () {
     quick_sort(options, (a, b) => cast(s64) ((b.priority) - (a.priority)));                                   // prefer directories over files
 
     list_rect := r;
-    list_rect.h = 1.5*k;
+    list_rect.h = xx h;
 
     linp_theme := List_Input.DEFAULT_THEME;
     linp_theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
@@ -198,4 +231,6 @@ File_Browser :: struct {
     items: [..] File_Visit_Info;
     options: [..] List_Input.Option(File_Visit_Info);
     scan_requested := true;
+    
+    open_animation: Anim;
 }
