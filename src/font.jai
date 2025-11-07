@@ -190,7 +190,7 @@ folder_open_icon_md_width := 0;
 r_font_largest_digit_width := 0;
 
 DEFAULT_FONT_SIZE :: 15;
-DEFAULT_SMALL_FONT_SIZE :: 13;
+DEFAULT_SMALL_FONT_SIZE :: 14;
 DEFAULT_ICON_FONT_SIZE :: 14;
 
 PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);

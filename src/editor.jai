@@ -159,8 +159,12 @@ insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor:
     t := Clipboard.os_clipboard_get_text();
     defer free(t);
 
-    text := normalize_line_endings(t);
-    defer free(text);
+    // @Speed
+    normalize_line_endings(*t);
+    spaces := talloc_string(tab_size);
+    for spaces { spaces[it_index] = " "; } 
+    text := replace(t, "\t", spaces);
+    defer free(t);
 
     // @Todo: Validate if the input data is valid utf8!
 
