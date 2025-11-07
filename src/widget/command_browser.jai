@@ -6,18 +6,17 @@ open_command_browser :: () {
     } else {
         self_text_input = create_text_input(cast(u64)#location());
 
-        array_reserve(*options, _EDITOR_COMMANDS.count);
-        for * cmd: _EDITOR_COMMANDS {
+        array_reserve(*options, editor_commands.count);
+        for * cmd: editor_commands {
             label_for_search := replace(cmd.name, " ", "");
-
             array_add(*options, .{label=cmd.name, ref=cmd, label_for_search=label_for_search});
         }
+        
     }
 
     switch_editor_mode(.WIDGET);
     active_widget = Command_Browser;
-
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 command_browser: Command_Browser;
 

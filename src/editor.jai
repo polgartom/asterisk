@@ -1342,6 +1342,13 @@ active_editor: *Editor = null;
 editors: [2] Editor;
 buffers: [..] *Buffer;
 
+editor_commands :: Editor_Command.[
+    .{"Open Editor Config", OpenEditorConfigFile},
+    .{"Open Project Config", OpenProjectConfigFile},
+    .{"Reload Buffer From Disk", ReloadBufferFromDisk},
+    .{"Transform Selection to Snake Case", TransformSelectionToSnakeCase},
+];
+
 // log_buffer:    *Buffer;
 // logerr_buffer: *Buffer;
 
@@ -1414,9 +1421,7 @@ Row_Info :: struct {
 }
 
 Editor_Command_Proc :: #type ();
-
 Editor_Command :: struct {
-    proc: Editor_Command_Proc;
     name: string;
-    keymap_name: string;
+    proc: Editor_Command_Proc;
 }

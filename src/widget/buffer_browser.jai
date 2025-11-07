@@ -39,7 +39,7 @@ open_buffer_browser :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Buffer_Browser;
 
-} @EditorCommandUnlisted(editor_keymap)
+}
 
 update_visible_options :: (using browser: *Buffer_Browser) {
     assert(bb_text_input != null);

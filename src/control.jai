@@ -38,11 +38,12 @@ CloseCurrentWidget :: () {
 }
 
 // [Editor]
+
 ReloadEditor :: () {
     load_global_config();
     load_project_config();
     init_fonts();
-} @EditorCommand
+}
 
 SwitchOrSplitEditorPanel :: () {
     c := active_editor;
@@ -55,21 +56,19 @@ SwitchOrSplitEditorPanel :: () {
 
     if      *editors[0] == active_editor then active_editor = *editors[1];
     else if *editors[1] == active_editor then active_editor = *editors[0];
-} @EditorCommand(editor_keymap)
+}
 
 HideSecondEditorPanel :: () {
     active_editor = *editors[0];
-    
     editors[1].visible = false;
-} @EditorCommand(editor_keymap)
+}
 
 CreateBuffer :: () {
     editor, _ := get_active_editor_and_buffer();
     
     buffer := create_or_find_empty_buffer(editor);
     change_active_buffer(editor, buffer);
-    
-} @EditorCommand(editor_keymap)
+}
 
 CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
@@ -86,7 +85,7 @@ CloseCurrentBuffer :: () {
 
     close_buffer(buffer);
 
-} @EditorCommand(editor_keymap)
+}
 
 PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
@@ -163,10 +162,11 @@ Save :: () {
 
 ToggleDevInfo :: () {
     show_debug_info = !show_debug_info;
-} @EditorCommand
+}
+
 ToggleDevInfoFont :: () {
     show_font_debug_info = !show_font_debug_info;
-} @EditorCommand
+}
 
 ToggleWaitForEvent :: () {
     wait_os_event_before_redraw = !wait_os_event_before_redraw;
@@ -1138,8 +1138,7 @@ TransformSelectionToSnakeCase :: () {
     if s != result {
         replace_selection(editor, buffer, *editor.cursor, result);
     }
-
-} @EditorCommand(name=Transform_to_Snake_Case)
+}
 
 ReloadBufferFromDisk :: () {
     editor, buffer := get_active_editor_and_buffer();
@@ -1153,8 +1152,7 @@ ReloadBufferFromDisk :: () {
     }
 
     buffer_reload_from_disk(editor, buffer);
-
-} @EditorCommand
+}
 
 OpenEditorConfigFile :: () {
     config_path := get_editor_config_path();
@@ -1167,7 +1165,7 @@ OpenEditorConfigFile :: () {
     }
     
     // @Todo: Show error alert
-} @EditorCommand
+}
 
 OpenProjectConfigFile :: () {
     config_path := get_project_config_path();
@@ -1179,10 +1177,9 @@ OpenProjectConfigFile :: () {
         log_error("Unable to locate the project config file: '%'\n", config_path);
     }
     
-} @EditorCommand
+}
 
-////////////////////////////////////
-//
+//////////////////////////////////////////////////
 
 register_keymap_procedures :: () {
     core_keymap   = add_keymap(*keymap_set, "core");
@@ -1193,18 +1190,25 @@ register_keymap_procedures :: () {
         add_proc(k, #run Code_get_identifier_name(ident), #insert ident);
     }
 
-    _Add_Noted_Editor_Commands();
-
     // Core
     Add(core_keymap, Quit);
 
     // Widget
     Add(widget_keymap, CloseCurrentWidget);
-
+    
     // Editor
-    Add(editor_keymap, ToggleDevInfo);
-    Add(editor_keymap, ToggleDevInfoFont);
-    Add(editor_keymap, ToggleWaitForEvent);
+    Add(editor_keymap, open_command_browser);
+    Add(editor_keymap, open_buffer_browser);
+    Add(editor_keymap, open_file_browser);
+    Add(editor_keymap, open_find_global_text_dialog);
+    Add(editor_keymap, open_find_text_dialog);
+    Add(editor_keymap, open_goto_line_dialog);
+    
+    Add(editor_keymap, ReloadEditor);
+    Add(editor_keymap, SwitchOrSplitEditorPanel);
+    Add(editor_keymap, HideSecondEditorPanel);
+    Add(editor_keymap, CreateBuffer);
+    Add(editor_keymap, CloseCurrentBuffer);
 
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);
@@ -1263,6 +1267,12 @@ register_keymap_procedures :: () {
     Add(editor_keymap, Redo);
 
     Add(editor_keymap, WordCompletion);
+    
+    //Add(editor_keymap, TransformSelectionToSnakeCase);
+    
+    Add(editor_keymap, ToggleDevInfo);
+    Add(editor_keymap, ToggleDevInfoFont);
+    Add(editor_keymap, ToggleWaitForEvent);
 }
 
 
