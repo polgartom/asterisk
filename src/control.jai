@@ -195,6 +195,11 @@ ToggleWaitForEvent :: () {
     wait_os_event_before_redraw = !wait_os_event_before_redraw;
 }
 
+DumpBufferHistory :: () {
+    e, b := get_active_editor_and_buffer();
+    dump_buffer_histories(b);
+}
+
 move_up_by_one_row :: ($with_selection := true) {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
@@ -409,19 +414,19 @@ MoveRightWordSlow :: inline () {
             c := buffer.data[pos];
             if !is_whitespace(c) break;
         }
-    } else if is_separator(char) {
+    } else if is_separator(char, include_underscore=false) {
         // Tokens like (){}$...
         while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
-            if !is_separator(c) || is_whitespace(c) break;
+            if !is_separator(c, include_underscore=false) || is_whitespace(c) break;
         }
     } else {
         // Alphanum
         while pos < buffer.count {
             pos = next_character_pos(buffer, pos);
             c := buffer.data[pos];
-            if is_separator(c) break;
+            if is_separator(c, include_underscore=false) break;
         }
     }
 
@@ -1350,6 +1355,8 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, ToggleDevInfoFont);
     Add(editor_keymap, ToggleWaitForEvent);
+    Add(editor_keymap, DumpBufferHistory);
+    Add(editor_keymap, load_dump_buffer_history);
 }
 
 

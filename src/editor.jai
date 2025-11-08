@@ -17,6 +17,7 @@ insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
 }
 
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+    
     insert_text_at_raw(buffer, at, text);
 
     buffer.dirty = true;
@@ -522,7 +523,7 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         
         for list {
             if it.type != h.type break;
-            if expect_alphanum ^ is_alphanum(it.text[0]) break;
+            if expect_alphanum != is_alphanum(it.text[0]) break;
             end_index += 1;
         }
         
@@ -540,7 +541,7 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
             if it.type != h.type break;
             nochars = utf8_character_count(it.text);
             if nochars != 1 break;
-            if expect_alphanum ^ is_alphanum(it.text[0]) break;
+            if expect_alphanum != is_alphanum(it.text[0]) break;
             end_index += 1;
         }
         
@@ -554,8 +555,15 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
     undos := batch_up_undos(history, history_index);
-    for #v2 < h: undos { // We perform undos so we have to go backward
-        if #complete h.type == {
+    for #v2 < h: undos { // We perform undos so we have to go backward        
+        hash := h.hash;
+        
+        current_hash := crc64(to_string(buffer));
+        if hash != current_hash {
+            log("\n\n-----------\nInvalid hash (undo/before): %  % | %\n", hash, current_hash, h);
+        }
+
+        if #complete h.type == {        
             case .INSERT;
                 to   := h.range.start;
                 from := h.range.end;
@@ -601,7 +609,12 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                 // We don't want to change these type of undos
 
             case .UNDEFINED;
-                assert(false);
+                assert(false, "Undefined history type: %\n", h);
+        }
+        
+        current_hash = crc64(to_string(buffer));
+        if hash != current_hash {
+            log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", hash, current_hash, h);
         }
     }
 }
@@ -612,6 +625,9 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
     redos := batch_up_redos(history, history_index+1);
 
     for #v2 h: redos {
+        hash := h.hash;
+        current_hash := crc64(to_string(buffer));
+    
         if h.type == {
             case .INSERT;
                 to := h.range.start;
@@ -665,23 +681,26 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 // We don't want to change these type of redos
 
             case .UNDEFINED;
-                assert(false);
+                assert(false, "Undefined history type: %\n", h);
         }
     }
 }
 
-add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_History) {
+add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_History) -> *Buffer_History {
     if history.count && history_index != history.count-1 {
         // We should truncate the history because...
         new_size := buffer.history_index+1;
         history.count = new_size;
         Clamp(*history_index, -1, history.count-1);
     }
+    
+    assert(new_history.hash != 0);
 
     h := array_add(*history);
     h.type   = new_history.type;
     h.range  = new_history.range;
     h.cursor = new_history.cursor;
+    h.hash   = new_history.hash;
 
     assert(!!new_history.text);
     modify_string(*h.text, new_history.text);
@@ -692,9 +711,11 @@ add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_Hist
     }
     
     history_index += 1; // also we jump -1 to 0 if no history exists
+    
+    return h;
 }
 
-add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Type, text: string, range: Range, _old_text: string = "" /*for replace*/) {
+add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Type, text: string, range: Range, _old_text: string = "" /*for replace*/) -> *Buffer_History {
     if history.count && history_index != history.count-1 {
         // We should truncate the history because...
         new_size := buffer.history_index+1;
@@ -706,6 +727,7 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     h.type   = type;
     h.range  = range;
     h.cursor = editor.cursor;
+    h.hash   = crc64(to_string(buffer));
 
     modify_string(*h.text, text);
 
@@ -715,6 +737,8 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     }
     
     history_index += 1; // also we jump -1 to 0 if no history exists
+    
+    return h;
 }
 
 last_history :: (using buffer: *Buffer) -> *Buffer_History {
@@ -726,6 +750,7 @@ last_history :: (using buffer: *Buffer) -> *Buffer_History {
 }
 
 reset_history :: (using buffer: *Buffer) {
+    log("reset_history!");
     history_index = -1;
     array_reset_keeping_memory(*history);
 }
@@ -1342,6 +1367,99 @@ init_editor_buffers :: (files_from_cmdline: [] string) {
     }
 }
 
+dump_buffer_histories :: (using buffer: *Buffer) {
+    fname := path_filename(buffer.filepath);
+    if !fname  {
+        assert(false);
+        return;
+    }
+
+    fpath := tprint("dumps/%", fname);
+    File.file_delete(fpath);
+    ok := File.write_entire_file(fpath, to_string(buffer));
+    if !ok {
+        assert(false);
+        return;
+    }
+    
+    b: String_Builder;
+    init_string_builder(*b);
+    
+    append_by_pointer(*b, *history_index);
+    append_by_pointer(*b, *history.count);
+    
+    for history {
+        append(*b, it.text);
+        append(*b, 0);
+        append(*b, it.old_text);
+        append(*b, 0);
+        append_by_pointer(*b, *it.range);
+        append_by_pointer(*b, *it.cursor);
+        append_by_pointer(*b, *it.type);
+        append_by_pointer(*b, *it.modtime);
+        append_by_pointer(*b, *it.hash);
+    }
+    
+    s := builder_to_string(*b);
+    defer free(s);
+    fpath = tprint("dumps/%-history", fname);
+    File.file_delete(fpath);
+    ok = File.write_entire_file(fpath, s);
+    if !ok {
+        assert(false);
+    }
+}
+
+load_dump_buffer_history :: () {
+    for *e: editors {
+        close_buffer(e.active_buffer);
+    }
+    
+    e := get_active_editor_and_buffer();
+    b := open_file_or_create_empty_buffer(e, "dumps/main.jai");
+    reset_history(b);
+    
+    data := File.read_entire_file("dumps/main.jai-history");
+    defer free_string(*data);
+    
+    get :: ($T: Type) -> T #expand {
+        assert(`data.count >= size_of(T));
+        r := cast(*T, `data.data);
+        advance(*`data, size_of(T));
+        return r.*;
+    }
+    
+    get_string :: () -> string #expand {
+        i := find_index_from_left(`data, 0);
+        assert(i != -1, "data: %\n", `data);
+        defer advance(*`data, i+1);
+        r := slice(`data, 0, i);
+        return r;
+    }
+    
+    history_index := get(s64);
+    expected_history_count := get(s64);
+    
+    while data.count {
+        h: Buffer_History;
+        h.text = get_string();
+        h.old_text = get_string();
+        h.range = get(Range);
+        h.cursor = get(Cursor);
+        h.type = get(Buffer_History.Type);
+        h.modtime = get(float64);
+        h.hash = get(u64);
+        
+        added_history := add_history(e, b, h);
+    }
+    
+    b.history_index = history_index;
+    
+    // log("Added histories:\n%\n", b.history);
+    
+    assert(expected_history_count == b.history.count, "expected: % ; got: %\n", expected_history_count, b.history.count);
+}
+
 active_editor: *Editor = null;
 editors: [2] Editor;
 buffers: [..] *Buffer;
@@ -1412,6 +1530,7 @@ Buffer_History :: struct {
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
     modtime: float64;
+    hash: u64;
 
     Type :: enum u8 {
         UNDEFINED :: 0;

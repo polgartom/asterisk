@@ -616,6 +616,7 @@ MeasureProc :: () #expand {
 #import "File_Watcher";
 #import "Hash_Table";
 #import "Process";
+#import "Crc";
 
 Thread    :: #import "Thread";
 File      :: #import "File";
