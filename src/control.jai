@@ -58,8 +58,8 @@ SwitchOrSplitEditorPanel :: () {
             anim.start  = 0.0;
             anim.target = 1.0;
             anim.duration = 0.08;
+            //anim.duration = 2.0;
             anim.started_at = frame_time64;
-            
             editors[1].width_anim = anim;
         }    
         
@@ -80,6 +80,7 @@ HideSecondEditorPanel :: () {
         anim.start  = 1.0;
         anim.target = 0.0;
         anim.duration = 0.08;
+        //anim.duration = 2.0;
         anim.started_at = frame_time64;
         
         editors[1].width_anim = anim;
@@ -1213,6 +1214,7 @@ TransformSelectionToSnakeCase :: () {
     defer free(result);
 
     if s != result {
+        // kacsa
         replace_selection(editor, buffer, *editor.cursor, result);
     }
 }

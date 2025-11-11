@@ -52,7 +52,9 @@ draw_frame :: () {
         right, left := cut_right(rect, rect.w/2*v);
         
         draw_editor(*editors[0], left);
-        draw_editor(*editors[1], right);
+        if right.w != 0 {
+            draw_editor(*editors[1], right);
+        }
     }
     
     // Widgets

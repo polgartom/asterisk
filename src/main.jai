@@ -146,6 +146,10 @@ main :: () {
                 ctrl_released = true;
             }
             
+            if event.key_code == .CTRL {
+                vk_ctrl_down = cast(bool, event.key_pressed);
+            }
+            
             if event.key_code == .SHIFT {
                 vk_shift_down = cast(bool, event.key_pressed);
             }
@@ -211,13 +215,19 @@ main :: () {
                     // Also the rect_for_draw include the editor footer rect.
                     if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
                         if mouse_scrolled_on_frame == .up {
-                            if vk_shift_down {
+                            if vk_ctrl_down {
+                                font_size += 1;
+                                init_fonts();
+                            } else if vk_shift_down {
                                 scroll_left(e);
                             } else {
                                 scroll_up(e);
                             }
                         } else if mouse_scrolled_on_frame == .down {
-                            if vk_shift_down {
+                            if vk_ctrl_down {
+                                font_size -= 1;
+                                init_fonts();
+                            } else if vk_shift_down {
                                 scroll_right(e);
                             } else {
                                 scroll_down(e);  
@@ -234,21 +244,19 @@ main :: () {
             if ok for *e: editors {
                 if !e.visible continue;
                 if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                    
                     os_set_cursor(.CUR_BEAM);
                     
-                    //if !click_action_cooldown_active {
-                        if mouse_dbl_clicked {
-                            SelectSimilarCharacters();
-                            // start_click_action_cooldown();
-                        } else if mouse_down {
-                            active_editor = e;
-                            mx, my, ok := get_mouse_pointer_position(right_handed=false);
-                            pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
-                            if pos != -1 {
-                                set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
-                            }
+                    if mouse_dbl_clicked {
+                        SelectSimilarCharacters();
+                    } else if mouse_down {
+                        active_editor = e;
+                        mx, my, ok := get_mouse_pointer_position(right_handed=false);
+                        pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
+                        if pos != -1 {
+                            set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                         }
-                    //}
+                    }
                 }
             }
         }
@@ -532,6 +540,7 @@ editor_keymap: *Keymap;
 widget_keymap: *Keymap;
 
 vk_shift_down := false;
+vk_ctrl_down  := false;
 
 mouse_scrolled_on_frame: enum u8 {none; up; down;};
 mouse_down := false; // @Temporary

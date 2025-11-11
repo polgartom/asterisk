@@ -31,6 +31,8 @@ init_fonts :: () {
     // so if we want to make a new raster with not the same font size we need to copy that font data, omg...
     modify_string(*font_data_sm, font_data);
 
+    font_size = max(font_size, 10);
+    
     delta := cast(int, font_size) - DEFAULT_FONT_SIZE;
     assert(DEFAULT_SMALL_FONT_SIZE + delta > 0);
     assert(DEFAULT_FONT_SIZE + delta > 0);
