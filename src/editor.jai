@@ -1,32 +1,25 @@
-append_text_raw :: (buffer: *Buffer, text: string) {
-    insert_text_at_raw(buffer, at=buffer.count, text);
-}
-
-insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
-    maybe_grow(buffer, text.count);
-
-    insert_at      := buffer.data  + at;
-    new_right      := insert_at    + text.count;
-    right_rem_size := buffer.count - (insert_at - buffer.data);
-    right_rem_size  = max(0, right_rem_size);
-
-    if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
-    memmove(insert_at, text.data, text.count);
-
-    buffer.count += text.count;
-}
-
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+    #if history {
+        add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
+    }
     
-    insert_text_at_raw(buffer, at, text);
+    {
+        maybe_grow(buffer, text.count);
+
+        insert_at      := buffer.data  + at;
+        new_right      := insert_at    + text.count;
+        right_rem_size := buffer.count - (insert_at - buffer.data);
+        right_rem_size  = max(0, right_rem_size);
+    
+        if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
+        memmove(insert_at, text.data, text.count);
+    
+        buffer.count += text.count;
+    }
 
     buffer.dirty = true;
     buffer.unsaved = true;
     buffer.modtime = ms_since_init();
-
-    #if history {
-        add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
-    }
 
     // @Temporary
     // We must rescan the lines right after text insertion because the byte_pos_to_row_col_index() works on the buffer's "row_table" that is dirty at that point so
@@ -556,13 +549,6 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
 
     undos := batch_up_undos(history, history_index);
     for #v2 < h: undos { // We perform undos so we have to go backward        
-        hash := h.hash;
-        
-        current_hash := crc64(to_string(buffer));
-        if hash != current_hash {
-            log("\n\n-----------\nInvalid hash (undo/before): %  % | %\n", hash, current_hash, h);
-        }
-
         if #complete h.type == {        
             case .INSERT;
                 to   := h.range.start;
@@ -610,11 +596,17 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
 
             case .UNDEFINED;
                 assert(false, "Undefined history type: %\n", h);
-        }
-        
-        current_hash = crc64(to_string(buffer));
-        if hash != current_hash {
-            log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", hash, current_hash, h);
+        }        
+    }
+
+    if undos.count {
+        h := undos[0];
+        s := to_string(buffer);
+        current_hash := crc64(s);
+        if h.hash != current_hash {
+            log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", h.hash, current_hash, h);
+            File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
+            File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
         }
     }
 }
@@ -700,6 +692,7 @@ add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_Hist
     h.type   = new_history.type;
     h.range  = new_history.range;
     h.cursor = new_history.cursor;
+    modify_string(*h.snapshot, to_string(buffer));
     h.hash   = new_history.hash;
 
     assert(!!new_history.text);
@@ -727,7 +720,8 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     h.type   = type;
     h.range  = range;
     h.cursor = editor.cursor;
-    h.hash   = crc64(to_string(buffer));
+    modify_string(*h.snapshot, to_string(buffer));
+    h.hash = crc64(h.snapshot);
 
     modify_string(*h.text, text);
 
@@ -1408,18 +1402,28 @@ dump_buffer_histories :: (using buffer: *Buffer) {
     if !ok {
         assert(false);
     }
+    
+    dialog_confirm("Hisotry dump saved!", options=.OK|.ICONINFORMATION);
 }
 
 load_dump_buffer_history :: () {
+    e, b := get_active_editor_and_buffer();
+    fname := path_filename(b.filepath);
+    if !fname  {
+        assert(false);
+        return;
+    }
+
     for *e: editors {
         close_buffer(e.active_buffer);
     }
     
-    e := get_active_editor_and_buffer();
-    b := open_file_or_create_empty_buffer(e, "dumps/main.jai");
+    fpath := tprint("dumps/%", fname);
+    b = open_file_or_create_empty_buffer(e, fpath);
     reset_history(b);
-    
-    data := File.read_entire_file("dumps/main.jai-history");
+
+    fpath = tprint("dumps/%-history", fname);
+    data := File.read_entire_file(fpath);
     defer free_string(*data);
     
     get :: ($T: Type) -> T #expand {
@@ -1531,6 +1535,7 @@ Buffer_History :: struct {
     type: Buffer_History.Type = .UNDEFINED;
     modtime: float64;
     hash: u64;
+    snapshot: string;
 
     Type :: enum u8 {
         UNDEFINED :: 0;

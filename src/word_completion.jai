@@ -9,6 +9,10 @@ word_completion :: (forwards := true, subwords := false) {
         new_history: Buffer_History;
         history = new_history;
         history.type = .REPLACE;
+        
+        e, b := get_active_editor_and_buffer();
+        modify_string(*history.snapshot, to_string(b));
+        history.hash = crc64(history.snapshot);
 
         search_for_subwords = subwords;
         word_complete_search();
@@ -168,10 +172,10 @@ word_complete_apply :: ($apply_history := false) {
 
 // This procedure is copied from focus editor
 is_word_char :: (c: u8) -> bool {
-	return (#char "A" <= c && c <= #char "Z") ||
-		(#char "a" <= c && c <= #char "z") ||
-		(#char "0" <= c && c <= #char "9") ||
-		c == #char "_";
+    return (#char "A" <= c && c <= #char "Z") ||
+        (#char "a" <= c && c <= #char "z") ||
+        (#char "0" <= c && c <= #char "9") ||
+        c == #char "_";
 }
 
 Word_Completion :: struct {
