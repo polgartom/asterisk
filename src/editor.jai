@@ -1,8 +1,9 @@
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
+
     #if history {
         add_history(editor, buffer, .INSERT, text, Range.{at, at + text.count});
     }
-    
+
     {
         maybe_grow(buffer, text.count);
 
@@ -10,10 +11,10 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
         new_right      := insert_at    + text.count;
         right_rem_size := buffer.count - (insert_at - buffer.data);
         right_rem_size  = max(0, right_rem_size);
-    
+
         if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
         memmove(insert_at, text.data, text.count);
-    
+
         buffer.count += text.count;
     }
 
@@ -108,47 +109,6 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
     }
 }
 
-is_valid_line :: inline (buffer: *Buffer, line: s64) -> bool {
-    if line < 0 || line - 1 >= buffer.row_table.count return false;
-
-    return true;
-}
-
-get_current_line :: inline (using buffer: *Buffer, byte_pos: s64) -> s64 {
-    return find_row_index(buffer, byte_pos) + 1;
-}
-
-get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
-    assert(index < row_table.count);
-
-    s := get_row_as_string(buffer, row_table[index]);
-    return s;
-}
-
-get_row_as_string :: inline (using buffer: *Buffer, row: Row_Info) -> string {
-    s := slice(buffer, row.start, row.size);
-    return s;
-}
-
-get_selection_as_string :: (buffer: *Buffer, cursor: *Cursor) -> string {
-    start, end := selected_range(cursor);
-    return slice(buffer, start, end - start);
-}
-
-copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
-    text := get_selection_as_string(buffer, cursor);
-    Clipboard.os_clipboard_set_text(text);
-}
-
-cut_selection_and_copy_to_os_clipboard :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
-    if !has_selection(cursor) return;
-
-    text := get_selection_as_string(buffer, cursor);
-    Clipboard.os_clipboard_set_text(text);
-
-    delete_selected_range(editor, buffer, cursor);
-}
-
 insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
     t := Clipboard.os_clipboard_get_text();
     defer free(t);
@@ -233,6 +193,46 @@ delete_selected_range :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, $hi
     start, end := selected_range(cursor);
     remove_text_from_left(editor, buffer, start, end - start, history=history);
     set_cursor_pos(buffer, cursor, start, horizontal=true, with_selection=true);
+}
+
+copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
+    text := get_selection_as_string(buffer, cursor);
+    Clipboard.os_clipboard_set_text(text);
+}
+
+cut_selection_and_copy_to_os_clipboard :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
+    if !has_selection(cursor) return;
+
+    text := get_selection_as_string(buffer, cursor);
+    Clipboard.os_clipboard_set_text(text);
+
+    delete_selected_range(editor, buffer, cursor);
+}
+
+is_valid_line :: inline (buffer: *Buffer, line: s64) -> bool {
+    if line < 0 || line - 1 >= buffer.row_table.count return false;
+    return true;
+}
+
+get_current_line :: inline (using buffer: *Buffer, byte_pos: s64) -> s64 {
+    return find_row_index(buffer, byte_pos) + 1;
+}
+
+get_row_as_string :: inline (using buffer: *Buffer, index: s64) -> string {
+    assert(index < row_table.count);
+
+    s := get_row_as_string(buffer, row_table[index]);
+    return s;
+}
+
+get_row_as_string :: inline (using buffer: *Buffer, row: Row_Info) -> string {
+    s := slice(buffer, row.start, row.size);
+    return s;
+}
+
+get_selection_as_string :: (buffer: *Buffer, cursor: *Cursor) -> string {
+    start, end := selected_range(cursor);
+    return slice(buffer, start, end - start);
 }
 
 next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
