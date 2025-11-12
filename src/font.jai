@@ -32,6 +32,7 @@ init_fonts :: () {
     modify_string(*font_data_sm, font_data);
 
     font_size = max(font_size, 10);
+    font_size = min(font_size, 45);
     
     delta := cast(int, font_size) - DEFAULT_FONT_SIZE;
     assert(DEFAULT_SMALL_FONT_SIZE + delta > 0);
