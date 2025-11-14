@@ -235,18 +235,19 @@ get_selection_as_string :: (buffer: *Buffer, cursor: *Cursor) -> string {
     return slice(buffer, start, end - start);
 }
 
-next_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
+next_character_pos :: (buffer: *Buffer, at: s64) -> (pos: s64, moved: bool) {
     assert(at > -1 || at <= buffer.count);
 
-    if at == buffer.count return at;
+    if at == buffer.count return at, false;
 
     byte := buffer.data[at];
-    return at + 1 + trailingBytesForUTF8[byte];
+    pos := at + 1 + trailingBytesForUTF8[byte];
+    return pos, pos != at;
 }
 
-// @Todo: Deprecate the prev_char_byte_offset() proc and use the prev_character_pos() name everywhere
-prev_character_pos :: (buffer: *Buffer, at: s64) -> s64 {
-    return prev_char_byte_offset(buffer, at);
+prev_character_pos :: (buffer: *Buffer, at: s64) -> (pos: s64, moved: bool) {
+    pos := prev_char_byte_offset(buffer, at);
+    return pos, pos != at;
 }
 
 count_buffers :: (using editor: *Editor, initialized: bool) -> (count: s64) {
@@ -605,8 +606,8 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
         current_hash := crc64(s);
         if h.hash != current_hash {
             log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", h.hash, current_hash, h);
-            File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
-            File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
+            //File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
+            //File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
         }
     }
 }

@@ -292,13 +292,58 @@ MoveLeftWord :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
 
-    cursor := *editor.cursor;    
-    pos := prev_character_pos(buffer, cursor.pos);
-    if cursor.pos == pos return;
+    cursor := *editor.cursor;
     
-    type := get_character_type(buffer.data[pos]);
-    start_type := type;
+    pos := cursor.pos;
+    prev_pos, moved := prev_character_pos(buffer, pos);
+    if !moved return;
     
+    start_type := get_character_type(buffer.data[prev_pos]);
+    pos = prev_pos;
+    
+    // @Cleanup: What a mess...
+    
+    if start_type == .space {
+        // If the previous character is a space, treat the following run of non-space characters
+        // as if they were a single "space" group for backward movement. We walk backward
+        // until we find a character type different from that first non-space character,
+        // then place the cursor at the last character of the run we just scanned.
+        
+        until_type := start_type;
+        until_type_is_set := false;
+        while pos != 0 {
+            pos, moved = prev_character_pos(buffer, pos);
+            type := get_character_type(buffer.data[pos]); // prev character type
+            if !until_type_is_set && type != .space {
+                until_type = type;
+                until_type_is_set = true;
+            }
+            if until_type != type || !moved {
+                pos = next_character_pos(buffer, pos); // We want to end up in the last similar character
+                set_cursor_pos(buffer, cursor, pos, horizontal=true);    
+                return;
+            }
+        }
+    }
+    
+    while pos != 0 {
+        pos, moved = prev_character_pos(buffer, pos);
+        type := get_character_type(buffer.data[pos]); // prev character type
+        /*
+        if start_type == .space && type != .space && type != .ctrl  {
+            // ha .space a prev char akkor azt össze lehet vonni a .alphanum al vagy .symbol al
+        }
+        */
+        if type != start_type || !moved {
+            pos = next_character_pos(buffer, pos); // We want to end up in the last similar character
+            set_cursor_pos(buffer, cursor, pos, horizontal=true);
+            return;
+        }
+    }
+    
+    
+    
+    /*
     while pos != 0 {
         _pos := prev_character_pos(buffer, pos);
         type = get_character_type(buffer.data[_pos]);
@@ -319,6 +364,7 @@ MoveLeftWord :: () {
     }
     
     set_cursor_pos(buffer, cursor, pos, horizontal=true);
+    */
 }
 
 MoveLeftWordSlow :: inline () {
@@ -374,28 +420,59 @@ MoveRightWord :: inline () {
     if cursor.pos == buffer.count return;
     
     pos := cursor.pos;
-    
+    next_pos := cursor.pos;
+
     type := get_character_type(buffer.data[pos]);
     start_type := type;
 
-    while pos < buffer.count {
-        pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
-        type = get_character_type(buffer.data[pos]);
-        if type != start_type {
-            break;
-        }
-    }
+    // @Cleanup: What a mess...
     
-    if type != start_type && type != .ctrl {
+    if start_type == .ctrl || start_type == .space {
         while pos < buffer.count {
-            pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
-            if get_character_type(buffer.data[pos]) != type {
-                break;
+            pos=, moved := next_character_pos(buffer, pos);
+            if !moved break;
+            type = get_character_type(buffer.data[pos]);
+            if type != .ctrl && type != .space {
+                while pos < buffer.count {
+                    pos=, moved := next_character_pos(buffer, pos);
+                    if !moved || get_character_type(buffer.data[pos]) != type {
+                        break;
+                    }
+                }
+                set_cursor_pos(buffer, cursor, pos, horizontal=true);
+                return;
+            }
+        }
+    } else {
+        while pos < buffer.count {
+            pos=, moved := next_character_pos(buffer, pos);
+            if !moved break;
+            type = get_character_type(buffer.data[pos]);
+            if type != start_type {
+                set_cursor_pos(buffer, cursor, pos, horizontal=true);
+                return;
             }
         }
     }
 
-    set_cursor_pos(buffer, cursor, pos, horizontal=true);
+    // while pos < buffer.count {
+    //     type = get_character_type(buffer.data[pos]);
+    //     if type != start_type {
+    //         break;
+    //     }
+    //     pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
+    // }
+    
+    // prev_pos := pos;
+    // if type != start_type {
+    //     while pos < buffer.count {
+    //         if get_character_type(buffer.data[pos]) != type {
+    //             break;
+    //         }
+    //         pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
+    //     }
+    // }
+
 }
 
 MoveRightWordSlow :: inline () {
