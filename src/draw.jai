@@ -131,7 +131,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
-        Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR));
+        Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR)); // right border
         
         Simp.set_shader_for_text();
         
@@ -869,16 +869,20 @@ draw_goto_line_dialog :: () {
 }
 
 draw_global_debug_info :: (r: Rect) {
+    e,b := get_active_editor_and_buffer();
+
     Simp.immediate_begin();
     
     PrintDev("[frame] %\n", frame);
     PrintDev("[flags] wait_os_event_before_redraw: %\n", wait_os_event_before_redraw);
-
-    e := get_active_editor_and_buffer();
+    
     PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
 
     mx, my, ok := get_mouse_pointer_position_right_handed();
     PrintDev("[mouse] x:% y:%\n", mx, my);
+
+    PrintDev("[line-ends-scan] % lines | % ms\n", b.row_table.count, b.row_table_recalc_time);
+    PrintDev("[syntax-highlighting] %ms\n", b.tokenization_time);
 
     row := 1;
     max := 0;

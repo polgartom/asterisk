@@ -64,7 +64,6 @@ build :: () {
     build_constants := tprint(#string STRING
             DEBUG           :: %;
             WINDOW_NAME     :: "%";
-            USE_BAKED_FONT  :: true; 
         STRING,
             ifx release_build then "false" else "true",
             window_name,

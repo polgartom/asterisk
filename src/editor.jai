@@ -600,14 +600,16 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
         }        
     }
 
-    if undos.count {
-        h := undos[0];
-        s := to_string(buffer);
-        current_hash := crc64(s);
-        if h.hash != current_hash {
-            log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", h.hash, current_hash, h);
-            //File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
-            //File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
+    #if DEBUG {
+        if undos.count {
+            h := undos[0];
+            s := to_string(buffer);
+            current_hash := crc64(s);
+            if h.hash != current_hash {
+                log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", h.hash, current_hash, h);
+                //File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
+                //File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
+            }
         }
     }
 }
@@ -618,9 +620,6 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
     redos := batch_up_redos(history, history_index+1);
 
     for #v2 h: redos {
-        hash := h.hash;
-        current_hash := crc64(to_string(buffer));
-    
         if h.type == {
             case .INSERT;
                 to := h.range.start;
@@ -687,14 +686,17 @@ add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_Hist
         Clamp(*history_index, -1, history.count-1);
     }
     
-    assert(new_history.hash != 0);
+    #if DEBUG { assert(new_history.hash != 0); }
 
     h := array_add(*history);
     h.type   = new_history.type;
     h.range  = new_history.range;
     h.cursor = new_history.cursor;
-    modify_string(*h.snapshot, to_string(buffer));
-    h.hash   = new_history.hash;
+
+    #if DEBUG {
+        modify_string(*h.snapshot, to_string(buffer));
+        h.hash   = new_history.hash;
+    }
 
     assert(!!new_history.text);
     modify_string(*h.text, new_history.text);
@@ -721,8 +723,11 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     h.type   = type;
     h.range  = range;
     h.cursor = editor.cursor;
-    modify_string(*h.snapshot, to_string(buffer));
-    h.hash = crc64(h.snapshot);
+    
+    #if DEBUG {
+        modify_string(*h.snapshot, to_string(buffer));
+        h.hash = crc64(h.snapshot);
+    }
 
     modify_string(*h.text, text);
 
@@ -1362,107 +1367,113 @@ init_editor_buffers :: (files_from_cmdline: [] string) {
     }
 }
 
-dump_buffer_histories :: (using buffer: *Buffer) {
-    fname := path_filename(buffer.filepath);
-    if !fname  {
-        assert(false);
-        return;
-    }
+#if DEBUG {
+    dump_buffer_histories :: (using buffer: *Buffer) {
+        #if !DEBUG { return; }
 
-    fpath := tprint("dumps/%", fname);
-    File.file_delete(fpath);
-    ok := File.write_entire_file(fpath, to_string(buffer));
-    if !ok {
-        assert(false);
-        return;
-    }
-    
-    b: String_Builder;
-    init_string_builder(*b);
-    
-    append_by_pointer(*b, *history_index);
-    append_by_pointer(*b, *history.count);
-    
-    for history {
-        append(*b, it.text);
-        append(*b, 0);
-        append(*b, it.old_text);
-        append(*b, 0);
-        append_by_pointer(*b, *it.range);
-        append_by_pointer(*b, *it.cursor);
-        append_by_pointer(*b, *it.type);
-        append_by_pointer(*b, *it.modtime);
-        append_by_pointer(*b, *it.hash);
-    }
-    
-    s := builder_to_string(*b);
-    defer free(s);
-    fpath = tprint("dumps/%-history", fname);
-    File.file_delete(fpath);
-    ok = File.write_entire_file(fpath, s);
-    if !ok {
-        assert(false);
-    }
-    
-    dialog_confirm("Hisotry dump saved!", options=.OK|.ICONINFORMATION);
-}
+        fname := path_filename(buffer.filepath);
+        if !fname  {
+            assert(false);
+            return;
+        }
 
-load_dump_buffer_history :: () {
-    e, b := get_active_editor_and_buffer();
-    fname := path_filename(b.filepath);
-    if !fname  {
-        assert(false);
-        return;
-    }
-
-    for *e: editors {
-        close_buffer(e.active_buffer);
-    }
-    
-    fpath := tprint("dumps/%", fname);
-    b = open_file_or_create_empty_buffer(e, fpath);
-    reset_history(b);
-
-    fpath = tprint("dumps/%-history", fname);
-    data := File.read_entire_file(fpath);
-    defer free_string(*data);
-    
-    get :: ($T: Type) -> T #expand {
-        assert(`data.count >= size_of(T));
-        r := cast(*T, `data.data);
-        advance(*`data, size_of(T));
-        return r.*;
-    }
-    
-    get_string :: () -> string #expand {
-        i := find_index_from_left(`data, 0);
-        assert(i != -1, "data: %\n", `data);
-        defer advance(*`data, i+1);
-        r := slice(`data, 0, i);
-        return r;
-    }
-    
-    history_index := get(s64);
-    expected_history_count := get(s64);
-    
-    while data.count {
-        h: Buffer_History;
-        h.text = get_string();
-        h.old_text = get_string();
-        h.range = get(Range);
-        h.cursor = get(Cursor);
-        h.type = get(Buffer_History.Type);
-        h.modtime = get(float64);
-        h.hash = get(u64);
+        fpath := tprint("dumps/%", fname);
+        File.file_delete(fpath);
+        ok := File.write_entire_file(fpath, to_string(buffer));
+        if !ok {
+            assert(false);
+            return;
+        }
         
-        added_history := add_history(e, b, h);
+        b: String_Builder;
+        init_string_builder(*b);
+        
+        append_by_pointer(*b, *history_index);
+        append_by_pointer(*b, *history.count);
+        
+        for history {
+            append(*b, it.text);
+            append(*b, 0);
+            append(*b, it.old_text);
+            append(*b, 0);
+            append_by_pointer(*b, *it.range);
+            append_by_pointer(*b, *it.cursor);
+            append_by_pointer(*b, *it.type);
+            append_by_pointer(*b, *it.modtime);
+            append_by_pointer(*b, *it.hash);
+        }
+        
+        s := builder_to_string(*b);
+        defer free(s);
+        fpath = tprint("dumps/%-history", fname);
+        File.file_delete(fpath);
+        ok = File.write_entire_file(fpath, s);
+        if !ok {
+            assert(false);
+        }
+        
+        dialog_confirm("Hisotry dump saved!", options=.OK|.ICONINFORMATION);
     }
-    
-    b.history_index = history_index;
-    
-    // log("Added histories:\n%\n", b.history);
-    
-    assert(expected_history_count == b.history.count, "expected: % ; got: %\n", expected_history_count, b.history.count);
+
+    load_dump_buffer_history :: () {
+        #if !DEBUG { return; }
+
+        e, b := get_active_editor_and_buffer();
+        fname := path_filename(b.filepath);
+        if !fname  {
+            assert(false);
+            return;
+        }
+
+        for *e: editors {
+            close_buffer(e.active_buffer);
+        }
+        
+        fpath := tprint("dumps/%", fname);
+        b = open_file_or_create_empty_buffer(e, fpath);
+        reset_history(b);
+
+        fpath = tprint("dumps/%-history", fname);
+        data := File.read_entire_file(fpath);
+        defer free_string(*data);
+        
+        get :: ($T: Type) -> T #expand {
+            assert(`data.count >= size_of(T));
+            r := cast(*T, `data.data);
+            advance(*`data, size_of(T));
+            return r.*;
+        }
+        
+        get_string :: () -> string #expand {
+            i := find_index_from_left(`data, 0);
+            assert(i != -1, "data: %\n", `data);
+            defer advance(*`data, i+1);
+            r := slice(`data, 0, i);
+            return r;
+        }
+        
+        history_index := get(s64);
+        expected_history_count := get(s64);
+        
+        while data.count {
+            h: Buffer_History;
+            h.text = get_string();
+            h.old_text = get_string();
+            h.range = get(Range);
+            h.cursor = get(Cursor);
+            h.type = get(Buffer_History.Type);
+            h.modtime = get(float64);
+            h.hash = get(u64);
+            
+            added_history := add_history(e, b, h);
+        }
+        
+        b.history_index = history_index;
+        
+        // log("Added histories:\n%\n", b.history);
+        
+        assert(expected_history_count == b.history.count, "expected: % ; got: %\n", expected_history_count, b.history.count);
+    }
 }
 
 active_editor: *Editor = null;
@@ -1535,8 +1546,11 @@ Buffer_History :: struct {
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
     modtime: float64;
-    hash: u64;
-    snapshot: string;
+    
+    #if DEBUG {
+        hash: u64;
+        snapshot: string;
+    }
 
     Type :: enum u8 {
         UNDEFINED :: 0;

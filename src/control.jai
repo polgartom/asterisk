@@ -198,7 +198,10 @@ ToggleWaitForEvent :: () {
 
 DumpBufferHistory :: () {
     e, b := get_active_editor_and_buffer();
-    dump_buffer_histories(b);
+    #if DEBUG {
+        dump_buffer_histories(b);
+    }
+    // kacsa
 }
 
 move_up_by_one_row :: ($with_selection := true) {
@@ -1434,8 +1437,11 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, ToggleDevInfoFont);
     Add(editor_keymap, ToggleWaitForEvent);
-    Add(editor_keymap, DumpBufferHistory);
-    Add(editor_keymap, load_dump_buffer_history);
+    
+    #if DEBUG {
+        Add(editor_keymap, DumpBufferHistory);
+        Add(editor_keymap, load_dump_buffer_history);
+    }
 }
 
 

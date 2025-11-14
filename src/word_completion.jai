@@ -11,8 +11,11 @@ word_completion :: (forwards := true, subwords := false) {
         history.type = .REPLACE;
         
         e, b := get_active_editor_and_buffer();
-        modify_string(*history.snapshot, to_string(b));
-        history.hash = crc64(history.snapshot);
+
+        #if DEBUG {
+            modify_string(*history.snapshot, to_string(b));
+            history.hash = crc64(history.snapshot);
+        }
 
         search_for_subwords = subwords;
         word_complete_search();
