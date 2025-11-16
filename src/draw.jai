@@ -123,7 +123,8 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
     scrollbar_width := r_font.em_width * 1.5;
-    scrollbar_area, r= := cut_right(r, scrollbar_width);
+    //scrollbar_area, r= := cut_right(r, scrollbar_width);
+    scrollbar_area := cut_right(r, scrollbar_width);
     
     // Draw line numbers
     if buffers.count && show_line_numbers {    
@@ -149,75 +150,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             c := map_color_to_vec4(.TEXT_DIMMED);
             Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
         }
-    }
-    
-    { 
-        Simp.set_shader_for_color(true);
-    
-        // Draw scrollbar
-        SCROLLBAR_UI_ID :: cast(u64)#location();
-        
-        // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
-        y_threshold := fnt_get_line_height() * 6; 
-        total_height := fnt_get_line_height() * buffer.row_table.count + y_threshold;
-        
-        min_scroll := 0.0;
-        max_scroll := total_height - r.h;
-    
-        area := scrollbar_area;        
-        scrollbar := area;
-        scrollbar.h = area.h * (area.h / total_height);
-        scrollbar.h = max(20.0, scrollbar.h);
-        scroll_zone_height := max(0.0, area.h - scrollbar.h);
-                
-        get_scrollbar_y :: (scrollbar: Rect, scroll: float32) -> float #expand {
-            y := `area.y + (`max_scroll - scroll) / (`max_scroll - `min_scroll) * `scroll_zone_height;
-            y = floor(y);
-            return y;
-        }
-        
-        scrollbar.y = get_scrollbar_y(scrollbar, editor.top_offset);
-        
-        mx, my := get_mouse_pointer_position_safe(right_handed=true);
-        mouse_point := Vector2.{cast(float)mx, cast(float)my};
-        
-        if mouse_grabbed_ui_id == SCROLLBAR_UI_ID || is_point_in_rect(area, mouse_point) {
-            //t := get_animation_value(*editor.scrollbar_anim);
-            //editor.scrollbar_opacity = move_toward(0.0, editor.scrollbar_anim.target, t);
-                            
-            if mouse_down {
-                if mouse_grabbed_ui_id != SCROLLBAR_UI_ID {
-                    mouse_grabbed_ui_id = SCROLLBAR_UI_ID;
-
-                    editor.scrollbar_grabbed_y = scrollbar.h / 2;
-                    if mouse_point.y > scrollbar.y && mouse_point.y < scrollbar.y + scrollbar.h {
-                        editor.scrollbar_grabbed_y = scrollbar.h - (my - scrollbar.y);
-                    }
-                }
-                
-                grab_point := editor.scrollbar_grabbed_y;
-                
-                editor.top_offset = (area.h + area.y - cast(float, my) - grab_point) / (area.h) * total_height;
-                editor.top_offset = max(0.0, editor.top_offset);
-                editor.top_offset = min(max_scroll, editor.top_offset);
-            }
-        }
-        
-        scrollbar.y = get_scrollbar_y(scrollbar, editor.top_offset);
-        
-        draw_quad(area, map_color_to_vec4(.BACKGROUND2));
-        if scroll_zone_height > 0 {
-            Simp.set_shader_for_rect();
-            color := Vector4.{1, 1, 1, editor.scrollbar_opacity};
-            radius := 4.0;
-            Simp.immediate_quad_with_radius(scrollbar.x, scrollbar.y, scrollbar.x + scrollbar.w, scrollbar.y + scrollbar.h, color, radius=radius);
-            //Simp.immediate_quad(scrollbar.x, scrollbar.y, scrollbar.x+scrollbar.w, scrollbar.y + scrollbar.h, .{1,1,1,.5});
-            //draw_quad(scrollbar, .{1, 1, 1, editor.scrollbar_opacity});
-        }
-        
-        //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h-1, .{1,0,0,1});
-        //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h/2+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h/2-1, .{1,0,0,1});
-        //Simp.immediate_quad(scrollbar.x, scrollbar.y+1, scrollbar.x+scrollbar.w, scrollbar.y-1, .{1,0,0,1});
     }
     
     _, r= := cut_left(r, LEFT_PADDING);
@@ -255,7 +187,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         redraw_requested = true;
     }
 
-    // kacsa
     if editor.cursor.moved {
         editor.cursor.moved = false;
         scroll_to_cursor(editor, editor.cursor, animation_duration=0.08);
@@ -293,6 +224,84 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     }
 
     draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
+
+    { 
+        // Draw scrollbar
+    
+        Simp.set_shader_for_color(true);
+    
+        SCROLLBAR_UI_ID :: cast(u64)#location(); // @Temporary
+        
+        // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
+        y_threshold := fnt_get_line_height() * 6; 
+        total_height := fnt_get_line_height() * buffer.row_table.count + y_threshold;
+        
+        min_scroll := 0.0;
+        max_scroll := total_height - r.h;
+    
+        area := scrollbar_area;        
+        scrollbar := area;
+        scrollbar.h = area.h * (area.h / total_height);
+        scrollbar.h = max(20.0, scrollbar.h);
+        scroll_zone_height := max(0.0, area.h - scrollbar.h);
+                
+        get_scrollbar_y :: (scrollbar: Rect, scroll: float32) -> float #expand {
+            y := `area.y + (`max_scroll - scroll) / (`max_scroll - `min_scroll) * `scroll_zone_height;
+            y = floor(y);
+            return y;
+        }
+        
+        scrollbar.y = get_scrollbar_y(scrollbar, editor.top_offset);
+        
+        mx, my := get_mouse_pointer_position_safe(right_handed=true);
+        mouse_point := Vector2.{cast(float)mx, cast(float)my};
+        
+        opacity := 0.0;
+        
+        if is_active(editor) && (mouse_grabbed_ui_id == SCROLLBAR_UI_ID || is_point_in_rect(area, mouse_point)) {
+            os_set_cursor(.CUR_ARROW);
+            opacity = 1.0;
+            
+            //t := get_animation_value(*editor.scrollbar_anim);
+            //editor.scrollbar_opacity = move_toward(0.0, editor.scrollbar_anim.target, t);
+                            
+            if mouse_down {
+                if mouse_grabbed_ui_id != SCROLLBAR_UI_ID {
+                    mouse_grabbed_ui_id = SCROLLBAR_UI_ID;
+
+                    editor.scrollbar_grabbed_y = scrollbar.h / 2;
+                    //if mouse_point.y > scrollbar.y && mouse_point.y < scrollbar.y + scrollbar.h {
+                    if is_point_in_rect(scrollbar, mouse_point) {
+                        editor.scrollbar_grabbed_y = scrollbar.h - (my - scrollbar.y);
+                    }
+                }
+                
+                grab_point := editor.scrollbar_grabbed_y;
+                
+                editor.top_offset = (area.h + area.y - cast(float, my) - grab_point) / (area.h) * total_height;
+                editor.top_offset = max(0.0, editor.top_offset);
+                editor.top_offset = min(max_scroll, editor.top_offset);
+            }
+        }
+        
+        scrollbar.y = get_scrollbar_y(scrollbar, editor.top_offset);
+        
+        color := map_color_to_vec4(.BACKGROUND2);
+        color.w = opacity;
+        draw_quad(area, color);
+        if scroll_zone_height > 0 {
+            Simp.set_shader_for_rect();
+            color := Vector4.{1, 1, 1, opacity*0.5};
+            radius := 4.0;
+            Simp.immediate_quad_with_radius(scrollbar.x, scrollbar.y, scrollbar.x + scrollbar.w, scrollbar.y + scrollbar.h, color, radius=radius);
+            //Simp.immediate_quad(scrollbar.x, scrollbar.y, scrollbar.x+scrollbar.w, scrollbar.y + scrollbar.h, .{1,1,1,.5});
+            //draw_quad(scrollbar, .{1, 1, 1, editor.scrollbar_opacity});
+        }
+        
+        //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h-1, .{1,0,0,1});
+        //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h/2+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h/2-1, .{1,0,0,1});
+        //Simp.immediate_quad(scrollbar.x, scrollbar.y+1, scrollbar.x+scrollbar.w, scrollbar.y-1, .{1,0,0,1});
+    }
 
     {
         // Draw footer

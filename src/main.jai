@@ -62,6 +62,7 @@ main :: () {
     load_project_config();
     init_editor_buffers(files_from_cmdline);
     init_fonts();
+    init_cursors();
 
     last_second_time: Apollo_Time;
 
@@ -69,7 +70,7 @@ main :: () {
         if !redraw_requested && wait_os_event_before_redraw {
             wait_for_event();
         }
-        
+            
         current_time = current_time_monotonic();
         frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
         frame_time = current_time_monotonic();
@@ -84,6 +85,7 @@ main :: () {
             second_elapsed = true;
         }
         
+        cursor_kind_changed_this_frame = false;
         redraw_requested = false;
 
         update_window_events();
@@ -209,7 +211,7 @@ main :: () {
             os_set_cursor(.CUR_ARROW);
         }
         
-        // kacsa @Temporary @Cleanup
+        // @Temporary @Cleanup
         if !mouse_down && mouse_grabbed_ui_id {
             mouse_grabbed_ui_id = 0;
         }
@@ -310,7 +312,7 @@ main :: () {
         }
 
         draw_frame();
-
+                
         // if 1 {
         //     c := map_color_to_vec4(.BACKGROUND);
         //     Simp.clear_render_target(c.x, c.y, c.z, c.w);
@@ -362,34 +364,29 @@ get_mouse_pointer_position_safe :: (right_handed := true) -> s64, s64 {
     return max(0, mx), max(0, my);
 }
 
+set_cursor_icon :: (kind: OS_Cursor_Kind) {
+    os_current_cursor_kind = kind;
+    cursor_kind_changed_this_frame = true;
+}
+
 #if OS == .WINDOWS {
     os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
-        // set_custom_cursor_handling(true);
+        //set_custom_cursor_handling(true);
     
-        cursor_resource_name := win32_cursor_resource_name_from_kind(kind);
-        if cursor_resource_name == null return false;
-        
-        handle := LoadCursorA(null /* HINSTANCE */, cursor_resource_name); // Loads the cursor resource if not already loaded; otherwise returns its handle.
-        if handle == null {
-            error_code := GetLastError();
-            log_error("Failed to load the cursor! error code: '%'\n", error_code);
-            return false;
-        }
-        
+        handle := cursor_pointers[kind];
         SetCursor(handle);
-        os_current_cursor_kind = kind;
         
         return true;
     }
     
-    win32_cursor_resource_name_from_kind :: (kind: OS_Cursor_Kind) -> LPCSTR {
-        if kind == {
-            case .CUR_ARROW; return IDC_ARROW;
-            case .CUR_BEAM;  return IDC_IBEAM;
-            case .CUR_WAIT;  return IDC_WAIT;
-        };
-        return null;
+    init_cursors :: () {
+        using OS_Cursor_Kind;
+        cursor_pointers[CUR_ARROW] = LoadCursorW(null, IDC_ARROW);
+        cursor_pointers[CUR_BEAM] = LoadCursorW(null, IDC_IBEAM);
+        cursor_pointers[CUR_WAIT] = LoadCursorW(null, IDC_WAIT);
     }
+        
+    cursor_pointers: [3] HCURSOR;
 }
 
 /*
@@ -578,12 +575,12 @@ Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
 Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
 
 os_current_cursor_kind := OS_Cursor_Kind.CUR_ARROW;
+cursor_kind_changed_this_frame := false;
 
 OS_Cursor_Kind :: enum u8 {
-    CUR_NONE  :: 0;
-    CUR_ARROW :: 1;
-    CUR_BEAM  :: 2;
-    CUR_WAIT  :: 3;
+    CUR_ARROW :: 0;
+    CUR_BEAM  :: 1;
+    CUR_WAIT  :: 2;
 }
 
 ////////////////////////////////
