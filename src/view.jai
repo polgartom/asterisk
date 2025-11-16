@@ -175,10 +175,25 @@ move_toward :: (a: float, b: float, amount_increasing: float, amount_decreasing 
     return a;
 }
 
+get_animation_value :: (using anim: *Anim) -> float {
+    if active {
+        t := (frame_time64 - started_at) / duration;
+        t = clamp(t, 0.0, 1.0);
+        distance := (target - start);
+        current = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+        if t == 1.0 then active = false;
+        
+        redraw_requested = true;
+    }
+    
+    return current;
+}
+
 Anim :: struct {
     active: bool;
     start: float;
     target: float;
+    current: float;
     started_at: float64;
     duration: float;
     elapsed: float64;

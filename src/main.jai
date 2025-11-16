@@ -5,6 +5,9 @@
 //     }
 // }
 
+frametimes: [60] float64;
+frametimes_i := 0;
+
 main :: () {
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -205,6 +208,11 @@ main :: () {
         if mode == .WIDGET {
             os_set_cursor(.CUR_ARROW);
         }
+        
+        // kacsa @Temporary @Cleanup
+        if !mouse_down && mouse_grabbed_ui_id {
+            mouse_grabbed_ui_id = 0;
+        }
 
         if mode == .EDITOR {
             if mouse_scrolled_on_frame != .none {
@@ -240,28 +248,29 @@ main :: () {
             
             // @Cleanup It's confusing that we have to check whether the mouse pointer is inside the rect using right-handed coordinates,
             // but later, when determining the desired row index, we need to perform a similar check using left-handed coordinates.
-            mx, my, ok := get_mouse_pointer_position(right_handed=true);
-            if ok for *e: editors {
-                if !e.visible continue;
-                if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
-                    
-                    os_set_cursor(.CUR_BEAM);
-                    
-                    if mouse_dbl_clicked {
-                        SelectSimilarCharacters();
-                    } else if mouse_down {
-                        active_editor = e;
-                        mx, my, ok := get_mouse_pointer_position(right_handed=false);
-                        pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
-                        if pos != -1 {
-                            set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
+            if !mouse_grabbed_ui_id {
+                mx, my, ok := get_mouse_pointer_position(right_handed=true);
+                if ok for *e: editors {
+                    if !e.visible continue;
+                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                        os_set_cursor(.CUR_BEAM);
+                        
+                        if mouse_dbl_clicked {
+                            SelectSimilarCharacters();
+                        } else if mouse_down {
+                            active_editor = e;
+                            mx, my, ok := get_mouse_pointer_position(right_handed=false);
+                            pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
+                            if pos != -1 {
+                                set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
+                            }
                         }
                     }
                 }
             }
         }
 
-        // @Cleanup
+        // @Cleanup @Temporary
         if ctrl_released {
             if word_complete.active {
                 word_complete_end();
@@ -346,6 +355,11 @@ get_dpi_scale :: (window: Window_Type) -> float {
 get_mouse_pointer_position_right_handed :: inline () -> s64, s64, bool {
     mx, my, ok := get_mouse_pointer_position(right_handed=true);
     return mx, my, ok;
+}
+
+get_mouse_pointer_position_safe :: (right_handed := true) -> s64, s64 {
+    mx, my, ok := get_mouse_pointer_position(right_handed);
+    return max(0, mx), max(0, my);
 }
 
 #if OS == .WINDOWS {
@@ -551,6 +565,8 @@ mouse_clicked_last_time_ms: float64;
 mouse_dbl_clicked := false;
 mouse_dbl_clicked_last_time_ms: float64;
 mouse_was_dbl_clicked := false;
+
+mouse_grabbed_ui_id: u64 = 0;
 
 //click_action_cooldown_active := false;
 //click_action_cooldown_start_time_ms: float64;

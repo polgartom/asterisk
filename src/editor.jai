@@ -1031,7 +1031,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
             anim_x.target = target;
             anim_x.duration = animation_duration;
             anim_x.started_at = frame_time64;
-            editor.x_scroll_anim = anim_x;        
+            editor.x_scroll_anim = anim_x;
         } else {
             editor.left_offset = target;
             editor.x_scroll_anim.active = false;
@@ -1039,7 +1039,7 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     }
 
     // Viewport (Y)
-    y_threshold := fnt_get_line_height() * 6;
+    y_threshold := fnt_get_line_height() * 6; // @Todo :WhiteSpacesAfterLastRow
     my := fnt_get_line_height(find_row_index(buffer, editor.cursor.pos));
     my = r.h - my + editor.top_offset;
 
@@ -1505,6 +1505,10 @@ Editor :: struct {
     width_anim:    Anim;
     y_scroll_anim: Anim;
     x_scroll_anim: Anim;
+    
+    scrollbar_anim: Anim; // @Todo
+    scrollbar_opacity := 0.5;
+    scrollbar_grabbed_y := 0.0;
 }
 
 Buffer :: struct {
