@@ -246,7 +246,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         scroll_zone_height := max(0.0, area.h - scrollbar.h);
                 
         get_scrollbar_y :: (scrollbar: Rect, scroll: float32) -> float #expand {
-            y := `area.y + (`max_scroll - scroll) / (`max_scroll - `min_scroll) * `scroll_zone_height;
+            y := `scroll_zone_height * (`max_scroll - scroll) / (`max_scroll - `min_scroll) + `area.y;
             y = floor(y);
             return y;
         }
@@ -256,11 +256,11 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         mx, my := get_mouse_pointer_position_safe(right_handed=true);
         mouse_point := Vector2.{cast(float)mx, cast(float)my};
         
-        opacity := 0.0;
+        opacity := 0.25;
         
         if is_active(editor) && (mouse_grabbed_ui_id == SCROLLBAR_UI_ID || is_point_in_rect(area, mouse_point)) {
-            os_set_cursor(.CUR_ARROW);
-            opacity = 1.0;
+            set_cursor_icon(.CUR_ARROW);
+            opacity = .8;
             
             //t := get_animation_value(*editor.scrollbar_anim);
             //editor.scrollbar_opacity = move_toward(0.0, editor.scrollbar_anim.target, t);
@@ -289,6 +289,12 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         color := map_color_to_vec4(.BACKGROUND2);
         color.w = opacity;
         draw_quad(area, color);
+        // kacsa
+        left_border_rect := cut_left(area, 1);
+        color = map_color_to_vec4(.LAYOUT_SEPARATOR);
+        color.w = 0.1*opacity;
+        draw_quad(left_border_rect, color);
+        
         if scroll_zone_height > 0 {
             Simp.set_shader_for_rect();
             color := Vector4.{1, 1, 1, opacity*0.5};
@@ -301,6 +307,16 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h-1, .{1,0,0,1});
         //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h/2+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h/2-1, .{1,0,0,1});
         //Simp.immediate_quad(scrollbar.x, scrollbar.y+1, scrollbar.x+scrollbar.w, scrollbar.y-1, .{1,0,0,1});
+        
+        // Show the cursor position on the scrollbar
+        ri := get_current_line(editor.active_buffer, editor.cursor.pos);
+        top_pos := fnt_get_line_height() * ri;
+        max_height := fnt_get_line_height() * buffer.row_table.count;
+        y := area.y + area.h * (max_height - top_pos) / (max_height - 0);
+        Simp.set_shader_for_color(true);
+        color = map_color_to_vec4(.CURSOR);
+        color.w = .8;
+        Simp.immediate_quad(area.x, y, area.x + area.w, y+2, color);
     }
 
     {

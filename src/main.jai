@@ -85,7 +85,7 @@ main :: () {
             second_elapsed = true;
         }
         
-        cursor_kind_changed_this_frame = false;
+        cursor_icon_was_set_this_frame = false;
         redraw_requested = false;
 
         update_window_events();
@@ -208,7 +208,7 @@ main :: () {
         // log("clicked: % ; dbl_clicked: % ; down: % ; was_down: %\n", mouse_clicked, mouse_dbl_clicked, mouse_down, mouse_was_down);
 
         if mode == .WIDGET {
-            os_set_cursor(.CUR_ARROW);
+            set_cursor_icon(.CUR_ARROW);
         }
         
         // @Temporary @Cleanup
@@ -255,7 +255,7 @@ main :: () {
                 if ok for *e: editors {
                     if !e.visible continue;
                     if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
-                        os_set_cursor(.CUR_BEAM);
+                        set_cursor_icon(.CUR_BEAM);
                         
                         if mouse_dbl_clicked {
                             SelectSimilarCharacters();
@@ -312,6 +312,17 @@ main :: () {
         }
 
         draw_frame();
+        
+        {
+            // kacsa
+            #if OS == .WINDOWS {
+                if cursor_icon_was_set_this_frame {
+                    handle := cursor_pointers[os_current_cursor_kind];
+                    SetCursor(handle);
+                }
+                set_custom_cursor_handling(cursor_icon_was_set_this_frame);
+            }
+        }
                 
         // if 1 {
         //     c := map_color_to_vec4(.BACKGROUND);
@@ -366,19 +377,10 @@ get_mouse_pointer_position_safe :: (right_handed := true) -> s64, s64 {
 
 set_cursor_icon :: (kind: OS_Cursor_Kind) {
     os_current_cursor_kind = kind;
-    cursor_kind_changed_this_frame = true;
+    cursor_icon_was_set_this_frame = true;
 }
 
 #if OS == .WINDOWS {
-    os_set_cursor :: (kind: OS_Cursor_Kind) -> bool {
-        //set_custom_cursor_handling(true);
-    
-        handle := cursor_pointers[kind];
-        SetCursor(handle);
-        
-        return true;
-    }
-    
     init_cursors :: () {
         using OS_Cursor_Kind;
         cursor_pointers[CUR_ARROW] = LoadCursorW(null, IDC_ARROW);
@@ -575,7 +577,7 @@ Cursor_Shape :: enum u8 {BLOCK; LINE; UNDERSCORE;};
 Cursor_Line_Indicator :: enum u8 {NONE; FILLED; BORDERED;};
 
 os_current_cursor_kind := OS_Cursor_Kind.CUR_ARROW;
-cursor_kind_changed_this_frame := false;
+cursor_icon_was_set_this_frame := false;
 
 OS_Cursor_Kind :: enum u8 {
     CUR_ARROW :: 0;
