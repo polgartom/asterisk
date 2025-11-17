@@ -254,7 +254,11 @@ main :: () {
                 mx, my, ok := get_mouse_pointer_position(right_handed=true);
                 if ok for *e: editors {
                     if !e.visible continue;
-                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
+                    
+                    // @Temporary
+                    scrollbar_width := r_font.em_width * 1.5;
+                    scrollbar_area, editor_rect := cut_right(e.rect_for_draw, scrollbar_width);                    
+                    if is_point_in_rect(editor_rect, Vector2.{xx mx, xx my}) {
                         set_cursor_icon(.CUR_BEAM);
                         
                         if mouse_dbl_clicked {
@@ -314,7 +318,6 @@ main :: () {
         draw_frame();
         
         {
-            // kacsa
             #if OS == .WINDOWS {
                 if cursor_icon_was_set_this_frame {
                     handle := cursor_pointers[os_current_cursor_kind];

@@ -117,7 +117,7 @@ swap_buffers :: () {
 draw_editor :: (using editor: *Editor, rect: Rect) {
     buffer := editor.active_buffer;
 
-    if !is_active(editor) context.color_intensity *= 0.90;
+    if !is_active(editor) context.color_intensity *= 0.95;
     defer reset_color_intensity();
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
@@ -125,9 +125,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     scrollbar_width := r_font.em_width * 1.5;
     //scrollbar_area, r= := cut_right(r, scrollbar_width);
     scrollbar_area := cut_right(r, scrollbar_width);
-
-    _, r= := cut_left(r, LEFT_PADDING);
-    editor.rect_for_draw = r;
 
     // Draw line numbers
     if buffers.count && show_line_numbers {    
@@ -154,6 +151,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
         }
     }
+    
+    _, r= := cut_left(r, LEFT_PADDING);
+    editor.rect_for_draw = r;
     
     if editor.y_scroll_anim.active {
         using editor.y_scroll_anim;
@@ -289,7 +289,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         color := map_color_to_vec4(.BACKGROUND2);
         color.w = opacity;
         draw_quad(area, color);
-        // kacsa
+        
         left_border_rect := cut_left(area, 1);
         color = map_color_to_vec4(.LAYOUT_SEPARATOR);
         color.w = 0.1*opacity;
@@ -427,7 +427,6 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     if #complete line_indicator == {
         case .NONE;
         case .FILLED;
-            // kacsa
             // Current line indicator shape
             color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
             Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
