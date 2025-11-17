@@ -51,7 +51,7 @@ main :: () {
     for DEFAULT_COLOR_MAP { COLOR_MAP[it_index] = it; }
 
     window = create_window(window_name=WINDOW_NAME, width=window_width, height=window_height);
-    msaa := Simp.prepare_window(window, wanted_msaa = 8);
+    msaa := Simp.prepare_window(window, wanted_msaa = 0);
     Simp.set_render_target(window);
     window_width, window_height = Simp.get_render_dimensions(window);
 
