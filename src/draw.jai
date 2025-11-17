@@ -125,9 +125,14 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     scrollbar_width := r_font.em_width * 1.5;
     //scrollbar_area, r= := cut_right(r, scrollbar_width);
     scrollbar_area := cut_right(r, scrollbar_width);
-    
+
+    _, r= := cut_left(r, LEFT_PADDING);
+    editor.rect_for_draw = r;
+
     // Draw line numbers
     if buffers.count && show_line_numbers {    
+        Simp.immediate_begin();
+
         t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
         line_numbers_rect, r= := cut_left(r, w);
@@ -150,12 +155,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             c := map_color_to_vec4(.TEXT_DIMMED);
             Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
         }
+
+        Simp.immediate_flush();
     }
     
-    _, r= := cut_left(r, LEFT_PADDING);
-
-    editor.rect_for_draw = r;
-
     if editor.y_scroll_anim.active {
         using editor.y_scroll_anim;
 
@@ -277,10 +280,11 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
                 }
                 
                 grab_point := editor.scrollbar_grabbed_y;
-                
-                editor.top_offset = (area.h + area.y - cast(float, my) - grab_point) / (area.h) * total_height;
-                editor.top_offset = max(0.0, editor.top_offset);
-                editor.top_offset = min(max_scroll, editor.top_offset);
+                if scroll_zone_height > 0 {
+                    editor.top_offset = (area.h + area.y - cast(float, my) - grab_point) / (area.h) * total_height;
+                    editor.top_offset = max(0.0, editor.top_offset);
+                    editor.top_offset = min(max_scroll, editor.top_offset);
+                }
             }
         }
         
