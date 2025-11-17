@@ -131,8 +131,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     // Draw line numbers
     if buffers.count && show_line_numbers {    
-        Simp.immediate_begin();
-
         t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
         line_numbers_rect, r= := cut_left(r, w);
@@ -155,8 +153,6 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             c := map_color_to_vec4(.TEXT_DIMMED);
             Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
         }
-
-        Simp.immediate_flush();
     }
     
     if editor.y_scroll_anim.active {

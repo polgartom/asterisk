@@ -201,7 +201,6 @@ DumpBufferHistory :: () {
     #if DEBUG {
         dump_buffer_histories(b);
     }
-    // kacsa
 }
 
 move_up_by_one_row :: ($with_selection := true) {
@@ -1299,7 +1298,6 @@ TransformSelectionToSnakeCase :: () {
     defer free(result);
 
     if s != result {
-        // kacsa
         replace_selection(editor, buffer, *editor.cursor, result);
     }
 }
