@@ -177,6 +177,13 @@ em :: (x: float, font: *Simp.Dynamic_Font) -> float {
     }
 }
 
+#if OS == .LINUX {
+    find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+        // @Todo
+        return false, "";
+    }
+}
+
 r_font:       *Simp.Dynamic_Font;
 r_font_sm:    *Simp.Dynamic_Font;
 r_font_icons: *Simp.Dynamic_Font;

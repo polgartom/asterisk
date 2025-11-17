@@ -356,12 +356,8 @@ get_dpi_scale :: (window: Window_Type) -> float {
         // }
     }
     #if OS == .LINUX {
-        /*
-        * `Linux_Display` is empty on platforms other than Linux, so importing it should be basically
-        * free on Windows/MacOS.
-        */
-        LD :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
-        return LD.get_dpi_scaling_factor(window);
+        // @Todo
+        return 96.0 / 96.0;
     }
 }
 
@@ -389,6 +385,10 @@ set_cursor_icon :: (kind: OS_Cursor_Kind) {
     }
         
     cursor_pointers: [3] HCURSOR;
+}
+
+#if OS == .LINUX {
+    init_cursors :: () {}
 }
 
 /*

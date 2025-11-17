@@ -45,4 +45,6 @@ seek_left_utf8_until_alphanum :: (s: string, point: int, $include_last_non_alpha
 }
 
 #import "Unicode";
-#import "Windows_Utf8";
+#if OS == .WINDOWS {
+    #import "Windows_Utf8";
+}
