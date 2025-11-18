@@ -750,7 +750,6 @@ last_history :: (using buffer: *Buffer) -> *Buffer_History {
 }
 
 reset_history :: (using buffer: *Buffer) {
-    log("reset_history!");
     history_index = -1;
     array_reset_keeping_memory(*history);
 }

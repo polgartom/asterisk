@@ -128,7 +128,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     // Draw line numbers
     if buffers.count && show_line_numbers {
-        MeasureScope("Draw line numbers");
+        //MeasureScope("Draw line numbers");
     
         t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
@@ -161,7 +161,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             }
         }
         
-        draw_code_run(buffer, draw_invisible_chars=false);        
+        draw_code_run(buffer);
     }
     
     _, r= := cut_left(r, LEFT_PADDING);
@@ -205,23 +205,13 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     draw_selection(editor, buffer, r);
 
-    // Draw Code
-    {
-        start_time := ms_since_init();
-        
-        if buffer_code_draw_method == {
-            case .v1; draw_buffer_code_v1(editor, buffer);
-            case .v2; draw_buffer_code_v2(editor, buffer); // ~0.1ms faster due to the one draw call (can be >1ms faster if the cpu cache isn't hot yet)
-        }
-    
-        push_measurement(*code_render_time, ms_since_init() - start_time);
-    }
+    draw_buffer_code(editor, buffer);
 
     draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
 
     {
         // Draw scrollbar
-        MeasureScope("Draw scrollbar");
+        //MeasureScope("Draw scrollbar");
     
         Simp.set_shader_for_color(true);
     
@@ -317,7 +307,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     {
         // Draw footer
-        MeasureScope("Draw footer");
+        //MeasureScope("Draw footer");
 
         //push_scissor(footer_r);
         //defer pop_scissor();
@@ -989,7 +979,7 @@ draw_global_debug_info :: (r: Rect) {
 
     PrintDev("[line-ends-scan] % lines | % ms\n", b.row_table.count, b.row_table_recalc_time);
     PrintDev("[syntax-highlighting] %ms\n", b.tokenization_time);
-    PrintDev("[code-draw-time (%)] avg %ms\n", buffer_code_draw_method, get_avg_from_measurement(*code_render_time));
+    //PrintDev("[code-draw-time (%)] avg %ms\n", buffer_code_draw_method, get_avg_from_measurement(*code_render_time));
 
     row := 1;
     max := 0;
@@ -1155,7 +1145,7 @@ draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     return w;
 }
 
-draw_buffer_code_v1 :: (using editor: *Editor, using buffer: *Buffer) {
+draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
     if !buffer.count return;
     
     r := editor.rect_for_draw;
@@ -1166,31 +1156,11 @@ draw_buffer_code_v1 :: (using editor: *Editor, using buffer: *Buffer) {
     color := map_color_to_vec4(.TEXT_DEFAULT);
 
     push_scissor(r);
-    defer pop_scissor();
-    
-    for row_index: start_row..end_row {
-        row := row_table[row_index];
-        if row.size == 0 continue;
-
-        baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
-        left := r.x;
-        line_text := slice(buffer, row.end - row.size, row.size);
-        draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
+    context.draw_invisible_characters = draw_invisible_characters;
+    defer {
+        pop_scissor();
+        context.draw_invisible_characters = false;
     }
-}
-
-draw_buffer_code_v2 :: (using editor: *Editor, using buffer: *Buffer) {
-    if !buffer.count return;
-    
-    r := editor.rect_for_draw;
-    line_height := fnt_get_line_height();
-    start_row: s64 = xx (top_offset / line_height);
-    start_row = clamp(start_row - 1, 0, row_table.count-1);
-    end_row := last_visible_row_index(editor, buffer);
-    color := map_color_to_vec4(.TEXT_DEFAULT);
-
-    push_scissor(r);
-    defer pop_scissor();
     
     array_reset_keeping_memory(*buffer.quads_for_code_run);
     
@@ -1249,7 +1219,7 @@ generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
     }
 }
 
-draw_code_run :: (buffer: *Buffer, $draw_invisible_chars := false) {
+draw_code_run :: (buffer: *Buffer) {
     #import "GL";
 
     draw_letter_quad :: inline (quad: Simp.Font_Quad, color: Vector4) {
@@ -1313,21 +1283,6 @@ draw_code_run :: (buffer: *Buffer, $draw_invisible_chars := false) {
     Simp.immediate_flush();
 
     glDisable(GL_BLEND);
-}
-
-draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
-    font := r_font;
-
-    width := Simp.prepare_text(font, text, 0);
-    Simp.generate_quads_for_prepared_text(font, x, y, 0);
-    
-    if context.draw_invisible_characters {
-        draw_generated_quads(buffer, text, font, draw_invisible_chars = true);
-    } else {
-        draw_generated_quads(buffer, text, font, draw_invisible_chars = false);
-    }
-    
-    return width;
 }
 
 draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font, $draw_invisible_chars := false) {

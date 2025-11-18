@@ -8,9 +8,6 @@
 frametimes: [60] float64;
 frametimes_i := 0;
 
-code_render_time: MultiSample_Measurement;
-buffer_code_draw_method: enum {v1; v2;} = .v2;
-
 main :: () {
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -339,13 +336,6 @@ main :: () {
             }
         }
                 
-        // if 1 {
-        //     c := map_color_to_vec4(.BACKGROUND);
-        //     Simp.clear_render_target(c.x, c.y, c.z, c.w);
-        //     draw_global_debug_info(make_rect(0,0,window_width, window_height));
-        // }
-        // swap_buffers();
-        
         array_reset(*debug_infos);
         reset_temporary_storage();
         
