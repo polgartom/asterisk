@@ -9,7 +9,7 @@ frametimes: [60] float64;
 frametimes_i := 0;
 
 code_render_time: MultiSample_Measurement;
-buffer_code_draw_method: enum {v1; v2;} = .v1;
+buffer_code_draw_method: enum {v1; v2;} = .v2;
 
 main :: () {
     #if OS == .WINDOWS {
@@ -620,7 +620,14 @@ ll :: (fmt: string, args: .. Any) #expand {
 MeasureProc :: () #expand {
     time := seconds_since_init();
     `defer {
-        print("[%/time] %ms\n", #procedure_name(), (seconds_since_init() - time) * 1000);
+        print("[%/time] %ms\n", #procedure_name(), formatFloat((seconds_since_init() - time) * 1000, trailing_width=4));
+    };
+}
+
+MeasureScope :: (name: string) #expand {
+    time := ms_since_init();
+    `defer {
+        PrintDev("[%/time] %ms\n", name, formatFloat(ms_since_init() - time, trailing_width=4));
     };
 }
 

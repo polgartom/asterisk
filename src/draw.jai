@@ -61,6 +61,10 @@ draw_frame :: () {
     if mode == .WIDGET {
         draw_widgets();
     }
+    
+    if show_font_debug_info {
+        draw_font_metrics_debug(active_editor);        
+    }
         
     if show_debug_info {
         /*
@@ -90,11 +94,7 @@ draw_frame :: () {
         draw_global_debug_info(active_editor.rect_for_draw);
         // draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
-
-    if show_font_debug_info {
-        draw_font_metrics_debug(active_editor);        
-    }
-
+    
     swap_buffers();
 }
 
@@ -127,7 +127,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     scrollbar_area := cut_right(r, scrollbar_width);
 
     // Draw line numbers
-    if buffers.count && show_line_numbers {    
+    if buffers.count && show_line_numbers {
+        MeasureScope("Draw line numbers");
+    
         t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
         line_numbers_rect, r= := cut_left(r, w);
@@ -137,19 +139,29 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
         Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR)); // right border
         
-        Simp.set_shader_for_text();
+        //Simp.set_shader_for_text();
         
         line_height := fnt_get_line_height();
         start_row := first_visible_row_index(editor, buffer);
         end_row   := last_visible_row_index(editor, buffer);
+        
+        color := map_color_to_vec4(.TEXT_DIMMED);
+        
+        array_reset_keeping_memory(*buffer.quads_for_code_run);
         for ri: start_row..end_row {
             t := tprint("%", formatInt(ri+1, digits_per_comma=0));
+            
             baseline := (rect.h + rect.y) - (line_height*(ri+1)) + top_offset;
-            w := Simp.prepare_text(r_font_sm, t);
-            left := rect.x + (rect.w/2 - w/2);
-            c := map_color_to_vec4(.TEXT_DIMMED);
-            Simp.draw_prepared_text(r_font_sm, xx left, xx baseline, c);
+            width := Simp.prepare_text(r_font_sm, t);
+            left := rect.x + (rect.w/2 - width/2);
+            
+            Simp.generate_quads_for_prepared_text(r_font_sm, xx left, xx baseline, 0);
+            for quad: r_font_sm.current_quads {
+                array_add(*buffer.quads_for_code_run, .{quad, color});
+            }
         }
+        
+        draw_code_run(buffer, draw_invisible_chars=false);        
     }
     
     _, r= := cut_left(r, LEFT_PADDING);
@@ -199,7 +211,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
         if buffer_code_draw_method == {
             case .v1; draw_buffer_code_v1(editor, buffer);
-            case .v2; draw_buffer_code_v2(editor, buffer);
+            case .v2; draw_buffer_code_v2(editor, buffer); // ~0.1ms faster due to the one draw call (can be >1ms faster if the cpu cache isn't hot yet)
         }
     
         push_measurement(*code_render_time, ms_since_init() - start_time);
@@ -207,8 +219,9 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
 
-    { 
+    {
         // Draw scrollbar
+        MeasureScope("Draw scrollbar");
     
         Simp.set_shader_for_color(true);
     
@@ -304,6 +317,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
     {
         // Draw footer
+        MeasureScope("Draw footer");
 
         //push_scissor(footer_r);
         //defer pop_scissor();
@@ -442,6 +456,8 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
 // @Todo: This thing is not doing draws properly. Also we should create an array of selections, because
 // we should draw those after the find text widget.
 draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
+    //MeasureScope("Draw selection");
+
     c := *editor.cursor;
     if !has_selection(c) return;
 
@@ -464,7 +480,12 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
     push_scissor(r);
     defer pop_scissor();
 
+    first_visible_ri := first_visible_row_index(editor, buffer);
+    last_visible_ri := last_visible_row_index(editor, buffer);
+
     for row_index: start_row..end_row {
+        if row_index < first_visible_ri|| row_index > last_visible_ri continue;
+        
         row := buffer.row_table[row_index];
         row_start := row.end-row.size;
         row_end   := row.end;
@@ -490,8 +511,6 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         Simp.immediate_quad(left, p1, left+width, p2, selection_color);
     }
 
-    ///////
-    
     show_selection_occurences := false;
     t := s.data;
     while t < s.data + s.count {
@@ -1149,7 +1168,6 @@ draw_buffer_code_v1 :: (using editor: *Editor, using buffer: *Buffer) {
     push_scissor(r);
     defer pop_scissor();
     
-    // Draw lines
     for row_index: start_row..end_row {
         row := row_table[row_index];
         if row.size == 0 continue;
@@ -1176,7 +1194,6 @@ draw_buffer_code_v2 :: (using editor: *Editor, using buffer: *Buffer) {
     
     array_reset_keeping_memory(*buffer.quads_for_code_run);
     
-    // Draw lines
     for row_index: start_row..end_row {
         row := row_table[row_index];
         if row.size == 0 continue;
@@ -1184,20 +1201,19 @@ draw_buffer_code_v2 :: (using editor: *Editor, using buffer: *Buffer) {
         baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
         left := r.x;
         line_text := slice(buffer, row.end - row.size, row.size);
-        //draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
         generate_quads_for_code_run(buffer, xx (left-left_offset), xx baseline, line_text);
     }
     
     draw_code_run(buffer);
 }
 
-text_glyphs_cache: Table(string, [..] *Simp.Glyph_Data);
+//text_glyphs_cache: Table(string, [..] *Simp.Glyph_Data);
 
 generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
     assert(text.count > 0);
     
     // @Speed Maybe we can cache the text, so we don't have to generate the quads every time!
-    
+    /*
     found, glyphs := table_find(*text_glyphs_cache, text);
     if found {
         array_reset_keeping_memory(*r_font.temporary_glyphs);
@@ -1210,7 +1226,9 @@ generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
         
         table_add(*text_glyphs_cache, copy_string(text), glyphs);
     }
+    */
     
+    Simp.prepare_text(r_font, text, 0);
     Simp.generate_quads_for_prepared_text(r_font, x, y, 0);
     
     t := text;
