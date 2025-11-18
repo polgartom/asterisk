@@ -1164,43 +1164,58 @@ IndentRight :: () {
     c.col = byte_pos_to_row_col_index(buffer, c.pos);
 }
 
-// @Incomplete: Move up all of the selected lines (partially selected lines included)
 MoveLineUp :: () {
     editor, buffer := get_active_editor_and_buffer();
+    using editor;
     using buffer;
     
-    row_index := find_row_index(buffer, editor.cursor.pos);
-    if row_index == 0 return;
-    prev_row_index := row_index - 1;
-    row := row_table[row_index];
-    prev_row := row_table[prev_row_index];
+    start_pos, end_pos := selected_range(*cursor);
     
-    rs := get_row_as_string(buffer, row);
-    prs := get_row_as_string(buffer, prev_row);
-    new_text := tprint("%1\n%2", rs, prs);
-    replace_text_at(editor, buffer, Range.{prev_row.start, row.end}, new_text);
+    first_row_index := find_row_index(buffer, start_pos);
+    if first_row_index == 0 return;
     
-    dest_cursor_pos := editor.cursor.pos - prs.count - 1;
-    set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=false, with_selection=true);
+    last_row_index := find_row_index(buffer, end_pos);
+    upper_row_index := first_row_index - 1;
+    
+    first_row := row_table[first_row_index];
+    last_row := row_table[last_row_index];
+    upper_row := row_table[upper_row_index];
+    
+    selected_text := slice(buffer, first_row.start, last_row.end - first_row.start);
+    upper_row_text := get_row_as_string(buffer, upper_row);
+    
+    new_text := tprint("%1\n%2", selected_text, upper_row_text);
+    replace_text_at(editor, buffer, Range.{upper_row.start, last_row.end}, new_text);
+    
+    cursor.pos = cursor.pos - upper_row_text.count - 1;
+    cursor.sel = cursor.sel - upper_row_text.count - 1;
 }
 
-// @Incomplete: Move down all of the selected lines (partially selected lines included)
 MoveLineDown :: () {
     editor, buffer := get_active_editor_and_buffer();
+    using editor;
     using buffer;
     
-    row_index := find_row_index(buffer, editor.cursor.pos);
-    if row_index == row_table.count-1 return;
-    next_row_index := row_index + 1;
-    row := row_table[row_index];
-    next_row := row_table[next_row_index];
-        
-    rs := get_row_as_string(buffer, row);
-    nrs := get_row_as_string(buffer, next_row);
-    new_text := tprint("%1\n%2", nrs, rs);
-    replace_text_at(editor, buffer, Range.{row.start, next_row.end}, new_text);
-    dest_cursor_pos := editor.cursor.pos + nrs.count + 1;
-    set_cursor_pos(buffer, *editor.cursor, dest_cursor_pos, horizontal=false, with_selection=true);
+    start_pos, end_pos := selected_range(*cursor);
+    
+    last_row_index := find_row_index(buffer, end_pos);
+    if last_row_index == row_table.count-1 return;
+    
+    first_row_index := find_row_index(buffer, start_pos);
+    lower_row_index := last_row_index + 1;
+    
+    first_row := row_table[first_row_index];
+    last_row := row_table[last_row_index];
+    lower_row := row_table[lower_row_index];
+    
+    selected_text := slice(buffer, first_row.start, last_row.end - first_row.start);
+    lower_row_text := get_row_as_string(buffer, lower_row);
+    
+    new_text := tprint("%1\n%2", lower_row_text, selected_text);
+    replace_text_at(editor, buffer, Range.{first_row.start, lower_row.end}, new_text);
+    
+    cursor.pos += lower_row_text.count + 1;
+    cursor.sel += lower_row_text.count + 1;
 }
 
 ExtendSelectionByToken :: () {
