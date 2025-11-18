@@ -20,7 +20,8 @@ create_text_input :: (ui_id: u64) -> *Text_Input {
     return input;
 }
 
-update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") {
+update_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") {
+    
     typed = false;
 
     for event: events_to_handle_this_frame_for_widgets {
@@ -125,74 +126,69 @@ update_text_input :: (using input: *Text_Input, r: Rect, font: *Simp.Dynamic_Fon
         }
     }
 
-    left_pad := 5.0;
-    ch  := font.character_height;
-    b   := r.y;
-    t   := r.y + r.h;
-
-    Simp.set_shader_for_rect();
-    
-    weight :: 2; // border weight
-    Simp.immediate_quad_with_radius(r.x-weight, b-weight, r.x + r.w + weight, t+weight, theme.border_color, radius=r_rect_radius); // border
-    Simp.immediate_quad_with_radius(r.x, b, r.x + r.w, t, theme.bg_color, radius=r_rect_radius); // input background
-
-    left := r.x + left_pad;
-    center := b + (t-b)*.5 - ch*.3; // With ch*.3 the text seems to be better aligned to center. 
-    // center := b + (t-b)*.5 - ch*.25;
-    
-    cx := left - left_pad + 5.0;
-    if cursor.pos && text {
-        t := text;
+    get_cursor_x :: (pos: s64) -> s64 #expand {
+        t := `text;
         t.count = cursor.pos;
-        cx += measure_text_width(font, t);
+        return measure_text_width(`font, t);
     }
+
+    draw_quad_with_radius(expand(rect, 2.0), theme.border_color, r_rect_radius);
+    draw_quad_with_radius(rect, theme.bg_color, r_rect_radius);
     
-    if cx > (r.x + r.w - 5.0) {
-        left -= cx - (r.x + r.w);
-    }
+    text_rect := shrink_x(rect, 5.0);
+    push_scissor(text_rect);
+    defer pop_scissor();
     
-    // @Incomplete: Icon as prefix
-    if prefix {
-        left += label(xx left, xx center, prefix, font, theme.fg_color);
-    }    
-
-    if text {
-        label(xx left, xx center, text, font, theme.fg_color);
-
-        if has_selection(cursor) {
-            start, end := selected_range(*cursor);
-            
-            s := slice(text, 0, start);
-            x := left + measure_text_width(font, s);
-            
-            s = advance(text, start);
-            s.count = end - start;
-            w := measure_text_width(font, s);
-
-            Simp.set_shader_for_color(true);
-            Simp.immediate_quad(x, b + (t-b)*.5 - ch*.7, x + w, t - (t-b)*.5 + ch*.7, theme.selection_color);
-        }
-
-    } else if placeholder {
-        label(xx left, xx center, placeholder, font, theme.placeholder_color);
-    }
-
-    {
-        // Draw cursor
-        Simp.set_shader_for_color(true);
-
-        left = left - left_pad + 5.0;
-        if cursor.pos && text {
-            t := text;
-            t.count = cursor.pos;
-            left += measure_text_width(font, t);
+    left := text_rect.x;
+    //baseline := text_rect.y + font.default_line_spacing - font.y_offset_for_centering; // almost the center but it's looking weird
+    baseline := text_rect.y + (font.y_offset_for_centering) + (text_rect.h - font.character_height) / 2;
+    p1, p2 := fnt_top_bottom_from_baseline_for_quad(font, baseline);
+    
+    if arrange_offset_this_frame {
+        x_threshold := em(1.0, font) * 1;
+        cursor_x := get_cursor_x(cursor.pos) - left_offset - text_rect.w;
+    
+        target := input.left_offset;
+        if cursor_x + x_threshold > 0 {
+            target += abs(cursor_x + x_threshold);
+        } else if abs(cursor_x - x_threshold) > xx text_rect.w {
+            target -= abs(cursor_x - x_threshold) - text_rect.w;
+            if target < 0 then target = 0;
         }
         
-        width  := em(.25, font);
-        right  := left + width;
-        bottom := b + (t-b)*.5 - ch*.5;
-        top    := bottom + ch;
-        Simp.immediate_quad(left, bottom, right, top, theme.cursor_color);
+        left_offset = target;
+    }
+    
+    arrange_offset_this_frame = true;
+    
+    {
+        // Draw selection
+        
+        start, end := selected_range(*cursor);
+        if start != end {
+            start_x := cast(float)measure_text_width(font, slice(text, 0, start));
+            start_x = text_rect.x + start_x - left_offset;
+            width   := cast(float)measure_text_width(font, slice(text, start, end - start));
+            
+            Simp.set_shader_for_rect();
+            Simp.immediate_quad_with_radius(start_x, p1, start_x + width, p2, map_color_to_vec4(.TEXT_SELECTION), radius=4.0);
+        }
+    }
+    
+    if text {
+        draw_text(text, xx (left - left_offset), xx baseline, theme.fg_color);
+    } else if placeholder {
+        draw_text(placeholder, xx text_rect.x, xx baseline, theme.placeholder_color);
+    }
+    
+    {
+        // Draw cursor
+        
+        Simp.set_shader_for_color(true);
+        
+        x := text_rect.x + get_cursor_x(cursor.pos) - left_offset;
+        width := max(em(0.25, font), 3.0);
+        Simp.immediate_quad(x, p1, x + width, p2, theme.cursor_color);
     }
 }
 
@@ -212,7 +208,7 @@ insert_text :: (using input: *Text_Input, s: string) -> bool {
     text.count += s.count;
     cursor.pos += s.count;
     cursor.sel += s.count;
-
+    
     return true;
 }
 
@@ -239,9 +235,9 @@ get_selected_text :: (using i: *Text_Input) -> string {
 
 clear_text :: (using i: *Text_Input) {
     text.count = 0;
-    
     cursor.pos = 0;
     cursor.sel = 0;
+    left_offset = 0;
 }
 
 move_cursor_left :: (using i: *Text_Input, shift_pressed := false, ctrl_pressed := false) {
@@ -369,6 +365,9 @@ Text_Input :: struct {
     cursor: Cursor;
 
     typed := false;
+    
+    left_offset := 0.0;
+    arrange_offset_this_frame := false;
 
     // @Todo: Handle buffer overflows
     MAX_BUFFER_SIZE :: 8000;

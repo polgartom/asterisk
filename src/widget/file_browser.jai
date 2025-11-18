@@ -45,7 +45,7 @@ _draw_file_browser :: () {
     
     theme := Text_Input.DEFAULT_THEME;
     theme.bg_color = #run hex_to_vec4(0x19_19_19_ff);
-    theme.fg_color = #run hex_to_vec4(0xff_ff_ff_c5);
+    theme.fg_color =  #run hex_to_vec4(0xff_ff_ff_c5);
     theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
     theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
     theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
@@ -70,6 +70,7 @@ _draw_file_browser :: () {
             if t == 1.0 then active = false;
             
             redraw_requested = true;
+            fb_text_input.arrange_offset_this_frame = false; // The animation starts on small width so text input's auto-viewport arrange should be ignored.  
         }
         
         w = cast(s64, target_width * v);

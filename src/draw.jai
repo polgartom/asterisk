@@ -731,11 +731,10 @@ draw_find_global_text_dialog :: () {
             if t == 1.0 then active = false;
             
             redraw_requested = true;
+            fgt_input.arrange_offset_this_frame = false; // The animation starts on small width so text input's auto-viewport arrange should be ignored.  
         }
         
         w = cast(s64, target_width * v);
-        
-        redraw_requested = true;
     }
 
     text_input_height := cast(float, font.character_height * 2.0);
@@ -816,27 +815,26 @@ draw_find_text_dialog :: () {
         font := r_font_sm;
         ch := font.character_height;
         k      := ed_r.h * .1;
-        kw     := ed_r.w * .15;
+        kw     := max(ed_r.w * .15, 200);
         width  := kw * 2.0;
         height := em(2.0, font);
         pad    := cast(float32, r_font.em_width);// * .5;
 
+        scrollbar_width := r_font.em_width * 1.5; // @Cleanup @Todo
         r := make_rect(
-            ed_r.x + ed_r.w - width - pad,
+            ed_r.x + ed_r.w - width - pad - scrollbar_width,
             ed_r.h - get_footer_height(),
             width,
-            xx font.character_height * 2.0,
+            font.default_line_spacing * 2.0,
         );
 
-        // @Temporary: We don't want to set those values on every frame, right?
         theme := Text_Input.DEFAULT_THEME;
-        theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-        theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
+        theme.bg_color = map_color_to_vec4(.BACKGROUND2); //#run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
+        theme.border_color = map_color_to_vec4(.LAYOUT_SEPARATOR);
         theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
         theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
         
-        theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
         if occurences {
             theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
         } else if input.text {
@@ -1409,6 +1407,11 @@ draw_quad :: (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Vector4
 draw_quad :: (r: Rect, color: Vector4) {
     p0, p1, p2, p3 := get_quad(r);
     draw_quad(p0, p1, p2, p3, color);
+}
+
+draw_quad_with_radius :: (r: Rect, color: Vector4, radius := 0.0) {
+    Simp.set_shader_for_rect();
+    Simp.immediate_quad_with_radius(r.x, r.y, r.x + r.w, r.y + r.h, color, radius=r_rect_radius);
 }
 
 push_scissor :: (_rect: Rect) {
