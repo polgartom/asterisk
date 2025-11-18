@@ -196,6 +196,14 @@ ToggleWaitForEvent :: () {
     wait_os_event_before_redraw = !wait_os_event_before_redraw;
 }
 
+ChangeBufferDrawMode :: () {
+    m := buffer_code_draw_method;
+    if m == .v1 m = .v2;
+    else        m = .v1;
+    
+    buffer_code_draw_method = m;
+}
+
 DumpBufferHistory :: () {
     e, b := get_active_editor_and_buffer();
     #if DEBUG {
@@ -1435,6 +1443,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, ToggleDevInfo);
     Add(editor_keymap, ToggleDevInfoFont);
     Add(editor_keymap, ToggleWaitForEvent);
+    Add(editor_keymap, ChangeBufferDrawMode);
     
     #if DEBUG {
         Add(editor_keymap, DumpBufferHistory);

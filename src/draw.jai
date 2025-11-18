@@ -194,32 +194,15 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     draw_selection(editor, buffer, r);
 
     // Draw Code
-    if buffer.count {
-        using editor;
-        using buffer;
-
-        avg_row_render_time: float64 = 0.0;
-        rendered_rows := 0;
-
-        line_height := fnt_get_line_height();
-        start_row: s64 = xx (top_offset / line_height);
-        start_row = clamp(start_row - 1, 0, row_table.count-1);
-        end_row := last_visible_row_index(editor, buffer);
-        color := map_color_to_vec4(.TEXT_DEFAULT);
-
-        push_scissor(r);
-        defer pop_scissor();
+    {
+        start_time := ms_since_init();
         
-        // Draw lines
-        for row_index: start_row..end_row {
-            row := row_table[row_index];
-            if row.size == 0 continue;
-
-            baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
-            left := r.x;
-            line_text := slice(buffer, row.end - row.size, row.size);
-            draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
+        if buffer_code_draw_method == {
+            case .v1; draw_buffer_code_v1(editor, buffer);
+            case .v2; draw_buffer_code_v2(editor, buffer);
         }
+    
+        push_measurement(*code_render_time, ms_since_init() - start_time);
     }
 
     draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
@@ -987,6 +970,7 @@ draw_global_debug_info :: (r: Rect) {
 
     PrintDev("[line-ends-scan] % lines | % ms\n", b.row_table.count, b.row_table_recalc_time);
     PrintDev("[syntax-highlighting] %ms\n", b.tokenization_time);
+    PrintDev("[code-draw-time (%)] avg %ms\n", buffer_code_draw_method, get_avg_from_measurement(*code_render_time));
 
     row := 1;
     max := 0;
@@ -1152,13 +1136,172 @@ draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     return w;
 }
 
+draw_buffer_code_v1 :: (using editor: *Editor, using buffer: *Buffer) {
+    if !buffer.count return;
+    
+    r := editor.rect_for_draw;
+    line_height := fnt_get_line_height();
+    start_row: s64 = xx (top_offset / line_height);
+    start_row = clamp(start_row - 1, 0, row_table.count-1);
+    end_row := last_visible_row_index(editor, buffer);
+    color := map_color_to_vec4(.TEXT_DEFAULT);
+
+    push_scissor(r);
+    defer pop_scissor();
+    
+    // Draw lines
+    for row_index: start_row..end_row {
+        row := row_table[row_index];
+        if row.size == 0 continue;
+
+        baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
+        left := r.x;
+        line_text := slice(buffer, row.end - row.size, row.size);
+        draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
+    }
+}
+
+draw_buffer_code_v2 :: (using editor: *Editor, using buffer: *Buffer) {
+    if !buffer.count return;
+    
+    r := editor.rect_for_draw;
+    line_height := fnt_get_line_height();
+    start_row: s64 = xx (top_offset / line_height);
+    start_row = clamp(start_row - 1, 0, row_table.count-1);
+    end_row := last_visible_row_index(editor, buffer);
+    color := map_color_to_vec4(.TEXT_DEFAULT);
+
+    push_scissor(r);
+    defer pop_scissor();
+    
+    array_reset_keeping_memory(*buffer.quads_for_code_run);
+    
+    // Draw lines
+    for row_index: start_row..end_row {
+        row := row_table[row_index];
+        if row.size == 0 continue;
+
+        baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
+        left := r.x;
+        line_text := slice(buffer, row.end - row.size, row.size);
+        //draw_code(buffer, xx (left-left_offset), xx baseline, line_text,, draw_invisible_characters=draw_invisible_characters);
+        generate_quads_for_code_run(buffer, xx (left-left_offset), xx baseline, line_text);
+    }
+    
+    draw_code_run(buffer);
+}
+
+text_glyphs_cache: Table(string, [..] *Simp.Glyph_Data);
+
+generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
+    assert(text.count > 0);
+    
+    // @Speed Maybe we can cache the text, so we don't have to generate the quads every time!
+    
+    found, glyphs := table_find(*text_glyphs_cache, text);
+    if found {
+        array_reset_keeping_memory(*r_font.temporary_glyphs);
+        array_copy(*r_font.temporary_glyphs, glyphs);
+    } else {
+        Simp.prepare_text(r_font, text, 0);
+        
+        glyphs: [..] *Simp.Glyph_Data;
+        array_copy(*glyphs, r_font.temporary_glyphs);
+        
+        table_add(*text_glyphs_cache, copy_string(text), glyphs);
+    }
+    
+    Simp.generate_quads_for_prepared_text(r_font, x, y, 0);
+    
+    t := text;
+    index := t.data - buffer.data;
+    
+    invisible_char_color := map_color_to_vec4(.TEXT_INVISIBLE_CHARACTER);
+    
+    for quad: r_font.current_quads {
+        color := map_color_to_vec4(buffer.colors[index]);
+        if draw_invisible_characters && buffer.data[index] == #char " " {
+            color = invisible_char_color;
+        }
+        
+        array_add(*buffer.quads_for_code_run, .{quad, color});
+        
+        t.data += 1 + trailingBytesForUTF8[t[0]];
+        index = t.data - buffer.data;
+    }
+}
+
+draw_code_run :: (buffer: *Buffer, $draw_invisible_chars := false) {
+    #import "GL";
+
+    draw_letter_quad :: inline (quad: Simp.Font_Quad, color: Vector4) {
+        page := quad.glyph.page;
+
+        if page.bitmap_data.width  <= 1 return;
+        if page.bitmap_data.height <= 1 return;
+
+        using quad;
+        uv0 := Vector2.{u0, v0};
+        uv1 := Vector2.{u1, v0};
+        uv2 := Vector2.{u1, v1};
+
+        uv3 := Vector2.{u0, v1};
+
+        inline Simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
+    }
+
+    Simp.set_shader_for_text();
+    Simp.immediate_begin();
+    Simp.CheckInit();
+    
+    glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+    glEnable(GL_BLEND);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    last_texture: s64 = -1;
+
+    code_quads := buffer.quads_for_code_run;
+
+    for code_quad, i: code_quads {
+        quad := code_quad.quad;
+        color := code_quad.color;
+
+        page := quad.glyph.page;
+        map  := *page.texture;
+
+        if page.dirty {
+            page.dirty = false;
+            Simp.texture_load_from_bitmap(map, page.bitmap_data);
+        }
+
+        if map.gl_handle != last_texture {
+            Simp.immediate_flush();
+            handle := map.gl_handle;
+            last_texture = handle;
+
+            shader := state.current_shader;
+            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            if loc < 0  log_error("Unable to find text_sampler in shader_text!");
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
+            glUniform1i(loc, 0);
+        }
+
+        inline draw_letter_quad(quad, color);
+    }
+
+    Simp.immediate_flush();
+
+    glDisable(GL_BLEND);
+}
+
 draw_code :: (buffer: *Buffer, x: s64, y: s64, text: string) -> width: s64 {
     font := r_font;
 
     width := Simp.prepare_text(font, text, 0);
     Simp.generate_quads_for_prepared_text(font, x, y, 0);
-    
-    Simp.set_shader_for_text();
     
     if context.draw_invisible_characters {
         draw_generated_quads(buffer, text, font, draw_invisible_chars = true);
@@ -1173,7 +1316,7 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
     // #import "GL"(DUMP_GL_ERRORS=true, ENABLE_ALL_EXTENSIONS=false, DEFAULT_MSAA=4)();
     #import "GL";
 
-    draw_letter_quad :: inline (font: *Simp.Dynamic_Font, quad: Simp.Font_Quad, color: Vector4) {
+    draw_letter_quad :: inline (quad: Simp.Font_Quad, color: Vector4) {
         page := quad.glyph.page;
 
         if page.bitmap_data.width  <= 1 return;
@@ -1240,7 +1383,7 @@ draw_generated_quads :: (buffer: *Buffer, text: string, font: *Simp.Dynamic_Font
             }
         }
         
-        inline draw_letter_quad(font, quad, color);
+        inline draw_letter_quad(quad, color);
 
         t.data += 1 + trailingBytesForUTF8[t[0]];
         index = t.data - buffer.data;

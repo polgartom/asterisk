@@ -8,6 +8,9 @@
 frametimes: [60] float64;
 frametimes_i := 0;
 
+code_render_time: MultiSample_Measurement;
+buffer_code_draw_method: enum {v1; v2;} = .v1;
+
 main :: () {
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -255,9 +258,18 @@ main :: () {
                 if ok for *e: editors {
                     if !e.visible continue;
                     
-                    // @Temporary
-                    scrollbar_width := r_font.em_width * 1.5;
-                    scrollbar_area, editor_rect := cut_right(e.rect_for_draw, scrollbar_width);                    
+                    editor_rect := e.rect_for_draw;
+                    if is_active(e) {
+                        // If the text is overflowed, we don’t want to move the cursor when clicking the scrollbar.
+                        // Also, if it's not the current editor, we should be able to click on its scrollbar to activate that editor.
+                        // But if we click from the active editor to another editor’s scrollbar, it would set the cursor position
+                        // to the overflowed text.
+                        // This fix only applies correctly when clicking the scrollbar of the active editor. @Todo @Bug @Cleanup
+                        
+                        scrollbar_width := r_font.em_width * 1.5;
+                        scrollbar_area, editor_rect= := cut_right(editor_rect, scrollbar_width);
+                    }
+                    
                     if is_point_in_rect(editor_rect, Vector2.{xx mx, xx my}) {
                         set_cursor_icon(.CUR_BEAM);
                         

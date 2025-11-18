@@ -1538,9 +1538,18 @@ Buffer :: struct {
     modtime: float64;
     last_writetime: Apollo_Time;
 
+    quads_for_code_run: [..] Code_Font_Quad;
+
+    Code_Font_Quad :: struct {
+        quad: Simp.Font_Quad;
+        color := Vector4.{1, 1, 1, 1.0};
+    }
+
     // For measurements
     tokenization_time: float64 = 0.0;
     row_table_recalc_time: float64 = 0.0;
+    
+    //code_render_time: MultiSample_Measurement;
 }
 
 Buffer_History :: struct {

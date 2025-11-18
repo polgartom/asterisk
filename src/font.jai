@@ -72,7 +72,15 @@ init_fonts :: () {
 
     file_icon_md_width        = measure_text_width(r_font_icons, FILE_ICON);
     folder_icon_md_width      = measure_text_width(r_font_icons, FOLDER_ICON);
-    folder_open_icon_md_width = measure_text_width(r_font_icons, FOLDER_ICON);    
+    folder_open_icon_md_width = measure_text_width(r_font_icons, FOLDER_ICON);
+    
+    //table_reset(*text_glyphs_cache); // @Memleak? Because we allocates
+    for text_glyphs_cache.entries { //@Memleak?
+        free_string(*it.key);
+        array_reset(*it.value);
+        //c_free(it.value.data);
+    }
+    table_reset(*text_glyphs_cache);
 }
 
 load_font :: (name: string) -> Loaded_Font {

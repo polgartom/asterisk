@@ -402,6 +402,23 @@ get_enum_by_name :: ($t: Type, name: string) -> (_enum: t, success: bool) {
     }
 }
 
+get_avg_from_measurement :: (using m: MultiSample_Measurement) -> float64 {
+    avg: float64 = 0.0;
+    for s: samples avg += s;
+    return avg / SAMPLE_COUNT;
+}
+
+push_measurement :: (using m: *MultiSample_Measurement, value: float64) {
+    samples[index % SAMPLE_COUNT] = value;
+    index += 1;
+}
+
+MultiSample_Measurement :: struct {
+    SAMPLE_COUNT :: 64;
+    index: u32;
+    samples: [SAMPLE_COUNT] float64;
+}
+
 ////////////////////////////////
 // Imports
 
