@@ -292,8 +292,15 @@ main :: () {
             }
         }
 
-        for buffers {
-            commit_buffer_changes(it);
+        for b: buffers {
+            commit_buffer_changes(b);
+            
+            if b.tokenization_requested {
+                MeasureScope("Tokenization");
+                
+                tokenize(b, language = .C_STYLE); // @Todo: Multiple language support
+                b.tokenization_requested = false;
+            }
         }
 
         for *editor: editors {
@@ -305,7 +312,7 @@ main :: () {
             editor.cursor.x_cache = -1; // Because the prepare text is very slow
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
 
-            b := editor.active_buffer;
+/*            b := editor.active_buffer;
             if b.should_reload_from_disk {
                 if !b.unsaved {
                     buffer_reload_from_disk(editor, b);
@@ -322,6 +329,7 @@ main :: () {
                     }
                 }
             }
+*/
         }
 
         draw_frame();

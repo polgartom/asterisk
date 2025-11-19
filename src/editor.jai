@@ -323,9 +323,9 @@ commit_buffer_changes :: (buffer: *Buffer, force := false) {
     }
 
     buffer.dirty = false;
+    buffer.tokenization_requested = true;
 
     rescan_line_ends(buffer);
-    tokenize(buffer, language = .C_STYLE); // @Todo: Multiple language support
 
     for *e: editors {
         if e.active_buffer == buffer {
@@ -1519,6 +1519,7 @@ Buffer :: struct {
 
     initialized := false;
     dirty := false;
+    tokenization_requested := false;
     unsaved := false;
     readonly := false;
     should_reload_from_disk := false;
