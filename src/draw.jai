@@ -731,10 +731,11 @@ draw_find_global_text_dialog :: () {
             if t == 1.0 then active = false;
             
             redraw_requested = true;
-            fgt_input.arrange_offset_this_frame = false; // The animation starts on small width so text input's auto-viewport arrange should be ignored.  
         }
         
         w = cast(s64, target_width * v);
+        
+        redraw_requested = true;
     }
 
     text_input_height := cast(float, font.character_height * 2.0);
@@ -815,26 +816,27 @@ draw_find_text_dialog :: () {
         font := r_font_sm;
         ch := font.character_height;
         k      := ed_r.h * .1;
-        kw     := max(ed_r.w * .15, 200);
+        kw     := ed_r.w * .15;
         width  := kw * 2.0;
         height := em(2.0, font);
         pad    := cast(float32, r_font.em_width);// * .5;
 
-        scrollbar_width := r_font.em_width * 1.5; // @Cleanup @Todo
         r := make_rect(
-            ed_r.x + ed_r.w - width - pad - scrollbar_width,
+            ed_r.x + ed_r.w - width - pad,
             ed_r.h - get_footer_height(),
             width,
-            font.default_line_spacing * 2.0,
+            xx font.character_height * 2.0,
         );
 
+        // @Temporary: We don't want to set those values on every frame, right?
         theme := Text_Input.DEFAULT_THEME;
-        theme.bg_color = map_color_to_vec4(.BACKGROUND2); //#run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
-        theme.border_color = map_color_to_vec4(.LAYOUT_SEPARATOR);
+        theme.bg_color = #run hex_to_vec4(0x18_20_20_ff); // 0x122922_ff
+        theme.border_color = #run hex_to_vec4(0x18_20_20_ff);
         theme.fg_color = #run hex_to_vec4(0xff_ff_ff_a9);
         theme.placeholder_color = #run hex_to_vec4(0xff_ff_ff_8a);
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
         
+        theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
         if occurences {
             theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
         } else if input.text {
@@ -1140,6 +1142,12 @@ draw_generated_quads :: (using styled_text: Text_Style, font: *Simp.Dynamic_Font
 draw_text :: inline (s: string, left: s64, bottom: s64, color: Vector4) -> s64 {
     w := Simp.prepare_text(r_font, s);
     Simp.draw_prepared_text(r_font, left, bottom, color);
+    return w;
+}
+
+draw_text :: inline (left: s64, baseline: s64, text: string, font: *Simp.Dynamic_Font, color: Vector4  = .{1,1,1,1}) -> s64 {
+    w := Simp.prepare_text(font, text);
+    Simp.draw_prepared_text(font, left, baseline, color);
     return w;
 }
 

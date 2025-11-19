@@ -140,15 +140,16 @@ update_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_
     defer pop_scissor();
     
     left := text_rect.x;
-    //baseline := text_rect.y + font.default_line_spacing - font.y_offset_for_centering; // almost the center but it's looking weird
-    baseline := text_rect.y + (font.y_offset_for_centering) + (text_rect.h - font.character_height) / 2;
-    p1, p2 := fnt_top_bottom_from_baseline_for_quad(font, baseline);
+    text_x := text_rect.x - left_offset;
+    text_y := text_rect.y + default_text_baseline(font, text_rect.h);
+    p1, p2 := get_y_range(font, text_y);
+    cursor_width := max(em(0.25, font), 3.0);
     
     if arrange_offset_this_frame {
-        x_threshold := em(1.0, font) * 1;
+        x_threshold := cursor_width;
         cursor_x := get_cursor_x(cursor.pos) - left_offset - text_rect.w;
     
-        target := input.left_offset;
+        target := left_offset;
         if cursor_x + x_threshold > 0 {
             target += abs(cursor_x + x_threshold);
         } else if abs(cursor_x - x_threshold) > xx text_rect.w {
@@ -176,9 +177,9 @@ update_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_
     }
     
     if text {
-        draw_text(text, xx (left - left_offset), xx baseline, theme.fg_color);
+        draw_text(xx text_x, xx text_y, text, font, theme.fg_color);
     } else if placeholder {
-        draw_text(placeholder, xx text_rect.x, xx baseline, theme.placeholder_color);
+        draw_text(xx text_x, xx text_y, placeholder, font, theme.placeholder_color);
     }
     
     {
@@ -187,8 +188,7 @@ update_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_
         Simp.set_shader_for_color(true);
         
         x := text_rect.x + get_cursor_x(cursor.pos) - left_offset;
-        width := max(em(0.25, font), 3.0);
-        Simp.immediate_quad(x, p1, x + width, p2, theme.cursor_color);
+        Simp.immediate_quad(x, p1, xx (x + cursor_width), p2, theme.cursor_color);
     }
 }
 
@@ -350,6 +350,34 @@ select_all :: (using i: *Text_Input) {
 }
 
 #scope_file
+
+// Copied from GetRect
+default_text_baseline :: (font: *Simp.Dynamic_Font, height: float) -> float {
+    if !font return 0;
+    active_height := font.character_height * 0.55;
+    pad := height - active_height;
+    
+    return floor(pad * 0.5);
+}
+
+// Copied from GetRect
+get_y_range :: (font: *Simp.Dynamic_Font, text_y: float) -> (y0: float, y1: float) {
+    assert(font != null);
+
+    FONT_CURSOR_EXTRA_HEIGHT :: 0.1;  // @Hardcode @Cleanup
+    y0 := text_y + font.typical_descender;
+    y1 := y0 + font.typical_ascender + FONT_CURSOR_EXTRA_HEIGHT * font.character_height;
+
+    y1 += 1;  // To include the top pixel, rather than limit just before the top pixel.
+
+    padding := (y1 - y0) / 8;
+
+    // We tend to need more extra padding on the top than bottom, since most letters don't have descenders.
+    y0 -= padding;
+    y1 += padding * 2;
+
+    return y0, y1;
+}
 
 clamp_cursor_pos :: (using i: *Text_Input) {
     Clamp(*cursor.pos, 0, text.count);
