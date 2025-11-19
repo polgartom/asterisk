@@ -652,27 +652,26 @@ DeleteFromRight :: () {
 
     if editor.cursor.pos == 0 return;
 
-    text := to_string(buffer);
-    bytes_to_del := editor.cursor.pos - prev_char_byte_offset(buffer, editor.cursor.pos);
-
-    // Check if we should delete a "tab"
-    ch := text.data[editor.cursor.pos-1];
-    if ch == #char " " {
-        i := 0;
-        spaces := 1;
-        for #v2 < 0..editor.cursor.pos-1 {
-            if text.data[it] == #char " " {
-                spaces += 1;
-                if spaces == tab_size {
-                    bytes_to_del = tab_size;
-                    break;
-                }
-            } else {
+    pos := editor.cursor.pos;
+    prev_pos := prev_char_byte_offset(buffer, pos);
+    bytes_to_del := pos - prev_pos;
+    
+    if find_row_index(buffer, pos) == find_row_index(buffer, prev_pos) && buffer.data[prev_pos] == #char " " {
+        row_index := find_row_index(buffer, prev_pos);
+        row := row_table[row_index];
+        
+        spaces := 0;
+        for #v2 < row.start..prev_pos {
+            if buffer.data[it] != #char " " {
                 break;
             }
+            spaces += 1;
         }
+        
+        bytes_to_del = spaces % tab_size;
+        if bytes_to_del == 0 then bytes_to_del = tab_size;
     }
-
+    
     if bytes_to_del {
         remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, bytes_to_del);
     }
@@ -1021,6 +1020,7 @@ ExpandSelectionViewPortDown :: () {
 }
 
 // @Cleanup: Gosh...
+// @Todo: Take into account where the tabs are and indent to that next tab (from right)
 IndentLeft :: () {
     editor, buffer := get_active_editor_and_buffer();
     using buffer;
