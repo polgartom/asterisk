@@ -1204,6 +1204,23 @@ last_visible_row :: inline (editor: *Editor, using buffer: *Buffer) -> Row_Info 
     return buffer.row_table[index];
 }
 
+get_selected_row_indices :: (buffer: *Buffer, cursor: *Cursor) -> [] s64 /* Temp */ {
+    start, end := selected_range(cursor);
+    start_row := find_row_index(buffer, start);
+    end_row := find_row_index(buffer, end);
+    count := max(1, end_row - start_row);
+     
+    rows: [..] s64;
+    rows.allocator = temporary_allocator;
+    array_reserve(*rows, max(1, end_row - start_row));
+    
+    for start_row..end_row {
+        array_add(*rows, it);    
+    }
+    
+    return rows;
+}
+
 byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
     assert(byte_pos <= buffer.count, "byte_pos: % ; buffer.count: %\n", byte_pos, buffer.count);
     row := find_row(buffer, byte_pos);

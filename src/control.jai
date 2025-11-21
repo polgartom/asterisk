@@ -1356,45 +1356,67 @@ OpenProjectConfigFile :: () {
     
 }
 
-// @Todo: Toggle comment on selected lines
 ToggleInlineComment :: () {
     e, b := get_active_editor_and_buffer();
     tok := language_inline_comment_token(b.language);
     if !tok return;
     
-    row_index := find_row_index(b, e.cursor.pos);
-    row := b.row_table[row_index];
-    str := get_row_as_string(b, row_index);
-    t := trim_left(str, " \t");
-    
-    at := row.start;
-    if t {
-        at += (t.data - str.data);
-    } else {
-        // Use cursor position as the insert point if the current line is empty or just contains whitespaces
-        at = e.cursor.pos;
-    }
-    
-    if begins_with(t, tok) {
-        bytes_to_del := tok.count;
-        at += bytes_to_del;
+    rows := get_selected_row_indices(b, *e.cursor);
+    i := 0;
+    for row_index: rows {
+        //row_index := find_row_index(b, e.cursor.pos);
+        row := b.row_table[row_index];
+        str := get_row_as_string(b, row_index);
+        t := trim_left(str, " \t");
         
-        if at < b.count && b.data[at] == #char " " {
-            at += 1;
-            bytes_to_del += 1;
+        at := row.start;
+        if t {
+            at += (t.data - str.data);
+        } else if rows.count == 1 {
+            // Use cursor position as the insert point if the current line is empty or just contains whitespaces
+            at = e.cursor.pos;
         }
         
-        remove_text_from_right(e, b, at, bytes_to_del);
-        if e.cursor.pos >= at {
-            rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
+        if begins_with(t, tok) {
+            bytes_to_del := tok.count;
+            at += bytes_to_del;
+            
+            if at < b.count && b.data[at] == #char " " {
+                at += 1;
+                bytes_to_del += 1;
+            }
+            
+            remove_text_from_right(e, b, at, bytes_to_del);
+            
+            if rows.count > 1 {
+                min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
+                if i == 0 then min.* -= bytes_to_del;
+                max.* -= bytes_to_del;
+                
+            } else if e.cursor.pos >= at {
+                rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
+            }
+            
+            commit_buffer_changes(b); // @Speed!!!
+            
+        } else {
+            insert := tprint("% ", tok);
+            insert_text_at(e, b, at, insert); // @Speed!!! This does a commit_buffer_changes after text insertion
+            
+            if rows.count > 1 {
+                min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
+                if i == 0 then min.* += insert.count;
+                max.* += insert.count;
+                
+            } else if e.cursor.pos >= at {
+                rearrange_cursor(b, *e.cursor, insert.count, remember_column=true);
+            }
         }
-    } else {
-        insert := tprint("% ", tok);
-        insert_text_at(e, b, at, insert);
-        if e.cursor.pos >= at {
-            rearrange_cursor(b, *e.cursor, insert.count, remember_column=true);
-        }
+        
+        i += 1;
     }
+    
+    e.cursor.col = byte_pos_to_row_col_index(b, e.cursor.pos);
 }
 
 //////////////////////////////////////////////////
