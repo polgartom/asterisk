@@ -259,6 +259,8 @@ language_from_file_extension :: (ext: string) -> Language {
         case "cpp"; #through; case "hpp"; #through;
         case "cxx"; 
             return .C_STYLE;
+        case "py";
+            return .PYTHON;
     };
     
     return .PLAIN_TEXT;
@@ -268,9 +270,19 @@ language_kind_to_string :: (lang: Language) -> string {
     if lang == {
         case .C_STYLE; return "C";
         case .JAI;     return "Jai";
+        case .PYTHON;  return "Python";
     };
     
     return "Text";
+}
+
+language_inline_comment_token :: (lang: Language) -> string {
+    if lang == {
+        case .C_STYLE; return "//";
+        case .JAI;     return "//";
+        case .PYTHON;  return "#";
+    };
+    return "";
 }
 
 Token_Type :: enum {
@@ -287,9 +299,10 @@ Token_Type :: enum {
 }
 
 Language :: enum_flags u64 {
-    PLAIN_TEXT :: (1<<0);
-    C_STYLE    :: (1<<1);
-    JAI        :: (1<<3);
+    PLAIN_TEXT;
+    C_STYLE;
+    JAI;
+    PYTHON;
 }
 
 ////////////////////////

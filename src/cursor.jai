@@ -17,11 +17,14 @@ set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal
     }
 }
 
-rearrange_cursor :: (buffer: *Buffer, cursor: *Cursor, steps: s64) {
+rearrange_cursor :: (buffer: *Buffer, cursor: *Cursor, steps: s64, remember_column := false) {
     cursor.pos += steps;
     cursor.sel += steps;
-
     clamp_cursor(cursor, buffer.count);
+    
+    if remember_column {
+        cursor.col = byte_pos_to_row_col_index(buffer, cursor.pos);
+    }
 }
 
 selected_range :: inline (using c: *Cursor) -> (start: s64, end: s64) {

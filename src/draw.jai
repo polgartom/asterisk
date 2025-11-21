@@ -429,7 +429,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
             Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + cw), p2, bg_color);
             // Change character's color under the cursor
             if buffer.count {
-                character := get_character_as_string_at(buffer, xx c.pos);
+                character := get_character_as_string_at(buffer, c.pos);
                 Simp.prepare_text(r_font, character);
                 Simp.draw_prepared_text(r_font, xx cx, cast(s64, baseline), fg_color);
             }

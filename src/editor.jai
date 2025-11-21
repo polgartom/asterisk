@@ -362,7 +362,7 @@ rescan_line_ends :: (using buffer: *Buffer) {
     row_table_recalc_time = (seconds_since_init() - timer) * 1000;
 }
 
-get_character_as_string_at :: (buffer: *Buffer, at: u32) -> string {
+get_character_as_string_at :: (buffer: *Buffer, at: s64) -> string {
     // @Todo VALIDATIONS!
     if at >= buffer.count return "";
     if buffer.data[at] == #char "\n" return ""; // @Hacky

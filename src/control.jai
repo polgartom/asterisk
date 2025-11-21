@@ -1356,6 +1356,47 @@ OpenProjectConfigFile :: () {
     
 }
 
+// @Todo: Toggle comment on selected lines
+ToggleInlineComment :: () {
+    e, b := get_active_editor_and_buffer();
+    tok := language_inline_comment_token(b.language);
+    if !tok return;
+    
+    row_index := find_row_index(b, e.cursor.pos);
+    row := b.row_table[row_index];
+    str := get_row_as_string(b, row_index);
+    t := trim_left(str, " \t");
+    
+    at := row.start;
+    if t {
+        at += (t.data - str.data);
+    } else {
+        // Use cursor position as the insert point if the current line is empty or just contains whitespaces
+        at = e.cursor.pos;
+    }
+    
+    if begins_with(t, tok) {
+        bytes_to_del := tok.count;
+        at += bytes_to_del;
+        
+        if at < b.count && b.data[at] == #char " " {
+            at += 1;
+            bytes_to_del += 1;
+        }
+        
+        remove_text_from_right(e, b, at, bytes_to_del);
+        if e.cursor.pos >= at {
+            rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
+        }
+    } else {
+        insert := tprint("% ", tok);
+        insert_text_at(e, b, at, insert);
+        if e.cursor.pos >= at {
+            rearrange_cursor(b, *e.cursor, insert.count, remember_column=true);
+        }
+    }
+}
+
 //////////////////////////////////////////////////
 
 register_keymap_procedures :: () {
@@ -1444,7 +1485,7 @@ register_keymap_procedures :: () {
     Add(editor_keymap, Redo);
 
     Add(editor_keymap, WordCompletion);
-    
+    Add(editor_keymap, ToggleInlineComment);
     //Add(editor_keymap, TransformSelectionToSnakeCase);
     
     Add(editor_keymap, ToggleDevInfo);
