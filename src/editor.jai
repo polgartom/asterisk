@@ -1098,10 +1098,13 @@ scroll_down :: (editor: *Editor) {
     r := editor.rect_for_draw;
     if r.w == 0 || r.h == 0 return; // ???
 
+    // Have to subtract the threshold because in this case we want to the top of the 6. row top not the bottom of it.
+    y_threshold := fnt_get_line_height() * (6-1); // :WhiteSpacesAfterLastRow
+
     last_ri := buffer.row_table.count-1;
     last_visible_ri := last_visible_row_index(editor, buffer);
     if last_visible_ri == last_ri {
-        if editor.top_offset + editor.rect_for_draw.h > fnt_get_line_height(last_ri) + r_font.default_line_spacing {
+        if editor.top_offset + editor.rect_for_draw.h - y_threshold > fnt_get_line_height(last_ri) + r_font.default_line_spacing {
             return;
         }
     }

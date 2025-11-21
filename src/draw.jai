@@ -326,7 +326,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
 
         width := 0;
         left := footer.x + 10;
-        baseline := footer.y + r_font_sm.y_offset_for_centering*1.25;
+        baseline := default_text_baseline(r_font_sm, footer.h, .bottom);
 
         if show_font_debug_info {
             Simp.immediate_quad(footer.x, footer.y+baseline, footer.x+footer.w, footer.y+baseline+1, .{1,0,0,.7});
@@ -1152,6 +1152,8 @@ draw_text :: inline (left: s64, baseline: s64, text: string, font: *Simp.Dynamic
 }
 
 draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
+    MeasureScope("draw_buffer_code");
+
     if !buffer.count return;
     
     r := editor.rect_for_draw;
@@ -1456,3 +1458,4 @@ set_scissor :: (r: Rect) {
 
 
 scissor_stack: [..] Rect;
+

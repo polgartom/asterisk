@@ -351,34 +351,6 @@ select_all :: (using i: *Text_Input) {
 
 #scope_file
 
-// Copied from GetRect
-default_text_baseline :: (font: *Simp.Dynamic_Font, height: float) -> float {
-    if !font return 0;
-    active_height := font.character_height * 0.55;
-    pad := height - active_height;
-    
-    return floor(pad * 0.5);
-}
-
-// Copied from GetRect
-get_y_range :: (font: *Simp.Dynamic_Font, text_y: float) -> (y0: float, y1: float) {
-    assert(font != null);
-
-    FONT_CURSOR_EXTRA_HEIGHT :: 0.1;  // @Hardcode @Cleanup
-    y0 := text_y + font.typical_descender;
-    y1 := y0 + font.typical_ascender + FONT_CURSOR_EXTRA_HEIGHT * font.character_height;
-
-    y1 += 1;  // To include the top pixel, rather than limit just before the top pixel.
-
-    padding := (y1 - y0) / 8;
-
-    // We tend to need more extra padding on the top than bottom, since most letters don't have descenders.
-    y0 -= padding;
-    y1 += padding * 2;
-
-    return y0, y1;
-}
-
 clamp_cursor_pos :: (using i: *Text_Input) {
     Clamp(*cursor.pos, 0, text.count);
     Clamp(*cursor.sel, 0, text.count);

@@ -318,7 +318,8 @@ KEYWORDS :: string.[
     "continue", "break", "default", "exit", "assert", "use", "namespace",
     "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "float32", "float64", "size_t", "char", "short", "unsigned", "long", "int", "bool", "boolean", "double",
     "public", "private", "protected", "defer", "cast", "case", "void", "new",
-    "using", "then", "xx" // @XXX: Jai
+    
+    "using", "then", "xx", "ifx", "context" // Jai
 ];
 
 #import "Basic";

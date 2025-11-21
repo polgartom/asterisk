@@ -98,7 +98,7 @@ _draw_file_browser :: () {
 
     chunks := split(tinp.text, "/",, allocator=temp);
     search_chunk := "";
-    if chunks search_chunk = chunks[chunks.count-1];
+    if chunks then search_chunk = chunks[chunks.count-1];
     
     prefix_width := max(file_icon_md_width, folder_icon_md_width);
     
