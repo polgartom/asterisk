@@ -708,6 +708,7 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font,
         }
 
         array_add(*font.current_quads, quad);
+        
         sx += cast(float) info.advance;
 
     }
@@ -866,8 +867,15 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32
             utf32 = #char "•";
             hash_key = utf32;
         }
+        if utf32 == #char "\t" {
+            utf32 = #char "→";
+        }
+    } else {
+        if utf32 == #char "\t" {
+            utf32 = #char " ";
+        }
     }
-    
+        
     success, data := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
     
@@ -889,6 +897,11 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32
     data.glyph_index_within_font = glyph_index;
 
     copy_glyph_to_bitmap(face, data);
+    
+    if hash_key == #char "\t" {
+        space_glyph := find_or_create_glyph(font, #char " ");
+        data.advance = space_glyph.advance * context.fnt_tab_size;
+    }
 
     table_add(*font.glyph_lookup, hash_key, data);
 

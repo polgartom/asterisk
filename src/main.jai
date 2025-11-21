@@ -551,6 +551,7 @@ working_dir:    string;
 line_height := 0.0;
 letter_spacing := 0.0; // @Todo: Config
 tab_size := 4;
+#add_context fnt_tab_size: s16 = 2;
 r_rect_radius := 8.0;
 show_line_numbers := true;
 draw_invisible_characters := false;

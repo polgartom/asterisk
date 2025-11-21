@@ -178,6 +178,9 @@ parse_style_section :: (file_data: string) -> bool {
                     }
                     // @Todo: :VirtualTabSize
                     tab_size = max(1, val);
+                    tab_size = min(10, val);
+                    context.fnt_tab_size = cast(s16)tab_size;
+                    init_fonts(,,allocator=context.default_allocator); // @Speed
                     
                 case "line_height";
                     val, success, rem := string_to_float(rhs);

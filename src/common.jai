@@ -116,7 +116,7 @@ is_separator :: inline (c: u8, $include_underscore := true) -> bool {
            c == #char "^" || c == #char "%"  ||
            c == #char "~" || c == #char "\\" ||
            c == #char "\"" || c == #char "'" ||
-           c == #char "`"
+           c == #char "`" || c == #char "\t"
            ;
 }
 
@@ -136,8 +136,7 @@ is_alphanum :: inline (c: u32, $include_underscore := true) -> bool {
 }
 
 is_whitespace :: inline (c: u32) -> bool {
-    assert(c != #char "\t", "We should convert all of the tabs to spaces");
-    return c == #char " " || c == #char "\n";
+    return c == #char " " || c == #char "\t" || c == #char "\n";
 }
 
 is_line_end :: inline (c: u32) -> bool {

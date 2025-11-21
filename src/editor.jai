@@ -117,8 +117,9 @@ insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor:
     normalize_line_endings(*t);
     spaces := talloc_string(tab_size);
     for spaces { spaces[it_index] = " "; } 
-    text := replace(t, "\t", spaces);
-    defer free(text);
+    text := t;
+    //text := replace(t, "\t", spaces);
+    //defer free(text);
 
     // @Todo: Validate if the input data is valid utf8!
 
@@ -793,10 +794,11 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             defer free(_input);
 
             normalize_line_endings(*_input); // Converts any \r\n into \n, overwriting the original data.
-            spaces := talloc_string(tab_size);
-            for spaces { spaces[it_index] = " "; } 
-            final_text := replace(_input, "\t", spaces);
-            defer free(final_text);
+            //spaces := talloc_string(tab_size);
+            //for spaces { spaces[it_index] = " "; } 
+            //final_text := replace(_input, "\t", spaces);
+            //defer free(final_text);
+            final_text := _input;
             insert_text_at(editor, buffer, 0, final_text, history=false);
             buffer.unsaved = false;
             buffer.last_writetime = file_modtime_and_size(filepath);

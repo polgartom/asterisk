@@ -1216,7 +1216,7 @@ generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
     
     for quad: r_font.current_quads {
         color := map_color_to_vec4(buffer.colors[index]);
-        if draw_invisible_characters && buffer.data[index] == #char " " {
+        if draw_invisible_characters && buffer.data[index] == #char " " || buffer.data[index] == #char "\t" {
             color = invisible_char_color;
         }
         
