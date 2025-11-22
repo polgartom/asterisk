@@ -736,6 +736,7 @@ draw_find_global_text_dialog :: () {
         w = cast(s64, target_width * v);
         
         redraw_requested = true;
+        fgt_input.arrange_offset_this_frame = false;
     }
 
     text_input_height := cast(float, font.character_height * 2.0);
