@@ -296,15 +296,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
         Simp.set_shader_for_color(true);
         
-        last_marked_row_index := -1;
-        
         put_line_marks_to_scrollbar :: (pos: s64, colorv4: Vector4) #expand {
             MARK_HEIGHT :: 2;
             
             row_index := find_row_index(`buffer, pos);
-            if `last_marked_row_index == row_index return; // don't draw on the same place more than once.
-            `last_marked_row_index = row_index;
-            
             top_pos := fnt_get_line_height() * row_index;
             min_height := 0;
             max_height := fnt_get_line_height() * buffer.row_table.count;
@@ -316,7 +311,10 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         if mode == .WIDGET && active_widget == Find_Text_Dialog {
             color := map_color_to_vec4(.TEXT_HIGHLIGHT);
             color.w = .5; //alpha
+            last_pos := -1;            
             for pos: find_text_dialog.occurrences {
+                if last_pos == pos continue; // don't draw more than once
+                last_pos = pos;
                 put_line_marks_to_scrollbar(pos, color);
             }
         }
