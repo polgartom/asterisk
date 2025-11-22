@@ -1369,7 +1369,7 @@ ToggleInlineComment :: () {
     history.type = .REPLACE;
     history.cursor = e.cursor;
     
-    {
+    if rows.count > 1 {
         start := b.row_table[rows[0]].start;
         end   := b.row_table[rows[rows.count-1]].end;
         history.range = Range.{start, end};
@@ -1400,15 +1400,16 @@ ToggleInlineComment :: () {
             action = ifx begins_with(t, tok) then .delete else .insert;
         }
         
-        if action == .insert {
-            insert_text_at(e, b, at, insert, history=false); // @Speed!!! This does a commit_buffer_changes after text insertion
-            
+        if action == .insert {            
             if rows.count > 1 {
+                insert_text_at(e, b, at, insert, history=false); // @Speed!!! This does a commit_buffer_changes after text insertion
+
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
                 if i == 0 then min.* += insert.count;
                 max.* += insert.count;
                 
             } else if e.cursor.pos >= at {
+                insert_text_at(e, b, at, insert, history=true); // @Speed!!! This does a commit_buffer_changes after text insertion
                 rearrange_cursor(b, *e.cursor, insert.count, remember_column=true);
             }
             
@@ -1420,15 +1421,16 @@ ToggleInlineComment :: () {
                 at += 1;
                 bytes_to_del += 1;
             }
-            
-            remove_text_from_right(e, b, at, bytes_to_del, history=false);
-            
+                        
             if rows.count > 1 {
+                remove_text_from_right(e, b, at, bytes_to_del, history=false);
+
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
                 if i == 0 then min.* -= bytes_to_del;
                 max.* -= bytes_to_del;
                 
             } else if e.cursor.pos >= at {
+                remove_text_from_right(e, b, at, bytes_to_del, history=true);
                 rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
             }
             
@@ -1440,7 +1442,7 @@ ToggleInlineComment :: () {
     
     e.cursor.col = byte_pos_to_row_col_index(b, e.cursor.pos);
     
-    {
+    if rows.count > 1 {
         start := b.row_table[rows[0]].start;
         end   := b.row_table[rows[rows.count-1]].end;
         
