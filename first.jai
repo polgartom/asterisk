@@ -61,7 +61,7 @@ build :: () {
         now := current_time_consensus();
         calendar_utc := to_calendar(now, .UTC);
         s := calendar_to_string(calendar_utc);
-        window_name = tprint("% | compiled (utc): %", window_name, s);
+        window_name = tprint("% | compiled: % UTC", window_name, s);
     }
 
     set_build_options(options, w);

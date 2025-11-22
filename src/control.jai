@@ -1361,27 +1361,14 @@ ToggleInlineComment :: () {
     tok := language_inline_comment_token(b.language);
     if !tok return;
     
+    push_history_edit_group(b, cast(u64)frame);
+    defer pop_history_edit_group(b);
+    
     rows := get_selected_row_indices(b, *e.cursor);
     insert := tprint("% ", tok);
-    action: enum u8 {unset; insert; delete;} = .unset;
+    action: enum u8 {none; insert; delete;} = .none;
+    multiline_mode := rows.count > 1;
     
-    history: Buffer_History;
-    history.type = .REPLACE;
-    history.cursor = e.cursor;
-    
-    if rows.count > 1 {
-        start := b.row_table[rows[0]].start;
-        end   := b.row_table[rows[rows.count-1]].end;
-        history.range = Range.{start, end};
-        
-        old_text := slice(b, start, end - start);
-        history.old_text = tprint("%", old_text);     // add_history will make a new allocation and copy this value, so just use temp alloc here.
-        #if DEBUG {
-            history.snapshot = tprint("%", to_string(b)); // add_history will make a new allocation and copy this value, so just use temp alloc here.
-            history.hash = meow_hash(cast([] u8)history.snapshot);
-        }
-    }
-
     i := 0;
     for row_index: rows {
         row := b.row_table[row_index];
@@ -1396,41 +1383,42 @@ ToggleInlineComment :: () {
             at = e.cursor.pos;
         }
         
-        if action == .unset {
+        if action == .none {
             action = ifx begins_with(t, tok) then .delete else .insert;
         }
         
         if action == .insert {            
-            if rows.count > 1 {
-                insert_text_at(e, b, at, insert, history=false); // @Speed!!! This does a commit_buffer_changes after text insertion
-
+            insert_text_at(e, b, at, insert, history=true); // @Speed!!! This does a commit_buffer_changes after text insertion
+            
+            if multiline_mode {
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
                 if i == 0 then min.* += insert.count;
                 max.* += insert.count;
                 
             } else if e.cursor.pos >= at {
-                insert_text_at(e, b, at, insert, history=true); // @Speed!!! This does a commit_buffer_changes after text insertion
                 rearrange_cursor(b, *e.cursor, insert.count, remember_column=true);
             }
             
         } else if action == .delete {
+            if !begins_with(t, tok) continue;
+            
             bytes_to_del := tok.count;
             at += bytes_to_del;
             
             if at < b.count && b.data[at] == #char " " {
+                // So we delete the extra space after the separator token. Example: "// somecode();" -> "somecode();"
                 at += 1;
                 bytes_to_del += 1;
             }
-                        
-            if rows.count > 1 {
-                remove_text_from_right(e, b, at, bytes_to_del, history=false);
-
+            
+            remove_text_from_right(e, b, at, bytes_to_del, history=true);
+            
+            if multiline_mode {
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
                 if i == 0 then min.* -= bytes_to_del;
                 max.* -= bytes_to_del;
                 
             } else if e.cursor.pos >= at {
-                remove_text_from_right(e, b, at, bytes_to_del, history=true);
                 rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
             }
             
@@ -1441,14 +1429,6 @@ ToggleInlineComment :: () {
     }
     
     e.cursor.col = byte_pos_to_row_col_index(b, e.cursor.pos);
-    
-    if rows.count > 1 {
-        start := b.row_table[rows[0]].start;
-        end   := b.row_table[rows[rows.count-1]].end;
-        
-        history.text = slice(b, start, end - start); // add_history will make a new allocation and copy this value.
-        add_history(e, b, history);
-    }
 }
 
 //////////////////////////////////////////////////

@@ -66,9 +66,6 @@ main :: () {
 
     {
         // kacsa
-        // init(
-            // *file_watcher,
-        // );
     }
 
     last_second_time: Apollo_Time;

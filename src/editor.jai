@@ -467,37 +467,50 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
     batch.data = history.data + history_index;
     batch.count = 1;
     
-    if h.type == .INSERT {
-        expect_alphanum := is_alphanum(h.text[0]);
-        start_index     := history_index;
-        list            := array_view(history, 0, history_index);
-        
+    list := array_view(history, 0, history_index);
+    start_index := history_index;
+    
+    if h.edit_group_id != 0 {
         for #v2 < list {
-            if it.type != h.type break;
-            if expect_alphanum ^ is_alphanum(it.text[0]) break;
+            if it.edit_group_id != h.edit_group_id break;
             start_index = it_index;
         }
-
+        
         batch = array_view(history, start_index, (history_index+1) - start_index);
-        
-    } else if h.type == .DELETE {
-        nochars := utf8_character_count(h.text);
-        if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
-        
-        expect_alphanum := is_alphanum(h.text[0]);
-        start_index     := history_index;
-        list            := array_view(history, 0, history_index);
-        
-        for #v2 < list {
-            if it.type != h.type break;
-            nochars = utf8_character_count(it.text);
-            if nochars != 1 break;
-            if expect_alphanum ^ is_alphanum(it.text[0]) break;
-            start_index = it_index;
+    
+    } else {
+        if h.type == .INSERT {
+            expect_alphanum := is_alphanum(h.text[0]);
+            
+            for #v2 < list {
+                if it.type != h.type break;
+                if expect_alphanum ^ is_alphanum(it.text[0]) break;
+                start_index = it_index;
+            }
+    
+            batch = array_view(history, start_index, (history_index+1) - start_index);
+            
+        } else if h.type == .DELETE {
+            nochars := utf8_character_count(h.text);
+            if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
+            
+            expect_alphanum := is_alphanum(h.text[0]);
+            
+            for #v2 < list {
+                if it.type != h.type break;
+                nochars = utf8_character_count(it.text);
+                if nochars != 1 break;
+                if expect_alphanum ^ is_alphanum(it.text[0]) break;
+                start_index = it_index;
+            }
+    
+            batch = array_view(history, start_index, (history_index+1) - start_index);
+            
+        } else if h.type == .REPLACE {
+            // Skip it..
         }
-
-        batch = array_view(history, start_index, (history_index+1) - start_index);
-    } 
+    }
+    
 
     return batch;
 }
@@ -510,38 +523,53 @@ batch_up_redos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
     batch: [] Buffer_History;
     batch.data = history.data + history_index;
     batch.count = 1;
-
-    if h.type == .INSERT {
-        expect_alphanum := is_alphanum(h.text[0]);
-        end_index       := history_index;
-        list            := advance(history, history_index);
-        
-        for list {
-            if it.type != h.type break;
-            if expect_alphanum != is_alphanum(it.text[0]) break;
-            end_index += 1;
-        }
-        
-        batch = array_view(history, history_index, end_index-history_index);
-        
-    } else if h.type == .DELETE {
-        nochars := utf8_character_count(h.text);
-        if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
     
-        expect_alphanum := is_alphanum(h.text[0]);
-        end_index       := history_index;
-        list            := advance(history, history_index);
-        
+    list := advance(history, history_index);
+    end_index := history_index;
+
+    if h.edit_group_id != 0 {
         for list {
-            if it.type != h.type break;
-            nochars = utf8_character_count(it.text);
-            if nochars != 1 break;
-            if expect_alphanum != is_alphanum(it.text[0]) break;
-            end_index += 1;
+            if it.edit_group_id != h.edit_group_id break;
+            end_index += 1;    
         }
         
         batch = array_view(history, history_index, end_index-history_index);
+        
+    } else {
+        if h.type == .INSERT {
+            expect_alphanum := is_alphanum(h.text[0]);
+                    
+            for list {
+                if it.type != h.type break;
+                if expect_alphanum != is_alphanum(it.text[0]) break;
+                end_index += 1;
+            }
+            
+            batch = array_view(history, history_index, end_index-history_index);
+            
+        } else if h.type == .DELETE {
+            nochars := utf8_character_count(h.text);
+            if nochars != 1 return batch; // Because multi-chars deletion already kinda batched up, we only interested about single character histories for now.
+        
+            expect_alphanum := is_alphanum(h.text[0]);
+            end_index       := history_index;
+            
+            for list {
+                if it.type != h.type break;
+                nochars = utf8_character_count(it.text);
+                if nochars != 1 break;
+                if expect_alphanum != is_alphanum(it.text[0]) break;
+                end_index += 1;
+            }
+            
+            batch = array_view(history, history_index, end_index-history_index);
+            
+        } else if h.type == .REPLACE {
+            // Skip it..
+        }
+    
     }
+
 
     return batch;
 }
@@ -726,6 +754,7 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     h.type   = type;
     h.range  = range;
     h.cursor = editor.cursor;
+    h.edit_group_id = history_current_edit_group_id;
     
     #if DEBUG {
         modify_string(*h.snapshot, to_string(buffer));
@@ -755,6 +784,17 @@ last_history :: (using buffer: *Buffer) -> *Buffer_History {
 reset_history :: (using buffer: *Buffer) {
     history_index = -1;
     array_reset_keeping_memory(*history);
+}
+
+push_history_edit_group :: (b: *Buffer, id: u64) {
+    array_add(*b.history_edit_group_id_stack, b.history_current_edit_group_id);
+    
+    b.history_current_edit_group_id = id;
+}
+
+pop_history_edit_group :: (b: *Buffer) {
+    id := pop(*b.history_edit_group_id_stack);
+    b.history_current_edit_group_id = id;
 }
 
 switch_editor_mode :: (switch_to: Program_Mode) {
@@ -1558,9 +1598,12 @@ Buffer :: struct {
     colors: [] Color;
     row_table: [..] Row_Info;
     cursor_backup: [editors.count] Cursor;
+    language: Language = .PLAIN_TEXT; // @Todo: It's mainly for the system buffers like logs or console output etc..
+    
     history: [..] Buffer_History;
     history_index: s64 = -1;
-    language: Language = .PLAIN_TEXT; // @Todo: It's mainly for the system buffers like logs or console output etc..
+    history_edit_group_id_stack: [..] u64;
+    history_current_edit_group_id: u64 = 0;
     
     name: string;
     filepath: string;
@@ -1589,6 +1632,7 @@ Buffer_History :: struct {
     cursor: Cursor;
     type: Buffer_History.Type = .UNDEFINED;
     modtime: float64;
+    edit_group_id: u64;
     
     #if DEBUG {
         hash: u64;
