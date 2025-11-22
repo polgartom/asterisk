@@ -1376,8 +1376,10 @@ ToggleInlineComment :: () {
         
         old_text := slice(b, start, end - start);
         history.old_text = tprint("%", old_text);     // add_history will make a new allocation and copy this value, so just use temp alloc here.
-        history.snapshot = tprint("%", to_string(b)); // add_history will make a new allocation and copy this value, so just use temp alloc here.
-        history.hash = meow_hash(cast([] u8)history.snapshot);
+        #if DEBUG {
+            history.snapshot = tprint("%", to_string(b)); // add_history will make a new allocation and copy this value, so just use temp alloc here.
+            history.hash = meow_hash(cast([] u8)history.snapshot);
+        }
     }
 
     i := 0;
