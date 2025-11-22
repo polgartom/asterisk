@@ -999,6 +999,7 @@ draw_global_debug_info :: (r: Rect) {
     avg /= frametimes.count;
     
     PrintDev("[frame] % | avg %ms\n", frame, avg);
+    PrintDev("[video/vsync]: %\n", video_get_vsync());
     PrintDev("[flags] wait_os_event_before_redraw: %\n", wait_os_event_before_redraw);
     
     PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);

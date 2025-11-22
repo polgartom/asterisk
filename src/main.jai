@@ -520,6 +520,23 @@ wait_for_event :: () {
     }
 }
 
+video_set_vsync :: (kind: Video_Vsync_Kind) {
+    MeasureProc();
+    wglSwapIntervalEXT(xx kind);
+}
+
+video_get_vsync :: () -> Video_Vsync_Kind {
+    return cast(Video_Vsync_Kind) wglGetSwapIntervalEXT();
+}
+
+Video_Vsync_Kind :: enum s16 {
+    UNKNOWN  :: -100;
+    HALF     :: 2;
+    ADAPTIVE :: -1;
+    DISABLED ::  0;
+    STANDARD ::  1;
+}
+
 memmove :: inline (destination: *void, source: *void, count: s64) {
     c_memmove(destination, source, xx count);
 }

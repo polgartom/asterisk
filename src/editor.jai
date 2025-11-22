@@ -1529,10 +1529,20 @@ editors: [2] Editor;
 buffers: [..] *Buffer;
 
 editor_commands :: Editor_Command.[
-    .{"Open Editor Config", OpenEditorConfigFile},
-    .{"Open Project Config", OpenProjectConfigFile},
-    .{"Reload Buffer From Disk", ReloadBufferFromDisk},
-    .{"Transform Selection to Snake Case", TransformSelectionToSnakeCase},
+    .{"Open Editor Config",                 OpenEditorConfigFile},
+    .{"Open Project Config",                OpenProjectConfigFile},
+    .{"Reload Buffer From Disk",            ReloadBufferFromDisk},
+    .{"Transform Selection to Snake Case",  TransformSelectionToSnakeCase},
+    
+    .{"[OS] Wait for os event",          () { wait_os_event_before_redraw = !wait_os_event_before_redraw; }},
+    
+    .{"[Video] Standard vsync",             () { video_set_vsync(.STANDARD); }},
+    .{"[Video] No Vsync",                   () { video_set_vsync(.DISABLED); }},
+    .{"[Video] Half vsync",                 () { video_set_vsync(.HALF    ); }},
+    .{"[Video] Adaptive vsync",             () { video_set_vsync(.ADAPTIVE); }},
+    
+    .{"[DEV] Debug infos",                () { show_debug_info = !show_debug_info; }},
+    .{"[DEV] Draw font metrics lines",    () { show_font_debug_info = !show_font_debug_info; }},
 ];
 
 // log_buffer:    *Buffer;
