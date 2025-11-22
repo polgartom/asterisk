@@ -309,6 +309,11 @@ main :: () {
                 tokenize(b, language = .C_STYLE); // @Todo: Multiple language support
                 b.tokenization_requested = false;
             }
+            
+            if b.was_dirty_on_frame {
+                b.hash = hash_from_buffer(b);
+                b.was_dirty_on_frame = false;
+            }
         }
 
         for *editor: editors {

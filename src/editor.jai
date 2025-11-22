@@ -19,7 +19,6 @@ insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $his
     }
 
     buffer.dirty = true;
-    buffer.unsaved = true;
     buffer.modtime = ms_since_init();
 
     // @Temporary
@@ -70,7 +69,6 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
     count -= (from - to);
 
     dirty = true;
-    unsaved = true;
     modtime = ms_since_init();
 
     // @Todo: Better explanation
@@ -115,15 +113,15 @@ insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor:
 
     // @Speed
     normalize_line_endings(*t);
-    spaces := talloc_string(tab_size);
-    for spaces { spaces[it_index] = " "; } 
-    text := t;
+    // spaces := talloc_string(tab_size);
+    // for spaces { spaces[it_index] = " "; } 
+    // text := t;
     //text := replace(t, "\t", spaces);
     //defer free(text);
 
     // @Todo: Validate if the input data is valid utf8!
 
-    insert_text_at_cursor(editor, buffer, cursor, text);
+    insert_text_at_cursor(editor, buffer, cursor, t);
 }
 
 replace_text_at :: (editor: *Editor, buffer: *Buffer, range: Range, new_text: string, $history := true) {
@@ -312,6 +310,7 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     maybe_grow(buffer, BUFFER_PAGE_SIZE);
 
     buffer.initialized = true;
+    buffer.disk_hash = hash_from_buffer(buffer);
 
     commit_buffer_changes(buffer, true);
 
@@ -324,6 +323,7 @@ commit_buffer_changes :: (buffer: *Buffer, force := false) {
     }
 
     buffer.dirty = false;
+    buffer.was_dirty_on_frame = true;
     buffer.tokenization_requested = true;
 
     rescan_line_ends(buffer);
@@ -395,6 +395,10 @@ to_string :: inline (buffer: *Buffer) -> string {
     s.count = buffer.count;
     s.data  = buffer.data;
     return s;
+}
+
+hash_from_buffer :: inline (using buffer: *Buffer) -> u64 {
+    return meow_hash(.{data = data, count = count});
 }
 
 maybe_grow :: (buffer: *Buffer, size: s64) {
@@ -634,7 +638,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
         if undos.count {
             h := undos[0];
             s := to_string(buffer);
-            current_hash := meow_hash(cast([]u8)s);
+            current_hash := hash_from_buffer(buffer);
             if h.hash != current_hash {
                 log("\n\n-----------\nInvalid hash (undo/after): %  % | \n%\n", h.hash, current_hash, h);
                 File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
@@ -842,7 +846,6 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             //defer free(final_text);
             final_text := _input;
             insert_text_at(editor, buffer, 0, final_text, history=false);
-            buffer.unsaved = false;
             buffer.last_writetime = file_modtime_and_size(filepath);
         }
 
@@ -850,8 +853,9 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
     }
 
     ext := path_extension(buffer.filepath);
-    buffer.language = language_from_file_extension(ext);
-    buffer.hash     = meow_hash(.{data=buffer.data, count=buffer.count}); 
+    buffer.language  = language_from_file_extension(ext);
+    buffer.hash      = hash_from_buffer(buffer);
+    buffer.disk_hash = buffer.hash; 
 
     return buffer;
 }
@@ -868,9 +872,11 @@ buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
     if input {
         normalize_line_endings(*input); // Converts any \r\n into \n, overwriting the original data.
         replace_text_at(editor, buffer, .{start=0, end=buffer.count}, input, history=true);
-        unsaved = false; // Because this is the up to date version of the buffer
         last_writetime = file_modtime_and_size(filepath);
     }
+    
+    disk_hash = hash_from_buffer(buffer);
+    
     commit_buffer_changes(buffer, force=true);
     return true;
 }
@@ -891,9 +897,9 @@ buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
         return false;
     }
 
-    unsaved = false;
     exists_on_disk = true;
     last_writetime = file_modtime_and_size(filepath);
+    disk_hash = hash_from_buffer(buffer);
 
     return true;
 }
@@ -911,7 +917,7 @@ save_buffer :: (using buffer: *Buffer) -> bool {
     }
 
     ok := buffer_write_to_disk(buffer);
-        
+    
     {
         // @Temporary: We could flag the buffer, like .BUFFER_EDITOR_CONFIG or .BUFFER_PROJECT_CONFIG
         // Also we should put this in file watcher procedure
@@ -922,7 +928,7 @@ save_buffer :: (using buffer: *Buffer) -> bool {
         config_path = get_project_config_path();
         if file_exists(config_path) && platform_path_equals(config_path, filepath) {
             ReloadEditor();
-        }    
+        }
     }
 
     return ok;
@@ -963,9 +969,9 @@ close_buffer :: (buffer: *Buffer) {
     buffer_reset_keeping_memory(buffer);
 }
 
-// is_unsaved :: inline (using buffer: *Buffer) -> bool {
-    // return hash != saved_hash;
-// }
+is_unsaved :: inline (using buffer: *Buffer) -> bool {
+    return hash != disk_hash;
+}
 
 is_active :: inline (using e: *Editor) -> bool {
     return e == active_editor;
@@ -1375,32 +1381,6 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     return ptr - buffer.data;
 }
 
-// logbuf :: (text: string) {
-//     using buffer := log_buffer;
-
-//     assert(buffer && buffer.readonly);
-    
-//     // @Todo: Handle binary and non-printable data
-//     normalize_line_endings(*text);
-
-//     append_text_raw(buffer, text);
-//     buffer.dirty = true;
-
-// }
-
-// logerrbuf :: (text: string) {
-//     using buffer := logerr_buffer;
-    
-//     assert(buffer && buffer.readonly);
-
-//     // @Todo: Handle binary and non-printable data
-//     normalize_line_endings(*text);
-
-//     append_text_raw(buffer, text);
-//     buffer.dirty = true;
-
-// }
-
 init_editor_buffers :: (files_from_cmdline: [] string) {
     // log_buffer    = create_readonly_buffer("logs");
     // logerr_buffer = create_readonly_buffer("errors");
@@ -1585,12 +1565,14 @@ Buffer :: struct {
     data:      *u8;
     count:     s64;
     allocated: s64;
+    
     hash:      u64;
+    disk_hash: u64;
 
     initialized := false;
     dirty := false;
+    was_dirty_on_frame := false;
     tokenization_requested := false;
-    unsaved := false;
     readonly := false;
     should_reload_from_disk := false;
     exists_on_disk := false;

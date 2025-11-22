@@ -380,7 +380,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
                     "%1%2%3",
                     path,
                     ifx !b.exists_on_disk then " <new>" else "",
-                    ifx b.unsaved         then "*"      else "",
+                    ifx is_unsaved(b)     then "*"      else "",
                 );
             }
 

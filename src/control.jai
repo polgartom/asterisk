@@ -2,8 +2,8 @@
 
 Quit :: () {
     should_open_dialog := false;
-    for buffers {
-        if it.unsaved {
+    for b: buffers {
+        if is_unsaved(b) {
             should_open_dialog = true;
             break;
         }
@@ -20,8 +20,8 @@ Quit :: () {
         result := MessageBoxW(window, modal_text, modal_text, MB_YESNOCANCEL | MB_ICONWARNING);
         if result == {
             case IDYES;
-                for buffers {
-                    if it.unsaved then save_buffer(it);
+                for b: buffers {
+                    if is_unsaved(b) then save_buffer(b);
                 }
             case IDNO;      // We don't want to save the buffer so close it!
             case IDCANCEL; 
@@ -98,7 +98,7 @@ CloseCurrentBuffer :: () {
     _, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
-    if buffer.unsaved {
+    if is_unsaved(buffer) {
         // @Todo: Linux
         answer := dialog_confirm("The buffer unsaved, do you want to save it?");
         if answer == {
@@ -1323,7 +1323,7 @@ ReloadBufferFromDisk :: () {
 
     if !buffer.exists_on_disk return;
 
-    if buffer.unsaved {
+    if is_unsaved(buffer) {
         answer := dialog_confirm("The buffer unsaved, do you want to reload it?");
         if answer != .YES return;
     }
