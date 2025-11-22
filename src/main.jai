@@ -115,6 +115,7 @@ main :: () {
         
         mouse_scrolled_on_frame = .none;
         mouse_was_down = mouse_down;
+        mouse_down = false;
         mouse_clicked = false;
         mouse_was_dbl_clicked = mouse_dbl_clicked;
         mouse_dbl_clicked = false;

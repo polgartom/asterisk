@@ -294,15 +294,43 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         //Simp.immediate_quad(scrollbar.x, scrollbar.y+scrollbar.h/2+1, scrollbar.x+scrollbar.w, scrollbar.y+scrollbar.h/2-1, .{1,0,0,1});
         //Simp.immediate_quad(scrollbar.x, scrollbar.y+1, scrollbar.x+scrollbar.w, scrollbar.y-1, .{1,0,0,1});
         
-        // Show the cursor position on the scrollbar
-        ri := get_current_line(editor.active_buffer, editor.cursor.pos);
-        top_pos := fnt_get_line_height() * ri;
-        max_height := fnt_get_line_height() * buffer.row_table.count;
-        y := area.y + area.h * (max_height - top_pos) / (max_height - 0);
         Simp.set_shader_for_color(true);
-        color = map_color_to_vec4(.CURSOR);
-        color.w = .8;
-        Simp.immediate_quad(area.x, y, area.x + area.w, y+2, color);
+        
+        last_marked_row_index := -1;
+        
+        put_line_marks_to_scrollbar :: (pos: s64, colorv4: Vector4) #expand {
+            MARK_HEIGHT :: 2;
+            
+            row_index := find_row_index(`buffer, pos);
+            if `last_marked_row_index == row_index return; // don't draw on the same place more than once.
+            `last_marked_row_index = row_index;
+            
+            top_pos := fnt_get_line_height() * row_index;
+            min_height := 0;
+            max_height := fnt_get_line_height() * buffer.row_table.count;
+            y := area.y + area.h * (max_height - top_pos) / (max_height - min_height) - MARK_HEIGHT;
+            
+            Simp.immediate_quad(area.x, y, area.x + area.w, y + MARK_HEIGHT, colorv4);
+        }
+        
+        if mode == .WIDGET && active_widget == Find_Text_Dialog {
+            color := map_color_to_vec4(.TEXT_HIGHLIGHT);
+            color.w = .5; //alpha
+            for pos: find_text_dialog.occurrences {
+                put_line_marks_to_scrollbar(pos, color);
+            }
+        }
+        
+        {
+            // @Todo: Draw current selection occurrences
+        }
+
+        {
+            // Show the cursor position on the scrollbar
+            color := map_color_to_vec4(.CURSOR);
+            color.w = .8; //alpha
+            put_line_marks_to_scrollbar(editor.cursor.pos, color);
+        }
     }
 
     {
@@ -501,19 +529,19 @@ draw_selection :: (editor: *Editor, buffer: *Buffer, r: Rect) {
         Simp.immediate_quad(left, p1, left+width, p2, selection_color);
     }
 
-    show_selection_occurences := false;
+    show_selection_occurrences := false;
     t := s.data;
     while t < s.data + s.count {
         if !is_whitespace(t.*) {
             // We don't want to highlight a bunch of spaces without one unicode character at least
-            show_selection_occurences = true;
+            show_selection_occurrences = true;
             break;
         }
 
         t += 1 + trailingBytesForUTF8[t.*];
     }
 
-    if show_selection_occurences {
+    if show_selection_occurrences {
         start_row := first_visible_row(editor, buffer);
         end_row := last_visible_row(editor, buffer);
 
@@ -838,7 +866,7 @@ draw_find_text_dialog :: () {
         theme.cursor_color = #run hex_to_vec4(0xff_ff_ff_c5);
         
         theme.border_color = #run hex_to_vec4(0xff_ff_ff_15);
-        if occurences {
+        if occurrences {
             theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
         } else if input.text {
             theme.border_color = #run hex_to_vec4(0xa9_22_22_a0);
@@ -853,7 +881,7 @@ draw_find_text_dialog :: () {
 
         Simp.set_shader_for_rect();
         Simp.immediate_quad_with_radius(r.x - weight, r.y - weight, r.x + r.w + weight, r.y+r.h + weight, theme.bg_color, radius=r_rect_radius);
-        hint := tprint("%/%", current_occurrence+1, occurences.count);
+        hint := tprint("%/%", current_occurrence+1, occurrences.count);
         x := r.x + r.w*.5 - measure_text_width(font, hint)*.5;
         label(xx x, xx (r.y+r.h*.5-ch*.3), hint, font, theme.fg_color);
     }
@@ -892,7 +920,7 @@ draw_find_text_dialog :: () {
         Simp.set_shader_for_color(true);
     }
 
-    for pos: occurences {
+    for pos: occurrences {
         ri := find_row_index(buffer, pos);
         if ri < rs_i || ri > re_i continue;
     
