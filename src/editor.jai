@@ -580,6 +580,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
                 history_index -= 1;
 
             case .REPLACE;
+                assert(h.text.count > 0, "\n%\n", h);
                 start := h.range.start;
                 end   := h.range.start + h.text.count;
                 if start >= end || start < 0 || start > buffer.count || end < 0 || end > buffer.count {
@@ -605,11 +606,11 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
         if undos.count {
             h := undos[0];
             s := to_string(buffer);
-            current_hash := crc64(s);
+            current_hash := meow_hash(cast([]u8)s);
             if h.hash != current_hash {
-                log("\n\n-----------\nInvalid hash (undo/after): %  % | %\n", h.hash, current_hash, h);
-                //File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
-                //File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
+                log("\n\n-----------\nInvalid hash (undo/after): %  % | \n%\n", h.hash, current_hash, h);
+                File.write_entire_file(tprint("./dumps/diff/%", current_hash), s);
+                File.write_entire_file(tprint("./dumps/diff/%", h.hash), h.snapshot);
             }
         }
     }
@@ -653,7 +654,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 history_index += 1;
 
             case .REPLACE;
-                // @INCOMPLETE @XXX
+                // @INCOMPLETE @XXX ???
                 start := h.range.start;
                 end   := h.range.start + h.old_text.count;
                 if start >= end || start < 0 || start > buffer.count || end < 0 || end > buffer.count {
@@ -666,9 +667,9 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
                 editor.cursor = h.cursor;
                 to := end + h.text.count - (end - start);
                 if to > buffer.count then to = buffer.count;
-                set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
+                //set_cursor_pos(buffer, *editor.cursor, to, horizontal=true); 
                 // clamp_cursor(*editor.cursor, buffer.count);
-                // editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
+                editor.cursor.col = byte_pos_to_row_col_index(buffer, editor.cursor.pos);
                 history_index += 1;
                 
                 // We don't want to change these type of redos
@@ -686,8 +687,6 @@ add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_Hist
         history.count = new_size;
         Clamp(*history_index, -1, history.count-1);
     }
-    
-    #if DEBUG { assert(new_history.hash != 0); }
 
     h := array_add(*history);
     h.type   = new_history.type;
@@ -695,8 +694,11 @@ add_history :: (editor: *Editor, using buffer: *Buffer, new_history: Buffer_Hist
     h.cursor = new_history.cursor;
 
     #if DEBUG {
-        modify_string(*h.snapshot, to_string(buffer));
-        h.hash   = new_history.hash;
+        assert(!!new_history.snapshot);
+        assert(!!new_history.hash);
+        
+        modify_string(*h.snapshot, new_history.snapshot);
+        h.hash = new_history.hash;
     }
 
     assert(!!new_history.text);
@@ -727,7 +729,7 @@ add_history :: (editor: *Editor, using buffer: *Buffer, $type: Buffer_History.Ty
     
     #if DEBUG {
         modify_string(*h.snapshot, to_string(buffer));
-        h.hash = crc64(h.snapshot);
+        h.hash = meow_hash(cast([]u8)h.snapshot);
     }
 
     modify_string(*h.text, text);
@@ -809,6 +811,7 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
 
     ext := path_extension(buffer.filepath);
     buffer.language = language_from_file_extension(ext);
+    buffer.hash     = meow_hash(.{data=buffer.data, count=buffer.count}); 
 
     return buffer;
 }
@@ -919,6 +922,10 @@ close_buffer :: (buffer: *Buffer) {
 
     buffer_reset_keeping_memory(buffer);
 }
+
+// is_unsaved :: inline (using buffer: *Buffer) -> bool {
+    // return hash != saved_hash;
+// }
 
 is_active :: inline (using e: *Editor) -> bool {
     return e == active_editor;
@@ -1538,6 +1545,7 @@ Buffer :: struct {
     data:      *u8;
     count:     s64;
     allocated: s64;
+    hash:      u64;
 
     initialized := false;
     dirty := false;

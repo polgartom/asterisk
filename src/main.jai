@@ -496,6 +496,17 @@ wait_for_event :: () {
     }
 } @NoProfile
 
+#if CPU == .X64 {
+    meow_hash :: (bytes: [] u8) -> u64 {
+        // Copied from Focus editor
+        #import "meow_hash";
+        //MeasureProc();
+        #asm { hash: vec; }
+        MeowHash(MeowDefaultSeed, xx bytes.count, bytes.data, hash);
+        return MeowU64From(hash, 0);
+    }
+}
+
 memmove :: inline (destination: *void, source: *void, count: s64) {
     c_memmove(destination, source, xx count);
 }
@@ -661,7 +672,6 @@ MeasureScope :: (name: string) #expand {
 #import "File_Watcher";
 #import "Hash_Table";
 #import "Process";
-#import "Crc";
 
 Thread    :: #import "Thread";
 File      :: #import "File";

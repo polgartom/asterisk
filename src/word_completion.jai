@@ -14,7 +14,7 @@ word_completion :: (forwards := true, subwords := false) {
 
         #if DEBUG {
             modify_string(*history.snapshot, to_string(b));
-            history.hash = crc64(history.snapshot);
+            history.hash = meow_hash(cast([]u8)history.snapshot);
         }
 
         search_for_subwords = subwords;
@@ -168,7 +168,8 @@ word_complete_apply :: ($apply_history := false) {
         history.range = range;
         history.cursor = cursor;
     }
-    modify_string(*history.text, result.word);
+    
+    modify_string(*history.text, result.word); // @Speed do this when we commit the history changes
     replace_text_at(editor, buffer, range, result.word, history=false);
     set_cursor_pos(buffer, cursor, start + result.word.count, horizontal=true);
 }
