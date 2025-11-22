@@ -29,7 +29,8 @@ init_fonts :: () {
     // :DifferentFontSizeRasterHack @Cleanup @Todo
     // The Simp is caching the font data based on the font_data[0] memory address,
     // so if we want to make a new raster with not the same font size we need to copy that font data, omg...
-    modify_string(*font_data_sm, font_data);
+    modify_string(*font_data_sm,   font_data);
+    modify_string(*font_data_tiny, font_data);
 
     font_size = max(font_size, 10);
     font_size = min(font_size, 45);
@@ -37,11 +38,14 @@ init_fonts :: () {
     delta := cast(int, font_size) - DEFAULT_FONT_SIZE;
     assert(DEFAULT_SMALL_FONT_SIZE + delta > 0);
     assert(DEFAULT_FONT_SIZE + delta > 0);
+    
     font_size_sm   = cast(u8, DEFAULT_SMALL_FONT_SIZE + delta);
-    font_size_icon = cast(u8, DEFAULT_ICON_FONT_SIZE + delta);
+    font_size_tiny = cast(u8, DEFAULT_TINY_FONT_SIZE  + delta);
+    font_size_icon = cast(u8, DEFAULT_ICON_FONT_SIZE  + delta);
 
     r_font       = Simp.get_font_at_size(cast([]u8)font_data, cast(int)(font_size*dpi_scale));
     r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data_sm, cast(int)(font_size_sm*dpi_scale));
+    r_font_tiny  = Simp.get_font_at_size(cast([]u8)font_data_tiny, cast(int)(font_size_tiny*dpi_scale));
     r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size_icon*dpi_scale));
     assert(r_font != null && r_font_sm != null && r_font_icons != null);
 
@@ -225,11 +229,13 @@ get_y_range :: (font: *Simp.Dynamic_Font, text_y: float) -> (y0: float, y1: floa
 
 r_font:       *Simp.Dynamic_Font;
 r_font_sm:    *Simp.Dynamic_Font;
+r_font_tiny:  *Simp.Dynamic_Font;
 r_font_icons: *Simp.Dynamic_Font;
 
 font_family: string;
 font_size: u8 = DEFAULT_FONT_SIZE;
 font_size_sm: u8 = DEFAULT_SMALL_FONT_SIZE; // change this dynamically based on the dpi and the font_size
+font_size_tiny: u8 = DEFAULT_TINY_FONT_SIZE; // change this dynamically based on the dpi and the font_size
 font_size_icon: u8 = DEFAULT_ICON_FONT_SIZE;
 
 file_icon_md_width := 0;
@@ -240,6 +246,7 @@ r_font_largest_digit_width := 0;
 
 DEFAULT_FONT_SIZE :: 15;
 DEFAULT_SMALL_FONT_SIZE :: 14;
+DEFAULT_TINY_FONT_SIZE :: 12;
 DEFAULT_ICON_FONT_SIZE :: 14;
 
 PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);
@@ -256,6 +263,8 @@ BAKED_FONT_DEFAULT :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
 BAKED_FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 font_data_sm: string;
+font_data_tiny: string;
+
 loaded_fonts: Table(string, string);
 
 fonts_dir_default: string;

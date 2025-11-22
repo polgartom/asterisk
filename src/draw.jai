@@ -998,36 +998,46 @@ draw_global_debug_info :: (r: Rect) {
     for t: frametimes { avg += t; }
     avg /= frametimes.count;
     
-    PrintDev("[frame] % | avg %ms\n", frame, avg);
-    PrintDev("[video/vsync]: %\n", video_get_vsync());
-    PrintDev("[flags] wait_os_event_before_redraw: %\n", wait_os_event_before_redraw);
-    
-    PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
-
-    mx, my, ok := get_mouse_pointer_position_right_handed();
-    PrintDev("[mouse] x:% y:%\n", mx, my);
-
     PrintDev("[line-ends-scan] % lines | % ms\n", b.row_table.count, b.row_table_recalc_time);
     PrintDev("[syntax-highlighting] %ms\n", b.tokenization_time);
     //PrintDev("[code-draw-time (%)] avg %ms\n", buffer_code_draw_method, get_avg_from_measurement(*code_render_time));
+    PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
+    mx, my, ok := get_mouse_pointer_position_right_handed();
+    PrintDev("[mouse] x:% y:%\n", mx, my);
+    PrintDev("[os] wait_os_event: %\n", wait_os_event_before_redraw);
+    PrintDev("[video/vsync]: %\n", video_get_vsync());
+    PrintDev("[frame] % | avg %ms\n", frame, avg);
 
-    row := 1;
-    max := 0;
+    PADDING :: 10;
+    font := r_font_tiny;
     line_height := fnt_get_line_height();
-    bottom: float32 = get_footer_height() + line_height;
+    left := r.x + r.w - 30;
+    baseline := window_height - line_height;
+    max_width := 0;
+    height := 0.0;
+    
+    for debug_infos {
+        s := trim(it, "\n");
+        width := measure_text_width(font, s);
+        if width > max_width then max_width = width;
+        height += line_height;
+    }
+    
+    {
+        Simp.set_shader_for_color(true);
+        rect := make_rect(left - max_width, baseline - height, xx max_width, height);
+        rect = expand(rect, PADDING);
+        rect.x -= PADDING;
+        draw_quad(rect, .{0, 0, 0, .7});
+    }
 
+    Simp.set_shader_for_text();
     for #v2 < debug_infos {
-        s := it;
-        ln := s[s.count-1] == #char "\n";
-        if ln then s.count -= 1;
+        s := trim(it, "\n");
 
-        rmargin := 10;
-
-        w := Simp.prepare_text(r_font, s);
-        bottom += line_height;
-        Simp.draw_prepared_text(r_font, xx (r.x + r.w - w - rmargin), xx (bottom), .{.8, .8, .8, 1});
-
-        if ln then row += 1;
+        w := Simp.prepare_text(font, s);
+        Simp.draw_prepared_text(font, xx (left - w - PADDING), xx (baseline - PADDING), .{.4, .7, .8, 1});
+        baseline -= line_height;
     }
     
     Simp.immediate_flush();

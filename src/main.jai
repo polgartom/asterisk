@@ -122,7 +122,6 @@ main :: () {
         
         mouse_scrolled_on_frame = .none;
         mouse_was_down = mouse_down;
-        mouse_down = false;
         mouse_clicked = false;
         mouse_was_dbl_clicked = mouse_dbl_clicked;
         mouse_dbl_clicked = false;
@@ -531,10 +530,10 @@ video_get_vsync :: () -> Video_Vsync_Kind {
 
 Video_Vsync_Kind :: enum s16 {
     UNKNOWN  :: -100;
-    HALF     :: 2;
     ADAPTIVE :: -1;
     DISABLED ::  0;
     STANDARD ::  1;
+    HALF     ::  2;
 }
 
 memmove :: inline (destination: *void, source: *void, count: s64) {

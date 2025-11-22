@@ -1545,9 +1545,6 @@ editor_commands :: Editor_Command.[
     .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
 ];
 
-// log_buffer:    *Buffer;
-// logerr_buffer: *Buffer;
-
 BUFFER_PAGE_SIZE :: 4096;
 
 Editor :: struct {
