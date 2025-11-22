@@ -299,7 +299,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         put_line_marks_to_scrollbar :: (pos: s64, colorv4: Vector4) #expand {
             MARK_HEIGHT :: 2;
             
-            row_index := find_row_index(`buffer, pos);
+            row_index := find_row_index(buffer, pos);
             top_pos := fnt_get_line_height() * row_index;
             min_height := 0;
             max_height := fnt_get_line_height() * buffer.row_table.count;
@@ -308,19 +308,21 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
             Simp.immediate_quad(area.x, y, area.x + area.w, y + MARK_HEIGHT, colorv4);
         }
         
-        if mode == .WIDGET && active_widget == Find_Text_Dialog {
-            color := map_color_to_vec4(.TEXT_HIGHLIGHT);
-            color.w = .5; //alpha
-            last_pos := -1;            
-            for pos: find_text_dialog.occurrences {
-                if last_pos == pos continue; // don't draw more than once
-                last_pos = pos;
-                put_line_marks_to_scrollbar(pos, color);
+        if is_active(editor) {
+            if mode == .WIDGET && active_widget == Find_Text_Dialog {
+                color := map_color_to_vec4(.TEXT_HIGHLIGHT);
+                color.w = .5; //alpha
+                last_pos := -1;            
+                for pos: find_text_dialog.occurrences {
+                    if last_pos == pos continue; // don't draw more than once
+                    last_pos = pos;
+                    put_line_marks_to_scrollbar(pos, color);
+                }
             }
-        }
-        
-        {
-            // @Todo: Draw current selection occurrences
+            
+            {
+                // @Todo: Draw current selection occurrences
+            }
         }
 
         {
