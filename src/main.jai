@@ -207,15 +207,6 @@ main :: () {
             }
         }
                 
-        //click_action_cooldown_active = false;
-                /*
-        if click_action_cooldown_active && (frame_start_time_ms - click_action_cooldown_start_time_ms) > 200.0 {
-            click_action_cooldown_active = false;
-        }
-        */
-
-        // log("clicked: % ; dbl_clicked: % ; down: % ; was_down: %\n", mouse_clicked, mouse_dbl_clicked, mouse_down, mouse_was_down);
-
         if mode == .WIDGET {
             set_cursor_icon(.CUR_ARROW);
         }
@@ -223,75 +214,6 @@ main :: () {
         // @Temporary @Cleanup
         if !mouse_down && mouse_grabbed_ui_id {
             mouse_grabbed_ui_id = 0;
-        }
-
-        if mode == .EDITOR {
-            if mouse_scrolled_on_frame != .none {
-                mx, my, ok := get_mouse_pointer_position_right_handed();
-                if ok for *e: editors {
-                    if !e.visible continue;
-                    // @Improve @Todo The rect_for_draw already contains the paddings so it won't if the mouse cursor on the paddings' area.
-                    // Also the rect_for_draw include the editor footer rect.
-                    if is_point_in_rect(e.rect_for_draw, Vector2.{xx mx, xx my}) {
-                        if mouse_scrolled_on_frame == .up {
-                            if vk_ctrl_down {
-                                font_size += 1;
-                                init_fonts();
-                            } else if vk_shift_down {
-                                scroll_left(e);
-                            } else {
-                                scroll_up(e);
-                            }
-                        } else if mouse_scrolled_on_frame == .down {
-                            if vk_ctrl_down {
-                                font_size -= 1;
-                                init_fonts();
-                            } else if vk_shift_down {
-                                scroll_right(e);
-                            } else {
-                                scroll_down(e);  
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            // @Cleanup It's confusing that we have to check whether the mouse pointer is inside the rect using right-handed coordinates,
-            // but later, when determining the desired row index, we need to perform a similar check using left-handed coordinates.
-            if !mouse_grabbed_ui_id {
-                mx, my, ok := get_mouse_pointer_position(right_handed=true);
-                if ok for *e: editors {
-                    if !e.visible continue;
-                    
-                    editor_rect := e.rect_for_draw;
-                    if is_active(e) {
-                        // If the text is overflowed, we don’t want to move the cursor when clicking the scrollbar.
-                        // Also, if it's not the current editor, we should be able to click on its scrollbar to activate that editor.
-                        // But if we click from the active editor to another editor’s scrollbar, it would set the cursor position
-                        // to the overflowed text.
-                        // This fix only applies correctly when clicking the scrollbar of the active editor. @Todo @Bug @Cleanup
-                        
-                        scrollbar_width := r_font.em_width * 1.5;
-                        scrollbar_area, editor_rect= := cut_right(editor_rect, scrollbar_width);
-                    }
-                    
-                    if is_point_in_rect(editor_rect, Vector2.{xx mx, xx my}) {
-                        set_cursor_icon(.CUR_BEAM);
-                        
-                        if mouse_dbl_clicked {
-                            SelectSimilarCharacters();
-                        } else if mouse_down {
-                            active_editor = e;
-                            mx, my, ok := get_mouse_pointer_position(right_handed=false);
-                            pos := byte_pos_from_mouse_xy(e, e.active_buffer, mx, my);
-                            if pos != -1 {
-                                set_cursor_pos(e.active_buffer, *e.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         // @Cleanup @Temporary
@@ -647,6 +569,25 @@ OS_Cursor_Kind :: enum u8 {
     CUR_ARROW :: 0;
     CUR_BEAM  :: 1;
     CUR_WAIT  :: 2;
+}
+
+Ui_Id :: enum s64 {
+    none :: -100;
+    editor_left :: -99;
+    editor_right :: -98;
+}
+
+UI: struct {
+    hot: Ui_Id = .none;
+    hot_last_frame: Ui_Id = .none;
+};
+
+maybe_set_hot :: (id: Ui_Id, rect: Rect) -> bool {
+    mx, my := get_mouse_pointer_position(right_handed=true);
+    if !is_point_in_rect(rect, Vector2.{xx mx, xx my}) return false;
+    
+    UI.hot = id;
+    return true;
 }
 
 ////////////////////////////////

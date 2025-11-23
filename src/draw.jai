@@ -9,6 +9,9 @@ draw_frame :: () {
     x, y, width, height := get_dimensions(window, true);
 
     rect := make_rect(0.0, 0.0, xx width, xx height);
+    
+    maybe_set_hot(.none, rect);
+    set_cursor_icon(.CUR_ARROW);
 
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
@@ -28,8 +31,8 @@ draw_frame :: () {
         right = cut_right(right, floor(right.w*v));
         sepa_rect := right;
 
-        draw_editor(*editors[0], left);
-        draw_editor(*editors[1], right);
+        draw_editor(*editors[0], left, .editor_left);
+        draw_editor(*editors[1], right, .editor_right);
 
         Simp.set_shader_for_color(true);
         c := map_color_to_vec4(.LAYOUT_SEPARATOR);
@@ -51,9 +54,9 @@ draw_frame :: () {
         
         right, left := cut_right(rect, rect.w/2*v);
         
-        draw_editor(*editors[0], left);
+        draw_editor(*editors[0], left, .editor_left);
         if right.w != 0 {
-            draw_editor(*editors[1], right);
+            draw_editor(*editors[1], right, .editor_right);
         }
     }
     
@@ -61,6 +64,8 @@ draw_frame :: () {
     if mode == .WIDGET {
         draw_widgets();
     }
+    
+    UI.hot_last_frame = UI.hot;
     
     if show_font_debug_info {
         draw_font_metrics_debug(active_editor);
@@ -174,7 +179,7 @@ swap_buffers :: () {
     }
 }
 
-draw_editor :: (using editor: *Editor, rect: Rect) {
+draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     buffer := editor.active_buffer;
 
     if !is_active(editor) context.color_intensity *= 0.95;
@@ -183,49 +188,56 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
     scrollbar_width := r_font.em_width * 1.5;
-    //scrollbar_area, r= := cut_right(r, scrollbar_width);
     scrollbar_area := cut_right(r, scrollbar_width);
-
-    // Draw line numbers
-    if buffers.count && show_line_numbers {
-        //MeasureScope("Draw line numbers");
     
+    line_numbers_rect := r;
+    if show_line_numbers && buffers.count {
         t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
-        line_numbers_rect, r= := cut_left(r, w);
-        rect := line_numbers_rect;
-        
-        Simp.set_shader_for_color(true);
-        Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
-        Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR)); // right border
-        
-        //Simp.set_shader_for_text();
-        
-        line_height := fnt_get_line_height();
-        start_row := first_visible_row_index(editor, buffer);
-        end_row   := last_visible_row_index(editor, buffer);
-        
-        color := map_color_to_vec4(.TEXT_DIMMED);
-        
-        array_reset_keeping_memory(*buffer.quads_for_code_run);
-        for ri: start_row..end_row {
-            t := tprint("%", formatInt(ri+1, digits_per_comma=0));
-            
-            baseline := (rect.h + rect.y) - (line_height*(ri+1)) + top_offset;
-            width := Simp.prepare_text(r_font_sm, t);
-            left := rect.x + (rect.w/2 - width/2);
-            
-            Simp.generate_quads_for_prepared_text(r_font_sm, xx left, xx baseline, 0);
-            for quad: r_font_sm.current_quads {
-                array_add(*buffer.quads_for_code_run, .{quad, color});
-            }
-        }
-        
-        draw_code_run(buffer);
+        line_numbers_rect, r = cut_left(r, w);
     }
     
     _, r= := cut_left(r, LEFT_PADDING);
     editor.rect_for_draw = r;
+    
+    maybe_set_hot(ui_id, editor.rect_for_draw);
+    
+    if UI.hot_last_frame == ui_id && !mouse_grabbed_ui_id {
+        set_cursor_icon(.CUR_BEAM);
+        
+        mx, my := get_mouse_pointer_position(right_handed=true);
+        if !is_point_in_rect(scrollbar_area, Vector2.{xx mx, xx my}) { // @Hacky
+            if mouse_down {
+                active_editor = editor;
+                
+                mx, my, ok := get_mouse_pointer_position(right_handed=false);
+                pos := byte_pos_from_mouse_xy(editor, editor.active_buffer, mx, my);
+                if pos != -1 {
+                    set_cursor_pos(editor.active_buffer, *editor.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
+                }
+            } else if mouse_dbl_clicked {
+                SelectSimilarCharacters();
+            } else if mouse_scrolled_on_frame == .up {
+                if vk_ctrl_down {
+                    font_size += 1;
+                    init_fonts();
+                } else if vk_shift_down {
+                    scroll_left(editor);
+                } else {
+                    scroll_up(editor);
+                }
+            } else if mouse_scrolled_on_frame == .down {
+                if vk_ctrl_down {
+                    font_size -= 1;
+                    init_fonts();
+                } else if vk_shift_down {
+                    scroll_right(editor);
+                } else {
+                    scroll_down(editor);
+                }
+            }
+        }
+    }
     
     if editor.y_scroll_anim.active {
         using editor.y_scroll_anim;
@@ -261,6 +273,39 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     if editor.cursor.moved {
         editor.cursor.moved = false;
         scroll_to_cursor(editor, editor.cursor, animation_duration=0.08);
+    }
+
+    // Draw line numbers
+    if show_line_numbers && buffers.count {
+        rect := line_numbers_rect;
+        
+        Simp.set_shader_for_color(true);
+        Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
+        Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR)); // right border
+        
+        //Simp.set_shader_for_text();
+        
+        line_height := fnt_get_line_height();
+        start_row := first_visible_row_index(editor, buffer);
+        end_row   := last_visible_row_index(editor, buffer);
+        
+        color := map_color_to_vec4(.TEXT_DIMMED);
+        
+        array_reset_keeping_memory(*buffer.quads_for_code_run);
+        for ri: start_row..end_row {
+            t := tprint("%", formatInt(ri+1, digits_per_comma=0));
+            
+            baseline := (rect.h + rect.y) - (line_height*(ri+1)) + top_offset;
+            width := Simp.prepare_text(r_font_sm, t);
+            left := rect.x + (rect.w/2 - width/2);
+            
+            Simp.generate_quads_for_prepared_text(r_font_sm, xx left, xx baseline, 0);
+            for quad: r_font_sm.current_quads {
+                array_add(*buffer.quads_for_code_run, .{quad, color});
+            }
+        }
+        
+        draw_code_run(buffer);
     }
 
     draw_selection(editor, buffer, r);
@@ -303,7 +348,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         
         opacity := 0.25;
         
-        if is_active(editor) && (mouse_grabbed_ui_id == SCROLLBAR_UI_ID || is_point_in_rect(area, mouse_point)) {
+        if UI.hot == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == SCROLLBAR_UI_ID) {
             set_cursor_icon(.CUR_ARROW);
             opacity = .8;
             
