@@ -492,6 +492,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                     ifx !b.exists_on_disk then " <new>" else "",
                     ifx is_unsaved(b)     then "*"      else "",
                 );
+                
+                info_text = tprint("% | %", info_text, b.disk_state);
             }
 
             width = Simp.prepare_text(r_font_sm, info_text);

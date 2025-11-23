@@ -855,7 +855,8 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
     ext := path_extension(buffer.filepath);
     buffer.language  = language_from_file_extension(ext);
     buffer.hash      = hash_from_buffer(buffer);
-    buffer.disk_hash = buffer.hash; 
+    buffer.disk_hash = buffer.hash;
+    buffer.disk_state = ifx buffer.exists_on_disk then .exists else .not_exists;
 
     return buffer;
 }
@@ -876,6 +877,7 @@ buffer_reload_from_disk :: (editor: *Editor, using buffer: *Buffer) -> bool {
     }
     
     disk_hash = hash_from_buffer(buffer);
+    disk_state = .exists;
     
     commit_buffer_changes(buffer, force=true);
     return true;
@@ -900,6 +902,7 @@ buffer_write_to_disk :: (using buffer: *Buffer) -> bool {
     exists_on_disk = true;
     last_writetime = file_modtime_and_size(filepath);
     disk_hash = hash_from_buffer(buffer);
+    disk_state = .exists;
 
     return true;
 }
@@ -1588,13 +1591,15 @@ Buffer :: struct {
     hash:      u64;
     disk_hash: u64;
 
+    should_reload_from_disk := false; // @Cleanup Remove
+    exists_on_disk := false;          // @Cleanup Remove
+    disk_state: enum u8 {not_exists; exists; modified; removed;} = .not_exists;
+
     initialized := false;
     dirty := false;
     was_dirty_on_frame := false;
     tokenization_requested := false;
     readonly := false;
-    should_reload_from_disk := false;
-    exists_on_disk := false;
 
     colors: [] Color;
     row_table: [..] Row_Info;

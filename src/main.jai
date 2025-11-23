@@ -60,8 +60,7 @@ main :: () {
     init_editor_buffers(files_from_cmdline);
     init_fonts();
     init_cursors();
-
-    last_second_time: Apollo_Time;
+    init_file_watcher();
 
     if executable_args.novsync {
         video_set_vsync(.DISABLED);
@@ -77,29 +76,36 @@ main :: () {
         if !redraw_requested && wait_os_event_before_redraw {
             wait_for_event();
         }
-            
-        current_time = current_time_monotonic();
-        //frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
-        frame_dt = to_float64_seconds(current_time - frame_time);
-        frame_time = current_time_monotonic();
-        frame_time64 = to_float64_seconds(frame_time);
-        frame_start_time_ms = ms_since_init();
-        frame += 1;
-
-        second_elapsed = false;
-        if to_float64_seconds(frame_time - last_second_time) > 1 {
-            last_second_time = current_time;
-            second_elapsed = true;
-        }
         
-        push_measurement(*frametimes, frame_dt * 1000);
+        {
+            current_time = current_time_monotonic();
+            //frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
+            frame_dt = to_float64_seconds(current_time - frame_time);
+            frame_time = current_time_monotonic();
+            frame_time64 = to_float64_seconds(frame_time);
+            frame_start_time_ms = ms_since_init();
+            frame += 1;
+    
+            second_elapsed = false;
+            if to_float64_seconds(frame_time - last_second_time) > 1 {
+                last_second_time = current_time;
+                second_elapsed = true;
+            }
+            
+            push_measurement(*frametimes, frame_dt * 1000);
+        }
         
         cursor_icon_was_set_this_frame = false;
         redraw_requested = false;
 
+        changed, needs_wait, wait_seconds := process_changes(*file_watcher);
+        if needs_wait {
+            redraw_requested = true;
+        }
+        
         update_window_events();
         clear_widget_events();
-
+        
         for get_window_resizes() {
             Simp.update_window(it.window);
             if it.window == window {
@@ -248,24 +254,36 @@ main :: () {
             editor.cursor.x_cache = -1; // Because the prepare text is very slow
             get_cursor_x(editor.active_buffer, *editor.cursor);     // @temporary
 
-/*            b := editor.active_buffer;
-            if b.should_reload_from_disk {
-                if !b.unsaved {
-                    buffer_reload_from_disk(editor, b);
-                } else {
-                    answer := dialog_confirm(
-                        "This file has been modified by another program. Do you want to reload it?", 
-                        b.filepath,
-                        .YESNO | .ICONASTERISK
-                    );
-
-                    if answer == {
-                        case .YES; buffer_reload_from_disk(editor, b);
-                        case .NO;  b.should_reload_from_disk = false;
+            #if OS == .WINDOWS {
+                for b: buffers {
+                    if editor.active_buffer == b {
+                        if b.disk_state == .modified {
+                            answer := dialog_confirm(
+                                "This file has been modified by another program. Do you want to reload it?", 
+                                b.filepath,
+                                .YESNO | .ICONASTERISK
+                            );
+                            
+                            if answer == {
+                                case .YES; buffer_reload_from_disk(editor, b);
+                                case .NO;  b.disk_state = .exists;
+                            }
+                        } else if b.disk_state == .removed {
+                            answer := dialog_confirm(
+                                "This file has been removed by another program. Do you want to keep it?", 
+                                b.filepath,
+                                .YESNO | .ICONASTERISK
+                            );
+                            
+                            if answer == {
+                                case .YES; b.disk_state = .not_exists;
+                                case .NO;  close_buffer(b);
+                            }
+                        }
                     }
                 }
             }
-*/
+
         }
 
         draw_frame();
@@ -441,6 +459,16 @@ wait_for_event :: () {
         MeowHash(MeowDefaultSeed, xx bytes.count, bytes.data, hash);
         return MeowU64From(hash, 0);
     }
+    
+    meow_hash_from_file :: (filepath: string) -> bool, u64 {
+        if !file_exists(filepath) return false, 0;
+        
+        data, ok := File.read_entire_file(filepath);
+        if !ok return false, 0;
+        defer free(data);
+        
+        return true, meow_hash(cast([]u8)data);
+    }
 }
 
 video_set_vsync :: (kind: Video_Vsync_Kind) {
@@ -508,6 +536,7 @@ current_time: Apollo_Time;
 frametimes: MultiSample_Measurement;
 
 second_elapsed := false;
+last_second_time: Apollo_Time;
 frame_start_time_ms: float64;
 last_simulation_time : float64;
 last_showed_sim_time : float64;
@@ -516,8 +545,6 @@ last_rendering_time  : float64;
 executable_dir: string;
 config_dir:     string;
 working_dir:    string;
-
-file_watcher: File_Watcher(string);
 
 //footer_height: float;
 line_height := 0.0;
