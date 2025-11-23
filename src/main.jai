@@ -259,7 +259,7 @@ main :: () {
                     if editor.active_buffer == b {
                         if b.disk_state == .modified {
                             answer := dialog_confirm(
-                                "This file has been modified by another program. Do you want to reload it?", 
+                                tprint("This file has been modified by another program. Do you want to reload it? '%'", b.filepath),
                                 b.filepath,
                                 .YESNO | .ICONASTERISK
                             );
@@ -270,7 +270,7 @@ main :: () {
                             }
                         } else if b.disk_state == .removed {
                             answer := dialog_confirm(
-                                "This file has been removed by another program. Do you want to keep it?", 
+                                tprint("This file has been removed by another program. Do you want to keep it? '%'", b.filepath), 
                                 b.filepath,
                                 .YESNO | .ICONASTERISK
                             );
