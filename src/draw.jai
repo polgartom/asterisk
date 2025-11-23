@@ -205,7 +205,11 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
     if UI.hot_last_frame == ui_id && !mouse_grabbed_ui_id {
         set_cursor_icon(.CUR_BEAM);
-        
+            
+        if mouse_clicked {
+            close_current_widget();
+        }
+            
         mx, my := get_mouse_pointer_position(right_handed=true);
         if !is_point_in_rect(scrollbar_area, Vector2.{xx mx, xx my}) { // @Hacky
             if mouse_down {
@@ -976,6 +980,12 @@ draw_find_text_dialog :: () {
             theme.border_color = #run hex_to_vec4(0x20_51_22_ff);
         } else if input.text {
             theme.border_color = #run hex_to_vec4(0xa9_22_22_a0);
+        }
+
+        find_text_dialog_ui_id :: cast(Ui_Id)#location();
+        maybe_set_hot(find_text_dialog_ui_id, r);
+        if UI.hot_last_frame == find_text_dialog_ui_id {
+            set_cursor_icon(.CUR_BEAM);
         }
 
         update_text_input(input, r, font, placeholder="Find text", theme);

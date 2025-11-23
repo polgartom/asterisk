@@ -21,7 +21,6 @@ create_text_input :: (ui_id: u64) -> *Text_Input {
 }
 
 update_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") {
-    
     typed = false;
 
     for event: events_to_handle_this_frame_for_widgets {
