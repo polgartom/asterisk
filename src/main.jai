@@ -5,9 +5,6 @@
 //     }
 // }
 
-frametimes: [60] float64;
-frametimes_i := 0;
-
 main :: () {
     #if OS == .WINDOWS {
         Windows :: #import "Windows";
@@ -32,7 +29,7 @@ main :: () {
         log_error("Invalid args given!\n");
         exit(1); // @Todo
     }
-
+    
     if executable_args.workdir && !set_workdir(executable_args.workdir) {
         log_error("Failed to set the '%' as working directory!\n", executable_args.workdir);
     }
@@ -66,16 +63,26 @@ main :: () {
 
     last_second_time: Apollo_Time;
 
+    if executable_args.novsync {
+        video_set_vsync(.DISABLED);
+    }
+    if executable_args.nowait {
+        wait_os_event_before_redraw = false;
+    }
+    if executable_args.showprofiler {
+        show_profiler = true;
+    }
+
     while !should_quit {
         if !redraw_requested && wait_os_event_before_redraw {
             wait_for_event();
         }
             
         current_time = current_time_monotonic();
-        frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
+        //frame_dt = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
+        frame_dt = to_float64_seconds(current_time - frame_time);
         frame_time = current_time_monotonic();
         frame_time64 = to_float64_seconds(frame_time);
-        
         frame_start_time_ms = ms_since_init();
         frame += 1;
 
@@ -84,6 +91,8 @@ main :: () {
             last_second_time = current_time;
             second_elapsed = true;
         }
+        
+        push_measurement(*frametimes, frame_dt * 1000);
         
         cursor_icon_was_set_this_frame = false;
         redraw_requested = false;
@@ -549,7 +558,12 @@ c_memmove :: (dest: *void, src: *void, count: u64) -> *void     #foreign crt "me
 //////////////////////////////
 // Globals
 
-executable_args: struct { workdir: string; };
+executable_args: struct { 
+    workdir: string;
+    novsync: bool;
+    nowait: bool;
+    showprofiler: bool;
+};
 
 window: Window_Type;
 window_width  := 1200;
@@ -569,6 +583,7 @@ frame_time: Apollo_Time;
 frame_time64: float64;
 frame_dt: float64;
 current_time: Apollo_Time;
+frametimes: MultiSample_Measurement;
 
 second_elapsed := false;
 frame_start_time_ms: float64;

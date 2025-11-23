@@ -2,7 +2,9 @@
 
 tokenize :: (buffer: *Buffer, $language: Language) {
     time := seconds_since_init();
-    defer { buffer.tokenization_time = (seconds_since_init() - time) * 1000; }
+    defer { 
+        buffer.tokenization_time = (seconds_since_init() - time) * 1000;        
+    }
     // defer ll("%ms\n", buffer.tokenization_time);
     
     if (!buffer.count) return;
@@ -35,6 +37,7 @@ tokenize :: (buffer: *Buffer, $language: Language) {
             }
             
             inline parse_numeric_value(buffer, *at);
+            
         } else if at[0] == #char "/" {
             if !(at+1<end) break;
             if at[1] == #char "/" {
@@ -163,14 +166,15 @@ parse_ident :: (buffer: *Buffer, _at: **u8) -> bool {
     while at < buf_end {
         defer eat();
 
-        if is_multibyte_char(at) { // Identifiers cannot be multibyte
-            while at < buf_end {
-                if !is_multibyte_char(at) && is_separator(at.*, false) break;
-                eat();
-            }
-            
-            return false;
-        }
+        // We check this below is_alphanum()
+        // if is_multibyte_char(at) { // Identifiers cannot be multibyte
+            // while at < buf_end {
+                // if !is_multibyte_char(at) && is_separator(at.*, false) break;
+                // eat();
+            // }
+//             
+            // return false;
+        // }
         
         if !is_alphanum(at[0]) {
             c1 = at;

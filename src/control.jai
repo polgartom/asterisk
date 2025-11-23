@@ -1412,6 +1412,7 @@ ToggleInlineComment :: () {
             }
             
             remove_text_from_right(e, b, at, bytes_to_del, history=true);
+            commit_buffer_changes(b); // @Speed!!!
             
             if multiline_mode {
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
@@ -1420,9 +1421,7 @@ ToggleInlineComment :: () {
                 
             } else if e.cursor.pos >= at {
                 rearrange_cursor(b, *e.cursor, -bytes_to_del, remember_column=true);
-            }
-            
-            commit_buffer_changes(b); // @Speed!!!
+            }            
         }
         
         i += 1;

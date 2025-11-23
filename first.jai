@@ -1,22 +1,24 @@
+Args :: struct {
+    profile: enum u8 {no; yes; full;} = .no;
+}
+
 build :: () {    
     format := *context.print_style.default_format_struct;
     format.use_newlines_if_long_form = true;
     format.draw_type_name = true;
     format.indentation_width = 2;
-
-    //~
-
-    release_build := false;
-
-    window_name := "Asterisk";
     
     // User-processed options will give us entries for either 'files' (files to load)
     // or 'run_strings' (strings to add to the build with #run in front.)
     files:         [..] string;
     add_strings:   [..] string;
     modules_paths: [..] string;
-    
     plugins_to_create: [..] Plugin_To_Create;
+
+    window_name := "Asterisk";
+    release_build := false;
+    do_profile: enum u8 {no; yes; full;} = .yes;
+    do_check := true;
 
     intercept_flags: Intercept_Flags;
 
@@ -31,19 +33,21 @@ build :: () {
     options.array_bounds_check = .ON;
     options.null_pointer_check = .ON;
 
-    do_profile: enum u8 {no; partial; full;} = .partial;
-
     args := get_build_options(-1).compile_time_command_line;
-    for arg: args {
-        if arg == {
-            case "release"; {
-                release_build = true; 
-                do_profile = .no;
-            }
-            case "full_profile"; do_profile = .full;
-        }    
+    has_argument :: (arg: string) -> bool #expand {
+        found := array_find(args, arg);
+        return found;
     }
-
+    
+    if has_argument("release") {
+        release_build = true; 
+        do_profile = .no;
+    }
+    if has_argument("no_profile")   then do_profile = .no;
+    if has_argument("profile")      then do_profile = .yes;
+    if has_argument("full_profile") then do_profile = .full;
+    if has_argument("no_check")     then do_check = true;
+    
     if release_build {
         options.backend = .LLVM;
         options.llvm_options.enable_split_modules = false;
@@ -77,6 +81,11 @@ build :: () {
         p := array_add(*plugins_to_create);
         p.name = "Iprof";
         if do_profile == .full then array_add(*p.options, "-modules");
+    }
+    
+    if do_check {
+        p := array_add(*plugins_to_create);
+        p.name = "Check";
     }
     
     success := init_plugins(plugins_to_create, *plugins, w);
@@ -164,3 +173,4 @@ String :: #import "String";
 #import "Compiler";
 #import "Basic";
 #import "Metaprogram_Plugins";
+#import "Command_Line";

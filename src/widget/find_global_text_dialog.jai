@@ -282,7 +282,7 @@ kill_find_process :: () -> bool {
 
     success := kill_process(process);
     if !success {
-        log_error("Failed to KILL the process: %\n");
+        log_error("Failed to KILL the process: %\n", process);
         return false;
     }
 

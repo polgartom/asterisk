@@ -1050,15 +1050,8 @@ draw_global_debug_info :: (r: Rect) {
     e,b := get_active_editor_and_buffer();
 
     Simp.immediate_begin();
-    
-    dt := ms_since_init() - frame_start_time_ms;
-    frametimes[frametimes_i % frametimes.count] = dt;
-    frametimes_i += 1;
-    avg: float64 = 0.0;
-    for t: frametimes { avg += t; }
-    avg /= frametimes.count;
-    
-    PrintDev("[line-ends-scan] % lines | % ms\n", b.row_table.count, b.row_table_recalc_time);
+        
+    PrintDev("[line-ends-scan] % lines | %ms\n", b.row_table.count, b.row_table_recalc_time);
     PrintDev("[syntax-highlighting] %ms\n", b.tokenization_time);
     //PrintDev("[code-draw-time (%)] avg %ms\n", buffer_code_draw_method, get_avg_from_measurement(*code_render_time));
     PrintDev("[viewport] x:% y:% | w:% h:%\n", e.left_offset, e.top_offset, e.rect_for_draw.w, e.rect_for_draw.h);
@@ -1066,13 +1059,13 @@ draw_global_debug_info :: (r: Rect) {
     PrintDev("[mouse] x:% y:%\n", mx, my);
     PrintDev("[os] wait_os_event: %\n", wait_os_event_before_redraw);
     PrintDev("[video/vsync]: %\n", video_get_vsync());
-    PrintDev("[frame] % | avg %ms\n", frame, avg);
+    PrintDev("[frame] % | avg %ms\n", frame, get_avg_from_measurement(frametimes));
 
     PADDING :: 10;
     font := r_font_tiny;
     line_height := fnt_get_line_height();
     left := r.x + r.w - 30;
-    baseline := window_height - line_height;
+    baseline := r.y + line_height;
     max_width := 0;
     height := 0.0;
     
@@ -1085,19 +1078,19 @@ draw_global_debug_info :: (r: Rect) {
     
     {
         Simp.set_shader_for_color(true);
-        rect := make_rect(left - max_width, baseline - height, xx max_width, height);
+        rect := make_rect(left - max_width, baseline, xx max_width, height);
         rect = expand(rect, PADDING);
         rect.x -= PADDING;
         draw_quad(rect, .{0, 0, 0, .7});
     }
 
     Simp.set_shader_for_text();
-    for #v2 < debug_infos {
+    for debug_infos {
         s := trim(it, "\n");
 
         w := Simp.prepare_text(font, s);
+        baseline += line_height;
         Simp.draw_prepared_text(font, xx (left - w - PADDING), xx (baseline - PADDING), .{.4, .7, .8, 1});
-        baseline -= line_height;
     }
     
     Simp.immediate_flush();
