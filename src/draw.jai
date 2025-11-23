@@ -10,7 +10,8 @@ draw_frame :: () {
 
     rect := make_rect(0.0, 0.0, xx width, xx height);
     
-    maybe_set_hot(.none, rect);
+    // maybe_set_hot(.none, make_rect(0.0, 0.0, xx window_width, xx window_height));
+    UI.hot = .none;
     set_cursor_icon(.CUR_ARROW);
 
     if editors[0].visible && editors[1].visible {
