@@ -7,6 +7,7 @@ build :: () {
     //~
 
     release_build := false;
+
     window_name := "Asterisk";
     
     // User-processed options will give us entries for either 'files' (files to load)
@@ -14,6 +15,10 @@ build :: () {
     files:         [..] string;
     add_strings:   [..] string;
     modules_paths: [..] string;
+    
+    plugins_to_create: [..] Plugin_To_Create;
+
+    intercept_flags: Intercept_Flags;
 
     set_build_options_dc(.{do_output = false});
 
@@ -26,12 +31,16 @@ build :: () {
     options.array_bounds_check = .ON;
     options.null_pointer_check = .ON;
 
-    metaporgram_args := get_build_options(-1).compile_time_command_line;
-    for arg: metaporgram_args {
+    do_profile: enum u8 {no; partial; full;} = .partial;
+
+    args := get_build_options(-1).compile_time_command_line;
+    for arg: args {
         if arg == {
             case "release"; {
                 release_build = true; 
+                do_profile = .no;
             }
+            case "full_profile"; do_profile = .full;
         }    
     }
 
@@ -64,15 +73,33 @@ build :: () {
         window_name = tprint("% | compiled: % UTC", window_name, s);
     }
 
+    if do_profile != .no {
+        p := array_add(*plugins_to_create);
+        p.name = "Iprof";
+        if do_profile == .full then array_add(*p.options, "-modules");
+    }
+    
+    success := init_plugins(plugins_to_create, *plugins, w);
+    if !success {
+        log_error("A plugin init() failed. Exiting.\n");
+        exit(0);
+    }
+
+    for plugins    if it.before_intercept it.before_intercept(it, *intercept_flags);
+
     set_build_options(options, w);
     
     compiler_begin_intercept(w);
-
+    
+    for plugins    if it.add_source it.add_source(it);
+    
     build_constants := tprint(#string STRING
             DEBUG           :: %;
+            PROFILER        :: %;
             WINDOW_NAME     :: "%";
         STRING,
-            ifx release_build then "false" else "true",
+            ifx release_build     then "false" else "true",
+            ifx do_profile != .no then "true"  else "false",
             window_name,
     );
     

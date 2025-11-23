@@ -64,13 +64,6 @@ main :: () {
     init_fonts();
     init_cursors();
 
-    {
-        // kacsa
-        // init(
-            // *file_watcher,
-        // );
-    }
-
     last_second_time: Apollo_Time;
 
     while !should_quit {
@@ -645,6 +638,7 @@ OS_Cursor_Kind :: enum u8 {
 // Debug
 
 show_debug_info := DEBUG;
+show_profiler := false;
 show_font_debug_info := false;
 debug_infos: [..] string;
 

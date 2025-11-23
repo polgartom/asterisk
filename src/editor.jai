@@ -981,6 +981,17 @@ is_active :: inline (using e: *Editor, using b: *Buffer) -> bool {
     return e.active_buffer == b;
 }
 
+get_not_active_editor :: () -> *Editor {
+    for *e: editors {
+        if !e.visible {
+            return active_editor; // Fallback
+        }
+    }
+    
+    if *editors[0] != active_editor return *editors[0];
+    return *editors[1];
+}
+
 get_buffer_index :: (buffer: *Buffer) -> s64 {
     for buffers {
         if buffer == it {
@@ -1539,10 +1550,11 @@ editor_commands :: Editor_Command.[
     .{"[Video] Standard vsync",             () { video_set_vsync(.STANDARD); }},
     .{"[Video] No Vsync",                   () { video_set_vsync(.DISABLED); }},
     .{"[Video] Half vsync",                 () { video_set_vsync(.HALF    ); }},
-    .{"[Video] Adaptive vsync",             () { video_set_vsync(.ADAPTIVE); }},
+    .{"[Video] Adaptive vsync (NVIDIA)",    () { video_set_vsync(.ADAPTIVE); }},
     
     .{"[DEV] Debug infos",                  () { show_debug_info = !show_debug_info; }},
     .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
+    .{"[DEV] Show Profiler",                () { show_profiler = !show_profiler; }},
 ];
 
 BUFFER_PAGE_SIZE :: 4096;

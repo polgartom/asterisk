@@ -63,7 +63,7 @@ draw_frame :: () {
     }
     
     if show_font_debug_info {
-        draw_font_metrics_debug(active_editor);        
+        draw_font_metrics_debug(active_editor);
     }
         
     if show_debug_info {
@@ -91,11 +91,71 @@ draw_frame :: () {
             //log("> % ; %\n", ls, line_gap);
         }
 */
-        draw_global_debug_info(active_editor.rect_for_draw);
+        draw_global_debug_info(get_not_active_editor().rect_for_draw);
         // draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
     
+        
+    #if PROFILER && #exists(__Iprof) {
+        if show_profiler {
+            __Iprof.update(true);
+            Iprof_Config.font_character_height = xx (r_font_tiny.character_height*2);
+            Iprof_Config.line_spacing = xx (r_font_tiny.default_line_spacing);
+            mx, my, ok := get_mouse_pointer_position(right_handed=false);
+            __Iprof.set_cursor_screen_coordinates(xx mx, xx my);
+            
+            r := get_not_active_editor().rect_for_draw;
+            
+            height :: 800;
+            rect := make_rect(
+                xx (r.x + r.w  - 580),
+                xx (r.h + r.y - 150 - height),
+                xx (550),
+                xx (height)
+            );
+            
+            __Iprof.draw(
+                rect.x,
+                rect.y,
+                rect.w,
+                rect.h,
+                *Iprof_Config
+            );
+            
+            // @Todo:
+            // __Iprof.draw_graph(
+                // rect.x,
+                // rect.y - 50,
+                // rect.w,
+                // 100,
+                // *Iprof_Config
+            // );
+        }
+    }
+    
     swap_buffers();
+}
+
+#if PROFILER && #exists(__Iprof) {
+    Iprof_Config := __Iprof.Config.{
+        line_spacing = 0,
+        font_character_height = 0,
+        
+        selected_bar_whiten_amount = 0.15,
+    
+        draw_text = (x: float, y: float, str: string, color: Vector4) {
+            draw_text(xx x, xx (window_height - y + r_font_tiny.y_offset_for_centering), str, r_font_tiny, color);
+        },
+        text_width = (s: string) -> float {
+            return xx measure_text_width(r_font_tiny, s);
+        },
+        draw_rectangle = (x0: float, y0: float, x1: float, y1: float, color: Vector4) {
+            Simp.immediate_quad(x0, xx (window_height-y0), x1, xx (window_height-y1), color);
+        },
+        // draw_line = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Vector4) {
+    
+        // }
+    };
 }
 
 swap_buffers :: () {
@@ -1498,4 +1558,3 @@ set_scissor :: (r: Rect) {
 
 
 scissor_stack: [..] Rect;
-
