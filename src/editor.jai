@@ -1304,10 +1304,13 @@ byte_pos_to_row_col_index :: (buffer: *Buffer, byte_pos: s64) -> s64 {
 byte_pos_from_mouse_xy :: (editor: *Editor, buffer: *Buffer, mx: s64, my: s64) -> s64 {
     if mx < 0 || my < 0 return -1;
 
+    rect := editor.rect_for_draw;
+    my -= xx (window_height - (rect.y + rect.h));
+    my = max(0, my);
+
     approx_row_index := cast(s64)floor((my + editor.top_offset) / fnt_get_line_height());
     if approx_row_index >= buffer.row_table.count return -1;
     
-    rect := editor.rect_for_draw;
     rs := get_row_as_string(buffer, approx_row_index);
     ch := r_font.character_height;
     left := cast(float32)rect.x;

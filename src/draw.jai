@@ -188,6 +188,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
+    tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
+    
     scrollbar_width := r_font.em_width * 1.5;
     scrollbar_area := cut_right(r, scrollbar_width);
     
@@ -279,7 +281,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         editor.cursor.moved = false;
         scroll_to_cursor(editor, editor.cursor, animation_duration=0.08);
     }
-
+    
     // Draw line numbers
     if show_line_numbers && buffers.count {
         rect := line_numbers_rect;
@@ -440,6 +442,72 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             color := map_color_to_vec4(.CURSOR);
             color.w = .8; //alpha
             put_line_marks_to_scrollbar(editor.cursor.pos, color);
+        }
+    }
+
+    {
+        // Draw tabs
+        
+        EDITOR_TABS_UI_ID :: cast(Ui_Id)#location();
+        maybe_set_hot(EDITOR_TABS_UI_ID, tabs_rect);
+                
+        Simp.set_shader_for_color(true);
+        rect := tabs_rect;
+        push_scissor(rect);
+        defer pop_scissor();
+        
+        Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
+        Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + 1, map_color_to_vec4(.LAYOUT_SEPARATOR));
+                
+        rect = shrink_x(rect, xx r_font.em_width);
+        
+        font := r_font_tiny;
+        padding :: 8.0;
+        left := rect.x;
+        baseline := rect.y + default_text_baseline(font, rect.h);
+        workdir := get_workdir();
+        for b: buffers {
+            {
+                path := "Untitled" ;
+                if b.filepath {
+                    path = b.filepath;
+                    if begins_with(path, workdir) {
+                        advance(*path, workdir.count + 1); // +1 for the path separator
+                        assert(path.count > 0);
+                    }
+                }
+                
+                Simp.set_shader_for_text();
+                
+                color := map_color_to_vec4(.TEXT_DIMMED);
+                if b == editor.active_buffer then color = map_color_to_vec4(.CURSOR);
+                
+                width := Simp.prepare_text(font, path);
+                
+                if b != editor.active_buffer && UI.hot_last_frame == EDITOR_TABS_UI_ID {
+                    r := make_rect(left, rect.y, width + padding, rect.h);
+                    if mouse_point_within_rect(r) {
+                        color = map_color_to_vec4(.TEXT_DEFAULT);
+                        if mouse_clicked {
+                            // @Temporary @Bug Temporary fix for the invalid cursor problem, maybe we should defer the change_active_buffer()?
+                            // change_active_buffer(editor, b);
+                            // clamp_cursor(*editor.cursor, b.count);
+                        }
+                    }
+                }
+                
+                Simp.draw_prepared_text(font, xx left, xx baseline, color);
+                
+                left += width + padding;
+            }
+            
+            {
+                Simp.set_shader_for_color(true);
+                color := map_color_to_vec4(.LAYOUT_SEPARATOR);
+                Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), color);
+                left += padding;
+            }
+            
         }
     }
 

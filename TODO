@@ -88,3 +88,23 @@ draw_code                         K:\Programming\asterisk\src\draw.jai:1017
 draw_editor                       K:\Programming\asterisk\src\draw.jai:186
 draw_frame                        K:\Programming\asterisk\src\draw.jai:25
 main                              K:\Programming\asterisk\src\main.jai:295
+
+------------------------------------------------
+
+End of the buffer click results crash!
+
+Adding root folders: K:/Programming/asterisk
+Array bounds check failed. (The attempted index is 21543, but the highest valid index is 21542). Site is K:/Programming/asterisk/./src/control.jai:1260.
+Panic.
+A breakpoint was hit, but no debugger is attached.
+
+Printing the stack trace:
+handle_exception                  C:\jai\modules\Runtime_Support_Crash_Handler.jai:356
+... (skipping OS-internal procedures)
+debug_break                       C:\jai\modules\Runtime_Support.jai:467
+my_panic                          C:\jai\modules\Runtime_Support.jai:368
+__array_bounds_check_fail         C:\jai\modules\Runtime_Support.jai:164
+SelectSimilarCharacters           K:\Programming\asterisk\.\src\control.jai:1260
+draw_editor                       K:\Programming\asterisk\.\src\draw.jai:226
+draw_frame                        K:\Programming\asterisk\.\src\draw.jai:36
+main                              K:\Programming\asterisk\.\src\main.jai:289

@@ -139,6 +139,11 @@ is_point_in_rect :: (r: Rect, p: Vector2) -> bool {
     return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
 }
 
+mouse_point_within_rect :: (rect: Rect) -> bool {
+    mx, my := get_mouse_pointer_position_right_handed();
+    return is_point_in_rect(rect, Vector2.{xx mx, xx my});
+}
+
 intersect :: (a: Rect, b: Rect) -> Rect {
     x := max(a.x, b.x);
     y := max(a.y, b.y);
