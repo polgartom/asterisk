@@ -450,6 +450,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
     {
         // Draw tabs
+        MeasureScope("Draw tabs");
         rect := tabs_rect;
         // rect = shrink_x(rect, rect.w/4);
         
@@ -570,8 +571,9 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 redraw_requested = true;
             } else if mouse_scrolled_on_frame == .down {
                 target := editor.tabs_left_offset;
-                if rect.x - editor.tabs_left_offset + total_width >= r.x + r.w {
-                    target = target + avg_width; // @Incomplete: CLamp the values
+                if rect.x - editor.tabs_left_offset + total_width >= rect.x + rect.w {
+                    //max_val := (rect.x + rect.w) - (rect.x - (editor.tabs_left_offset + avg_width) + total_width);
+                    target = target + avg_width; // @Incomplete: CLamp the values                    
                     anim_x: Anim;
                     anim_x.active = true;
                     anim_x.start  = editor.tabs_left_offset;
@@ -583,6 +585,26 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 }
             }
         }
+        
+        {
+            // Apply some correction, prevent the overflow during left to right scroll
+            // Also, we need to apply correction if window size changes? How VSCode does that? @Incomplete
+            
+            target := *editor.tabs_left_offset;
+            if editor.tabs_anim.active {
+                target = *editor.tabs_anim.target;
+            }
+        
+            a := rect.x - (target.*) + total_width;
+            b := rect.x + rect.w;
+            if a < b {
+                correction := (b) - (a);
+                target.* -= correction;
+            }
+            
+            target.* = max(0.0, target.*);
+        }
+        
     }
 
     {
