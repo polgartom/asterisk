@@ -180,22 +180,24 @@ swap_buffers :: () {
     }
 }
 
-draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
-    buffer := editor.active_buffer;
+USE_TABS :: 1;
 
+draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     if !is_active(editor) context.color_intensity *= 0.95;
     defer reset_color_intensity();
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
-    tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
+    #if USE_TABS {
+        tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
+    }
     
     scrollbar_width := r_font.em_width * 1.5;
     scrollbar_area := cut_right(r, scrollbar_width);
     
     line_numbers_rect := r;
     if show_line_numbers && buffers.count {
-        t := tprint("%", formatInt(buffer.row_table.count, digits_per_comma=0));
+        t := tprint("%", formatInt(editor.active_buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
         line_numbers_rect, r = cut_left(r, w);
     }
@@ -293,12 +295,12 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         //Simp.set_shader_for_text();
         
         line_height := fnt_get_line_height();
-        start_row := first_visible_row_index(editor, buffer);
-        end_row   := last_visible_row_index(editor, buffer);
+        start_row := first_visible_row_index(editor, editor.active_buffer);
+        end_row   := last_visible_row_index(editor, editor.active_buffer);
         
         color := map_color_to_vec4(.TEXT_DIMMED);
         
-        array_reset_keeping_memory(*buffer.quads_for_code_run);
+        array_reset_keeping_memory(*editor.active_buffer.quads_for_code_run);
         for ri: start_row..end_row {
             t := tprint("%", formatInt(ri+1, digits_per_comma=0));
             
@@ -308,18 +310,18 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             
             Simp.generate_quads_for_prepared_text(r_font_sm, xx left, xx baseline, 0);
             for quad: r_font_sm.current_quads {
-                array_add(*buffer.quads_for_code_run, .{quad, color});
+                array_add(*editor.active_buffer.quads_for_code_run, .{quad, color});
             }
         }
         
-        draw_code_run(buffer);
+        draw_code_run(editor.active_buffer);
     }
 
-    draw_selection(editor, buffer, r);
+    draw_selection(editor, editor.active_buffer, r);
 
-    draw_buffer_code(editor, buffer);
+    draw_buffer_code(editor, editor.active_buffer);
 
-    draw_cursor(editor, buffer, r, cursor_shape, cursor_line_indicator);
+    draw_cursor(editor, editor.active_buffer, r, cursor_shape, cursor_line_indicator);
 
     {
         // Draw scrollbar
@@ -331,7 +333,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         
         // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
         y_threshold := fnt_get_line_height() * 6; 
-        total_height := fnt_get_line_height() * buffer.row_table.count + y_threshold;
+        total_height := fnt_get_line_height() * editor.active_buffer.row_table.count + y_threshold;
         
         min_scroll := 0.0;
         max_scroll := total_height - r.h;
@@ -411,10 +413,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         put_line_marks_to_scrollbar :: (pos: s64, colorv4: Vector4) #expand {
             MARK_HEIGHT :: 2;
             
-            row_index := find_row_index(buffer, pos);
+            row_index := find_row_index(editor.active_buffer, pos);
             top_pos := fnt_get_line_height() * row_index;
             min_height := 0;
-            max_height := fnt_get_line_height() * buffer.row_table.count;
+            max_height := fnt_get_line_height() * editor.active_buffer.row_table.count;
             y := area.y + area.h * (max_height - top_pos) / (max_height - min_height) - MARK_HEIGHT;
             
             Simp.immediate_quad(area.x, y, area.x + area.w, y + MARK_HEIGHT, colorv4);
@@ -489,9 +491,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                     if mouse_point_within_rect(r) {
                         color = map_color_to_vec4(.TEXT_DEFAULT);
                         if mouse_clicked {
-                            // @Temporary @Bug Temporary fix for the invalid cursor problem, maybe we should defer the change_active_buffer()?
-                            // change_active_buffer(editor, b);
-                            // clamp_cursor(*editor.cursor, b.count);
+                            change_active_buffer(editor, b);
                         }
                     }
                 }
@@ -515,8 +515,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         // Draw footer
         //MeasureScope("Draw footer");
 
-        //push_scissor(footer_r);
-        //defer pop_scissor();
+        push_scissor(footer_r);
+        defer pop_scissor();
 
         footer := footer_r;
         Simp.set_shader_for_color(true);
@@ -541,7 +541,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
         {
             // Draw buffer's file info
-            b := buffer;
+            b := editor.active_buffer;
             info_text := b.name;
             if !b.readonly {
                 path := "Untitled";
@@ -570,12 +570,12 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             left += width;
         }
 
-        assert(editor.cursor.pos <= buffer.count, "buffer: % ; cursor: %\n", buffer.*, editor.cursor);
+        assert(editor.cursor.pos <= editor.active_buffer.count, "buffer: % ; cursor: %\n", editor.active_buffer.count, editor.cursor.pos);
 
-        row := find_row_index(buffer, editor.cursor.pos) + 1;
-        col := byte_pos_to_row_col_index(buffer, editor.cursor.pos) + 1;
-        total_row_percent := ceil((row / cast(float32)buffer.row_table.count) * 100.0);
-        text := tprint("%\% Ln % Col % Byte %  %", total_row_percent, row, col, editor.cursor.pos, language_kind_to_string(buffer.language));
+        row := find_row_index(editor.active_buffer, editor.cursor.pos) + 1;
+        col := byte_pos_to_row_col_index(editor.active_buffer, editor.cursor.pos) + 1;
+        total_row_percent := ceil((row / cast(float32)editor.active_buffer.row_table.count) * 100.0);
+        text := tprint("%\% Ln % Col % Byte %  %", total_row_percent, row, col, editor.cursor.pos, language_kind_to_string(editor.active_buffer.language));
         
         width = Simp.prepare_text(r_font_sm, text);
         x := cast(s64, footer.x + footer.w - width * 1.1); // 1.1 is the padding

@@ -1,5 +1,7 @@
 // @Cleanup: Rename the $with_selection param because the opposite is happening right now!
-set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true) {
+set_cursor_pos :: (buffer: *Buffer, cursor: *Cursor, target_pos: s64, horizontal := false, with_selection := true, loc := #caller_location) {
+    // log("[set_cursor_pos] pos: % ; horizontal: % ; with_selection: % ; caller loc: %\n", target_pos, horizontal, with_selection, loc);
+    
     cursor.moved = true;
 
     Clamp(*target_pos, 0, buffer.count);

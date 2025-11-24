@@ -1256,6 +1256,7 @@ SelectSimilarCharacters :: () {
     mx, my, ok := get_mouse_pointer_position(right_handed=false);
     pos := byte_pos_from_mouse_xy(editor, buffer, mx, my);
     if pos == -1 return;
+    pos = min(pos, s.count-1);
     
     expected := get_character_type(s[pos]);
     if expected == .ctrl return;
