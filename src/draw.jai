@@ -356,7 +356,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         
         opacity := 0.25;
         
-        if UI.hot == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == xx SCROLLBAR_UI_ID) {
+        if UI.hot_last_frame == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == xx SCROLLBAR_UI_ID) {
             set_cursor_icon(.CUR_ARROW);
             opacity = .8;
             
