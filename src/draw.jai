@@ -180,17 +180,15 @@ swap_buffers :: () {
     }
 }
 
-USE_TABS :: 1;
-
 draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     if !is_active(editor) context.color_intensity *= 0.95;
     defer reset_color_intensity();
+        
+    editor.panel_rect = rect;
     
     r, footer_r := cut_top(rect, window_height - get_footer_height());
     
-    #if USE_TABS {
-        tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
-    }
+    tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
     
     scrollbar_width := r_font.em_width * 1.5;
     scrollbar_area := cut_right(r, scrollbar_width);
@@ -202,10 +200,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         line_numbers_rect, r = cut_left(r, w);
     }
     
+    maybe_set_hot(ui_id, r);
+    
     _, r= := cut_left(r, LEFT_PADDING);
     editor.rect_for_draw = r;
-    
-    maybe_set_hot(ui_id, editor.rect_for_draw);
     
     if UI.hot_last_frame == ui_id && !mouse_grabbed_ui_id {
         set_cursor_icon(.CUR_BEAM);
@@ -329,7 +327,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
         Simp.set_shader_for_color(true);
     
-        SCROLLBAR_UI_ID :: cast(u64)#location(); // @Temporary
+        // SCROLLBAR_UI_ID :: cast(u64)#location(); // @Temporary
+        SCROLLBAR_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_scrollbar else Ui_Id.editor_right_scrollbar;
         
         // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
         y_threshold := fnt_get_line_height() * 6; 
@@ -357,7 +356,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         
         opacity := 0.25;
         
-        if UI.hot == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == SCROLLBAR_UI_ID) {
+        if UI.hot == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == xx SCROLLBAR_UI_ID) {
             set_cursor_icon(.CUR_ARROW);
             opacity = .8;
             
@@ -365,8 +364,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             //editor.scrollbar_opacity = move_toward(0.0, editor.scrollbar_anim.target, t);
                             
             if mouse_down {
-                if mouse_grabbed_ui_id != SCROLLBAR_UI_ID {
-                    mouse_grabbed_ui_id = SCROLLBAR_UI_ID;
+                active_editor = editor;
+                
+                if mouse_grabbed_ui_id != xx SCROLLBAR_UI_ID {
+                    mouse_grabbed_ui_id = xx SCROLLBAR_UI_ID;
 
                     editor.scrollbar_grabbed_y = scrollbar.h / 2;
                     //if mouse_point.y > scrollbar.y && mouse_point.y < scrollbar.y + scrollbar.h {
@@ -449,25 +450,44 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
     {
         // Draw tabs
+        rect := tabs_rect;
+        // rect = shrink_x(rect, rect.w/4);
         
-        EDITOR_TABS_UI_ID :: cast(Ui_Id)#location();
-        maybe_set_hot(EDITOR_TABS_UI_ID, tabs_rect);
+        // EDITOR_TABS_UI_ID :: cast(Ui_Id)#location();
+        EDITOR_TABS_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_tabs else .editor_right_tabs;
+        maybe_set_hot(EDITOR_TABS_UI_ID, rect);
                 
         Simp.set_shader_for_color(true);
-        rect := tabs_rect;
         push_scissor(rect);
         defer pop_scissor();
         
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + 1, map_color_to_vec4(.LAYOUT_SEPARATOR));
-                
+        
         rect = shrink_x(rect, xx r_font.em_width);
         
-        font := r_font_tiny;
-        padding :: 8.0;
-        left := rect.x;
+        if editor.tabs_anim.active {
+            using editor.tabs_anim;
+    
+            t := (frame_time64 - started_at) / duration;
+            t = clamp(t, 0.0, 1.0);
+            distance := (target - start);
+            // v := start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            v := start + cast(float)(distance * t);                          // lerp
+    
+            if t == 1.0 then active = false;
+    
+            editor.tabs_left_offset = v;
+            
+            redraw_requested = true;
+        }
+        
+        font := r_font_sm;
+        padding := 8.0 * dpi_scale;
+        left := rect.x - editor.tabs_left_offset;
         baseline := rect.y + default_text_baseline(font, rect.h);
         workdir := get_workdir();
+        total_width := 0.0;
         for b: buffers {
             {
                 path := "Untitled" ;
@@ -478,27 +498,52 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                         assert(path.count > 0);
                     }
                 }
-                
-                Simp.set_shader_for_text();
-                
+                                
                 color := map_color_to_vec4(.TEXT_DIMMED);
                 if b == editor.active_buffer then color = map_color_to_vec4(.CURSOR);
                 
                 width := Simp.prepare_text(font, path);
                 
-                if b != editor.active_buffer && UI.hot_last_frame == EDITOR_TABS_UI_ID {
-                    r := make_rect(left, rect.y, width + padding, rect.h);
-                    if mouse_point_within_rect(r) {
+                r := make_rect(left, rect.y, width + padding, rect.h);
+                if UI.hot_last_frame == EDITOR_TABS_UI_ID && b != editor.active_buffer {
+                    if mouse_point_within_rect(rect) && mouse_point_within_rect(r) {
                         color = map_color_to_vec4(.TEXT_DEFAULT);
                         if mouse_clicked {
+                            active_editor = editor;
                             change_active_buffer(editor, b);
                         }
                     }
                 }
                 
+                if editor.buffer_switched_this_frame && b == editor.active_buffer {
+                    // @Incomplete!!!
+                    if !editor.tabs_anim.active {
+                        target := editor.tabs_left_offset;
+                        r.w = xx width;
+                        if r.x + r.w > rect.x + rect.w {
+                            target += ((r.x + r.w) - (rect.x + rect.w));
+                        } else if r.x < rect.x {
+                            target -= (rect.x - r.x);
+                        }
+                        
+                        if target != editor.tabs_left_offset {
+                            anim_x: Anim;
+                            anim_x.active = true;
+                            anim_x.start  = editor.tabs_left_offset;
+                            anim_x.target = target;
+                            anim_x.duration = .08;
+                            anim_x.started_at = frame_time64;
+                            editor.tabs_anim = anim_x;
+                            redraw_requested = true;
+                        }
+                    }
+                }
+                
+                Simp.set_shader_for_text();
                 Simp.draw_prepared_text(font, xx left, xx baseline, color);
                 
                 left += width + padding;
+                total_width += width + padding;
             }
             
             {
@@ -506,8 +551,37 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 color := map_color_to_vec4(.LAYOUT_SEPARATOR);
                 Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), color);
                 left += padding;
+                total_width += padding;
             }
-            
+        }
+        
+        if UI.hot_last_frame == EDITOR_TABS_UI_ID {
+            avg_width := total_width / buffers.count / 2;
+            if mouse_scrolled_on_frame == .up {
+                target := editor.tabs_left_offset - avg_width;
+                target = max(0.0, target);
+                anim_x: Anim;
+                anim_x.active = true;
+                anim_x.start  = editor.tabs_left_offset;
+                anim_x.target = target;
+                anim_x.duration = 0.05;
+                anim_x.started_at = frame_time64;
+                editor.tabs_anim = anim_x;
+                redraw_requested = true;
+            } else if mouse_scrolled_on_frame == .down {
+                target := editor.tabs_left_offset;
+                if rect.x - editor.tabs_left_offset + total_width >= r.x + r.w {
+                    target = target + avg_width; // @Incomplete: CLamp the values
+                    anim_x: Anim;
+                    anim_x.active = true;
+                    anim_x.start  = editor.tabs_left_offset;
+                    anim_x.target = target;
+                    anim_x.duration = 0.05;
+                    anim_x.started_at = frame_time64;
+                    editor.tabs_anim = anim_x;
+                    redraw_requested = true;
+                }
+            }
         }
     }
 

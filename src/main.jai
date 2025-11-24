@@ -288,6 +288,12 @@ main :: () {
 
         draw_frame();
         
+        for *e: editors {
+            if e.buffer_switched_this_frame {
+                e.buffer_switched_this_frame = false;
+            }
+        }
+        
         {
             #if OS == .WINDOWS {
                 if cursor_icon_was_set_this_frame {
@@ -578,7 +584,7 @@ mouse_dbl_clicked := false;
 mouse_dbl_clicked_last_time_ms: float64;
 mouse_was_dbl_clicked := false;
 
-mouse_grabbed_ui_id: u64 = 0;
+mouse_grabbed_ui_id: s64 = 0;
 
 //click_action_cooldown_active := false;
 //click_action_cooldown_start_time_ms: float64;
@@ -600,8 +606,14 @@ OS_Cursor_Kind :: enum u8 {
 
 Ui_Id :: enum s64 {
     none :: -100;
+    
     editor_left :: -99;
-    editor_right :: -98;
+    editor_left_scrollbar :: -98;
+    editor_left_tabs :: -97;
+    
+    editor_right :: -89;
+    editor_right_scrollbar :: -88;
+    editor_right_tabs :: -87;
 }
 
 UI: struct {

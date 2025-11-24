@@ -1070,6 +1070,8 @@ change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
     scroll_to_cursor(editor, editor.cursor, animation_duration=0.0);
+    
+    editor.buffer_switched_this_frame = true;
 }
 
 scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float = 0.08) {
@@ -1569,8 +1571,10 @@ Editor :: struct {
     active_buffer: *Buffer;
     cursor: Cursor;
     
-    visible := false;
-        
+    visible: bool;
+    buffer_switched_this_frame: bool;
+    
+    panel_rect:    Rect;
     rect_for_draw: Rect;
     top_offset  := 0.0;
     left_offset := 0.0;
@@ -1582,6 +1586,9 @@ Editor :: struct {
     scrollbar_anim: Anim; // @Todo
     scrollbar_opacity := 0.5;
     scrollbar_grabbed_y := 0.0;
+    
+    tabs_left_offset := 0.0;
+    tabs_anim: Anim;
 }
 
 Buffer :: struct {
