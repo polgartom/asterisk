@@ -450,11 +450,11 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
     {
         // Draw tabs
-        MeasureScope("Draw tabs");
-        rect := tabs_rect;
-        // rect = shrink_x(rect, rect.w/4);
+        // @Cleanup This mess...
         
-        // EDITOR_TABS_UI_ID :: cast(Ui_Id)#location();
+        MeasureScope("Draw tabs");
+        
+        rect := tabs_rect;
         EDITOR_TABS_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_tabs else .editor_right_tabs;
         maybe_set_hot(EDITOR_TABS_UI_ID, rect);
                 
@@ -517,7 +517,6 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 }
                 
                 if editor.buffer_switched_this_frame && b == editor.active_buffer {
-                    // @Incomplete!!!
                     if !editor.tabs_anim.active {
                         target := editor.tabs_left_offset;
                         r.w = xx width;

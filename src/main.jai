@@ -133,9 +133,20 @@ main :: () {
         mouse_clicked = false;
         mouse_was_dbl_clicked = mouse_dbl_clicked;
         mouse_dbl_clicked = false;
+        
+        {
+            mouse_point_last_frame = mouse_point;
+        
+            mx, my := get_mouse_pointer_position_right_handed();
+            mx = max(0, mx);
+            my = max(0, my);
+            mouse_point = Vector2.{cast(float)mx, cast(float)my};
+            
+            mouse_moved_this_frame = mouse_point != mouse_point_last_frame;
+        }
 
         for event : events_this_frame {
-            //ll("%\n", event);
+            // ll("%\n", event);
             register_widget_event(event);
 
             if event.type == .QUIT {
@@ -583,6 +594,9 @@ mouse_clicked_last_time_ms: float64;
 mouse_dbl_clicked := false;
 mouse_dbl_clicked_last_time_ms: float64;
 mouse_was_dbl_clicked := false;
+mouse_moved_this_frame := false;
+mouse_point: Vector2;
+mouse_point_last_frame: Vector2;
 
 mouse_grabbed_ui_id: s64 = 0;
 

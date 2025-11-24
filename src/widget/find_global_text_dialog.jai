@@ -2,11 +2,9 @@ open_find_global_text_dialog :: () {
     using find_global_text_dialog;
     
     if !fgt_input {
-        fgt_input = create_text_input(cast(u64, #location()));
+        fgt_input = create_text_input(cast(Ui_Id)FIND_GLOBAL_TEXT_DIALOG_UI_ID);
     }
 
-    fgt_list_input_ui_id = cast(u64, #location());
-    
     reset_list_input(find_global_text_dialog);
 
     init_string_builder(*output_builder);
@@ -300,6 +298,8 @@ DO_VERBOSE :: false;
 
 #scope_export
 
+FIND_GLOBAL_TEXT_DIALOG_UI_ID :: cast(Ui_Id) #location();
+
 find_global_text_dialog: Find_Global_Text_Dialog;
 
 Find_Global_Text_Dialog :: struct {
@@ -316,8 +316,9 @@ Find_Global_Text_Dialog :: struct {
     };
 
     fgt_input: *Text_Input;
-    fgt_list_input_ui_id: u64 = 0;
+    fgt_list_input_ui_id := FIND_GLOBAL_TEXT_DIALOG_UI_ID;
     options: [..] List_Input.Option(Result);
     
     open_animation: Anim;
 }
+

@@ -1,7 +1,7 @@
 open_find_text_dialog :: () {
     using find_text_dialog;
     
-    if !input then input = create_text_input(cast(u64, #location()));
+    if !input then input = create_text_input(FIND_TEXT_DIALOG_UI_ID);
     
     if input.text {
         select_all(input);
@@ -122,6 +122,8 @@ update_find_text_dialog :: () {
     }
 
 }
+
+FIND_TEXT_DIALOG_UI_ID :: cast(Ui_Id) #location();
 
 find_text_dialog: Find_Text_Dialog;
 

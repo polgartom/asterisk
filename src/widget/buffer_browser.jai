@@ -4,11 +4,9 @@ open_buffer_browser :: () {
     if bb_text_input {
         select_all(bb_text_input);
     } else {
-        bb_text_input = create_text_input(cast(u64)#location());
+        bb_text_input = create_text_input(BUFFER_BROWSER_UI_ID);
     }
     
-    bb_list_input_ui_id = cast(u64)#location();
-
     array_reset_keeping_memory(*options);
     array_reserve(*options, buffers.count);
 
@@ -67,6 +65,8 @@ update_visible_options :: (using browser: *Buffer_Browser) {
     quick_sort(visible_options, (a, b) => cast(s64) ((b.priority) - (a.priority)));
 }
 
+BUFFER_BROWSER_UI_ID :: cast(Ui_Id) #location();
+
 buffer_browser: Buffer_Browser;
 
 Buffer_Browser :: struct {
@@ -76,5 +76,5 @@ Buffer_Browser :: struct {
     visible_options: [..] List_Input.Option(*Buffer);
 
     bb_text_input: *Text_Input;
-    bb_list_input_ui_id: u64 = 0;
+    bb_list_input_ui_id := BUFFER_BROWSER_UI_ID;
 }

@@ -4,7 +4,7 @@ open_command_browser :: () {
     if self_text_input {
         clear_text(self_text_input);
     } else {
-        self_text_input = create_text_input(cast(u64)#location());
+        self_text_input = create_text_input(COMMAND_BROWSER_UI_ID);
 
         array_reserve(*options, editor_commands.count);
         for * cmd: editor_commands {
@@ -17,6 +17,8 @@ open_command_browser :: () {
     switch_editor_mode(.WIDGET);
     active_widget = Command_Browser;
 }
+
+COMMAND_BROWSER_UI_ID :: cast(Ui_Id) #location();
 
 command_browser: Command_Browser;
 

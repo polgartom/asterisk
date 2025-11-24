@@ -1,6 +1,6 @@
 
 // The r: Rect's h (height) param represents the maximum height of the list.
-list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
+list_input :: (r: Rect, ui_id: Ui_Id, options: [] List_Input.Option, font: *Simp.Dynamic_Font, theme := List_Input.DEFAULT_THEME) -> *List_Input {
     input := find_or_create_list_input(ui_id);
     using input;
 
@@ -42,7 +42,7 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     // PrintDev("[%]: expected_height: % b: % ; overflow: %", #procedure_name(), expected_height, b, expected_height <= b);
 
     // Draw the container box
-    thickness :: 2.0; // border thickness
+    thickness := 2.0 * dpi_scale; // border thickness
     Simp.set_shader_for_rect();
     Simp.immediate_quad_with_radius(r.x-thickness, b-thickness, r.x + r.w + thickness, t + thickness, theme.border_color, radius=r_rect_radius); // border
     Simp.immediate_quad_with_radius(r.x, b, r.x + r.w, t, theme.bg_color, radius=r_rect_radius);
@@ -61,6 +61,8 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     rect := make_rect(r.x, b + bottom_padding, r.w, t-b);
     push_scissor(rect);
     defer pop_scissor();
+
+    maybe_set_hot(xx ui_id, rect);
 
     y += scroll_value;
 
@@ -85,6 +87,23 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
                 _anim.duration = 0.07;
                 _anim.started_at = frame_time64;
             }
+        }
+    }
+    
+    if UI.hot_last_frame == ui_id {
+        if mouse_scrolled_on_frame == .up {
+            _anim.active = true;
+            _anim.start  = scroll_value;
+            _anim.target = scroll_value - y_off * 4;
+            _anim.duration = 0.05;
+            _anim.started_at = frame_time64;
+        }
+        if mouse_scrolled_on_frame == .down {
+            _anim.active = true;
+            _anim.start  = scroll_value;
+            _anim.target = scroll_value + y_off * 4;
+            _anim.duration = 0.05;
+            _anim.started_at = frame_time64;
         }
     }
 
@@ -121,6 +140,13 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
         Simp.immediate_quad(r.x, y-ch*.5+1.0, x + r.w, y-ch*.5, .{1.0,1.0,1.0,.07}); // bottom border
         
         color := theme.fg_color;
+        option_rect := make_rect(x, y-ch*.5, r.w, ch*.5+ch*1.5);
+        if UI.hot_last_frame == ui_id && mouse_point_within_rect(option_rect) {
+            if mouse_moved_this_frame then selected_index = i;
+            if mouse_clicked {
+                input.entered = true; // @Hacky
+            }
+        }
         if i == selected_index {
             Simp.immediate_quad(r.x, y+ch*1.5, x + r.w, y-ch*.5, theme.current_item_bg_color);
             color = theme.current_item_fg_color;
@@ -144,7 +170,7 @@ list_input :: (r: Rect, ui_id: u64, options: [] List_Input.Option, font: *Simp.D
     return input;
 }
 
-find_or_create_list_input :: (ui_id: u64) -> (input: *List_Input, created: bool) {
+find_or_create_list_input :: (ui_id: Ui_Id) -> (input: *List_Input, created: bool) {
     found, input := table_find(*inputs, ui_id);
     if !found {
         input = New(List_Input);
@@ -179,7 +205,7 @@ move_to_prev_option :: (using i: *List_Input, options: [] List_Input.Option) {
     }
 }
 
-inputs: Table(u64, *List_Input);
+inputs: Table(Ui_Id, *List_Input);
 
 #scope_export
 

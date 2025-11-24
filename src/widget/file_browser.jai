@@ -2,7 +2,7 @@ open_file_browser :: () {
     using file_browser;
 
     if !fb_text_input {
-        fb_text_input = create_text_input(cast(u64)#location());
+        fb_text_input = create_text_input(FILE_BROWSER_TEXT_INPUT_UI_ID);
     }
     
     if current_dir {
@@ -109,7 +109,7 @@ _draw_file_browser :: () {
             if it.is_directory opt.priority += items.count+1;
             
             opt.label_prefix_styled.font_override = r_font_icons;
-            opt.label_prefix_styled.x_offset = 2;
+            opt.label_prefix_styled.x_offset = xx (2 * dpi_scale);
             if it.is_directory {
                 modify_string(*opt.label_prefix, FOLDER_ICON);
             } else {
@@ -118,7 +118,7 @@ _draw_file_browser :: () {
             }
             
             modify_string(*opt.label, it.short_name);
-            opt.label_styled.x_offset = prefix_width + 8;
+            opt.label_styled.x_offset = xx (prefix_width + (8 * dpi_scale));
         }
     }
     
@@ -131,7 +131,9 @@ _draw_file_browser :: () {
     linp_theme := List_Input.DEFAULT_THEME;
     linp_theme.border_color = #run hex_to_vec4(0x3a_4a_7a_ff);
     linp_theme.current_item_bg_color = #run hex_to_vec4(0x3a_4a_7a_8a);
-    linp := list_input(list_rect, xx #location(), options, font, theme=linp_theme);
+    
+    FILE_BROWSER_LIST_INPUT_UI_ID :: cast(Ui_Id) #location();
+    linp := list_input(list_rect, FILE_BROWSER_LIST_INPUT_UI_ID, options, font, theme=linp_theme);
     
     if tinp.typed {
         reset_list_input(linp);
@@ -221,6 +223,8 @@ file_browser_change_dir :: (dir: string) {
 }
 
 #scope_export
+
+FILE_BROWSER_TEXT_INPUT_UI_ID :: cast(Ui_Id) #location();
 
 file_browser: File_Browser;
 

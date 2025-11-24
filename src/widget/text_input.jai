@@ -1,4 +1,4 @@
-text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") -> *Text_Input {
+text_input :: (r: Rect, ui_id: Ui_Id, font: *Simp.Dynamic_Font, placeholder := "", theme := Text_Input.DEFAULT_THEME, prefix := "") -> *Text_Input {
     // timer := seconds_since_init();
     // defer PrintDev("[%] %ms\n", #procedure_name(), formatFloat((seconds_since_init()-timer)*1000, trailing_width=4));
     
@@ -12,7 +12,7 @@ text_input :: (r: Rect, ui_id: u64, font: *Simp.Dynamic_Font, placeholder := "",
     return input;
 }
 
-create_text_input :: (ui_id: u64) -> *Text_Input {
+create_text_input :: (ui_id: Ui_Id) -> *Text_Input {
     input := New(Text_Input);
     input.text.data = *input.input_buffer[0];
     table_add(*inputs, ui_id, input);
@@ -355,7 +355,7 @@ clamp_cursor_pos :: (using i: *Text_Input) {
     Clamp(*cursor.sel, 0, text.count);
 }
 
-inputs: Table(u64, *Text_Input);
+inputs: Table(Ui_Id, *Text_Input);
 
 #scope_export
 
