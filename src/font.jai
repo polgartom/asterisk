@@ -253,7 +253,8 @@ PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);
 CASE_SENSITIVE_ICON :: #run fontawesome_utf32_to_utf8(0xf031);
 WHOLE_WORD_ICON     :: #run fontawesome_utf32_to_utf8(0xe4ba);
 REGEX_SEARCH_ICON   :: #run fontawesome_utf32_to_utf8(0xf621);
-BULLET_ICON         :: #run fontawesome_utf32_to_utf8(0x2022);
+// BULLET_ICON         :: #run fontawesome_utf32_to_utf8(0x2022);
+
 XMARK_ICON          :: #run fontawesome_utf32_to_utf8(0xf057);
 FILE_ICON           :: #run fontawesome_utf32_to_utf8(0xf15b);
 FOLDER_ICON         :: #run fontawesome_utf32_to_utf8(0xf07b);

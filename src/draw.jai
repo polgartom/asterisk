@@ -198,6 +198,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         t := tprint("%", formatInt(editor.active_buffer.row_table.count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.25;
         line_numbers_rect, r = cut_left(r, w);
+        
+        // _, tabs_rect = cut_left(tabs_rect, line_numbers_rect.w); // We align the tabs to the scrollbar
     }
     
     maybe_set_hot(ui_id, r);
@@ -490,69 +492,87 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         workdir := get_workdir();
         total_width := 0.0;
         for b: buffers {
-            {
-                path := "Untitled" ;
-                if b.filepath {
-                    path = b.filepath;
-                    if begins_with(path, workdir) {
-                        advance(*path, workdir.count + 1); // +1 for the path separator
-                        assert(path.count > 0);
-                    }
+            path := "Untitled";
+            if b.filepath {
+                path = b.filepath;
+                if begins_with(path, workdir) {
+                    advance(*path, workdir.count + 1); // +1 for the path separator
+                    assert(path.count > 0);
                 }
-                                
-                color := map_color_to_vec4(.TEXT_DIMMED);
-                if b == editor.active_buffer then color = map_color_to_vec4(.CURSOR);
-                
-                width := Simp.prepare_text(font, path);
-                
-                r := make_rect(left, rect.y, width + padding, rect.h);
-                if UI.hot_last_frame == EDITOR_TABS_UI_ID && b != editor.active_buffer {
-                    if mouse_point_within_rect(rect) && mouse_point_within_rect(r) {
-                        color = map_color_to_vec4(.TEXT_DEFAULT);
-                        if mouse_clicked {
-                            active_editor = editor;
-                            change_active_buffer(editor, b);
-                        }
-                    }
-                }
-                
-                if editor.buffer_switched_this_frame && b == editor.active_buffer {
-                    if !editor.tabs_anim.active {
-                        target := editor.tabs_left_offset;
-                        r.w = xx width;
-                        if r.x + r.w > rect.x + rect.w {
-                            target += ((r.x + r.w) - (rect.x + rect.w));
-                        } else if r.x < rect.x {
-                            target -= (rect.x - r.x);
-                        }
-                        
-                        if target != editor.tabs_left_offset {
-                            anim_x: Anim;
-                            anim_x.active = true;
-                            anim_x.start  = editor.tabs_left_offset;
-                            anim_x.target = target;
-                            anim_x.duration = .08;
-                            anim_x.started_at = frame_time64;
-                            editor.tabs_anim = anim_x;
-                            redraw_requested = true;
-                        }
-                    }
-                }
-                
-                Simp.set_shader_for_text();
-                Simp.draw_prepared_text(font, xx left, xx baseline, color);
-                
-                left += width + padding;
-                total_width += width + padding;
+            }
+              
+            fg_color_locked := false;
+            fg_color := map_color_to_vec4(.TEXT_DIMMED);
+            bg_color := v4(1, 1, 1, .02);
+            icon     := FILE_ICON;
+            
+            if is_unsaved(b) {
+                icon = PEN_ICON;
+                fg_color = map_color_to_vec4(.CURSOR); // @Todo: Other Color
+                fg_color_locked = true;
             }
             
-            {
-                Simp.set_shader_for_color(true);
-                color := map_color_to_vec4(.LAYOUT_SEPARATOR);
-                Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), color);
-                left += padding;
-                total_width += padding;
+            width := Simp.prepare_text(font, path);
+            icon_width := Simp.prepare_text(r_font_icons, icon);
+            icon_width += xx padding;
+            width += icon_width;
+            tab_rect := make_rect(left - padding, rect.y, width + padding*2, rect.h);
+            
+            if UI.hot_last_frame == EDITOR_TABS_UI_ID && b != editor.active_buffer {
+                if mouse_point_within_rect(rect) && mouse_point_within_rect(tab_rect) {
+                    if !fg_color_locked then fg_color = map_color_to_vec4(.TEXT_DEFAULT);
+                    bg_color = v4(1, 1, 1, .08);
+                    
+                    if mouse_clicked {
+                        active_editor = editor;
+                        change_active_buffer(editor, b);
+                    }
+                }
             }
+            
+            if b == editor.active_buffer {
+                if !fg_color_locked then fg_color = map_color_to_vec4(.TEXT_DEFAULT);
+                bg_color = v4(1, 1, 1, .1);
+            }
+            
+            if editor.buffer_switched_this_frame && b == editor.active_buffer {
+                // Move the viewport to the selected buffer's tab
+                
+                if !editor.tabs_anim.active {
+                    target := editor.tabs_left_offset;
+                    if tab_rect.x + tab_rect.w > rect.x + rect.w {
+                        target += ((tab_rect.x + tab_rect.w) - (rect.x + rect.w));
+                    } else if tab_rect.x < rect.x {
+                        target -= (rect.x - tab_rect.x);
+                    }
+                    
+                    if target != editor.tabs_left_offset {
+                        anim_x: Anim;
+                        anim_x.active = true;
+                        anim_x.start  = editor.tabs_left_offset;
+                        anim_x.target = target;
+                        anim_x.duration = .08;
+                        anim_x.started_at = frame_time64;
+                        editor.tabs_anim = anim_x;
+                        redraw_requested = true;
+                    }
+                }
+            }
+            
+            Simp.set_shader_for_text();
+            Simp.draw_prepared_text(r_font_icons, xx (left), xx baseline, fg_color);
+            Simp.draw_prepared_text(font, xx (left + icon_width), xx baseline, fg_color);
+            
+            left += width + padding;
+            total_width += width + padding;
+            
+            // Background & Right border
+            Simp.set_shader_for_color(true);
+            draw_quad(tab_rect, bg_color);
+            Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), map_color_to_vec4(.LAYOUT_SEPARATOR));
+            
+            left += padding;
+            total_width += padding;
         }
         
         if UI.hot_last_frame == EDITOR_TABS_UI_ID {
