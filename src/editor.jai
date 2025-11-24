@@ -475,7 +475,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
     start_index := history_index;
     
     if h.edit_group_id != 0 {
-        for #v2 < list {
+        for < list {
             if it.edit_group_id != h.edit_group_id break;
             start_index = it_index;
         }
@@ -486,7 +486,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
         if h.type == .INSERT {
             expect_alphanum := is_alphanum(h.text[0]);
             
-            for #v2 < list {
+            for < list {
                 if it.type != h.type break;
                 if expect_alphanum ^ is_alphanum(it.text[0]) break;
                 start_index = it_index;
@@ -500,7 +500,7 @@ batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_
             
             expect_alphanum := is_alphanum(h.text[0]);
             
-            for #v2 < list {
+            for < list {
                 if it.type != h.type break;
                 nochars = utf8_character_count(it.text);
                 if nochars != 1 break;
@@ -582,7 +582,7 @@ undo :: (editor: *Editor, using buffer: *Buffer) {
     if !history.count || history_index == -1 return;
 
     undos := batch_up_undos(history, history_index);
-    for #v2 < h: undos { // We perform undos so we have to go backward        
+    for < h: undos { // We perform undos so we have to go backward        
         if #complete h.type == {        
             case .INSERT;
                 to   := h.range.start;
@@ -653,7 +653,7 @@ redo :: (editor: *Editor, using buffer: *Buffer) {
 
     redos := batch_up_redos(history, history_index+1);
 
-    for #v2 h: redos {
+    for h: redos {
         if h.type == {
             case .INSERT;
                 to := h.range.start;

@@ -661,7 +661,7 @@ DeleteFromRight :: () {
         row := row_table[row_index];
         
         spaces := 0;
-        for #v2 < row.start..prev_pos {
+        for < row.start..prev_pos {
             if buffer.data[it] != #char " " {
                 break;
             }
@@ -764,7 +764,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
     #if !subword_mode {
         // Delete all the whitespace until we find a non-whitespace character (only if the first deletable character from right is a whitespace)
         if text[start] == #char " " {
-            for #v2 < point: 0..start {
+            for < point: 0..start {
                 if text[point] != #char " " {
                     point += 1;
                     remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
@@ -779,7 +779,7 @@ delete_word_or_subword_from_right :: ($subword_mode: bool) {
         return;
     }
 
-    for #v2 < point: 0..start {
+    for < point: 0..start {
         if is_separator(text[point], subword_mode) {
             point += 1 + trailingBytesForUTF8[text[point]];
             remove_text_from_right_at_cursor(editor, buffer, *editor.cursor, editor.cursor.pos - point);
