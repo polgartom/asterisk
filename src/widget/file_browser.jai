@@ -108,13 +108,15 @@ _draw_file_browser :: () {
             memmove(*opt.ref, *it, size_of(File_Visit_Info));
             if it.is_directory opt.priority += items.count+1;
             
-            opt.label_prefix_styled.font_override = r_font_icons;
             opt.label_prefix_styled.x_offset = xx (2 * dpi_scale);
             if it.is_directory {
                 modify_string(*opt.label_prefix, FOLDER_ICON);
+                opt.label_prefix_styled.font_override = r_font_icons_solid;
+
             } else {
                 modify_string(*opt.label_prefix, FILE_ICON);
                 opt.label_prefix_styled.default_colorv4 = #run hex_to_vec4(0xff_ff_ff_8a);
+                opt.label_prefix_styled.font_override = r_font_icons;
             }
             
             modify_string(*opt.label, it.short_name);

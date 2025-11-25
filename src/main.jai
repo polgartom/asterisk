@@ -306,7 +306,6 @@ main :: () {
         
         {
             #if OS == .WINDOWS {
-                log("cursor_icon_was_set_this_frame: %\n", cursor_icon_was_set_this_frame);
                 if cursor_icon_was_set_this_frame {
                     handle := cursor_pointers[os_current_cursor_kind];
                     SetCursor(handle);
@@ -471,10 +470,13 @@ wait_for_event :: () {
 #if CPU == .X64 {
     meow_hash :: (bytes: [] u8) -> u64 {
         // Copied from Focus editor
-        #import "meow_hash";
         //MeasureProc();
+        #import "meow_hash";
+        
         #asm { hash: vec; }
+        
         MeowHash(MeowDefaultSeed, xx bytes.count, bytes.data, hash);
+        
         return MeowU64From(hash, 0);
     }
     
@@ -490,7 +492,7 @@ wait_for_event :: () {
 }
 
 video_set_vsync :: (kind: Video_Vsync_Kind) {
-    MeasureProc();
+    // MeasureProc();
     wglSwapIntervalEXT(xx kind);
 }
 
