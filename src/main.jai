@@ -95,12 +95,15 @@ main :: () {
             push_measurement(*frametimes, frame_dt * 1000);
         }
         
-        cursor_icon_was_set_this_frame = false;
         redraw_requested = false;
+        cursor_icon_was_set_this_frame = false;
 
+        // @Bug @Todo: If we don’t wait for OS events and the buffer changes and saves rapidly, we may mis-detect the actual state and show a misleading confirmation alert to the user.
+        // Way may wait the (wait seconds - frame delta time) time end of the frame.
         changed, needs_wait, wait_seconds := process_changes(*file_watcher);
         if needs_wait {
             redraw_requested = true;
+            // sleep_milliseconds(wait_seconds);
         }
         
         update_window_events();
@@ -115,6 +118,8 @@ main :: () {
                 if should_reinit {
                     dpi_scale = get_dpi_scale(window);
                     init_fonts();
+                    
+                    for *e: editors  e.tabs_force_offset_check = true;
                 }
             }
         }
@@ -225,7 +230,7 @@ main :: () {
         }
                 
         if mode == .WIDGET {
-            set_cursor_icon(.CUR_ARROW);
+            // set_cursor_icon(.CUR_ARROW);
         }
         
         // @Temporary @Cleanup
@@ -299,18 +304,14 @@ main :: () {
 
         draw_frame();
         
-        for *e: editors {
-            if e.buffer_switched_this_frame {
-                e.buffer_switched_this_frame = false;
-            }
-        }
-        
         {
             #if OS == .WINDOWS {
+                log("cursor_icon_was_set_this_frame: %\n", cursor_icon_was_set_this_frame);
                 if cursor_icon_was_set_this_frame {
                     handle := cursor_pointers[os_current_cursor_kind];
                     SetCursor(handle);
                 }
+                
                 set_custom_cursor_handling(cursor_icon_was_set_this_frame);
             }
         }
@@ -355,7 +356,7 @@ get_mouse_pointer_position_safe :: (right_handed := true) -> s64, s64 {
     return max(0, mx), max(0, my);
 }
 
-set_cursor_icon :: (kind: OS_Cursor_Kind) {
+set_cursor_icon :: (kind: OS_Cursor_Kind, loc := #caller_location) {
     os_current_cursor_kind = kind;
     cursor_icon_was_set_this_frame = true;
 }

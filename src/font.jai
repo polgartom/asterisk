@@ -47,6 +47,7 @@ init_fonts :: () {
     r_font_sm    = Simp.get_font_at_size(cast([]u8)font_data_sm, cast(int)(font_size_sm*dpi_scale));
     r_font_tiny  = Simp.get_font_at_size(cast([]u8)font_data_tiny, cast(int)(font_size_tiny*dpi_scale));
     r_font_icons = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS.data, cast(int)(font_size_icon*dpi_scale));
+    r_font_icons_solid = Simp.get_font_at_size(cast([]u8)BAKED_FONT_ICONS_SOLID.data, cast(int)(font_size_icon*dpi_scale));
     assert(r_font != null && r_font_sm != null && r_font_icons != null);
 
     #if 0 {
@@ -231,6 +232,7 @@ r_font:       *Simp.Dynamic_Font;
 r_font_sm:    *Simp.Dynamic_Font;
 r_font_tiny:  *Simp.Dynamic_Font;
 r_font_icons: *Simp.Dynamic_Font;
+r_font_icons_solid: *Simp.Dynamic_Font;
 
 font_family: string;
 font_size: u8 = DEFAULT_FONT_SIZE;
@@ -253,15 +255,15 @@ PEN_ICON            :: #run fontawesome_utf32_to_utf8(0xf304);
 CASE_SENSITIVE_ICON :: #run fontawesome_utf32_to_utf8(0xf031);
 WHOLE_WORD_ICON     :: #run fontawesome_utf32_to_utf8(0xe4ba);
 REGEX_SEARCH_ICON   :: #run fontawesome_utf32_to_utf8(0xf621);
-// BULLET_ICON         :: #run fontawesome_utf32_to_utf8(0x2022);
-
+GEARS_ICON          :: #run fontawesome_utf32_to_utf8(0xf085);
 XMARK_ICON          :: #run fontawesome_utf32_to_utf8(0xf057);
 FILE_ICON           :: #run fontawesome_utf32_to_utf8(0xf15b);
 FOLDER_ICON         :: #run fontawesome_utf32_to_utf8(0xf07b);
 FOLDER_OPEN_ICON    :: #run fontawesome_utf32_to_utf8(0xf07c);
 
-BAKED_FONT_DEFAULT :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
-BAKED_FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+BAKED_FONT_DEFAULT      :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
+BAKED_FONT_ICONS        :: #run load_font("font-awesome/Font Awesome 6 Free-Regular-400.otf");
+BAKED_FONT_ICONS_SOLID  :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 font_data_sm: string;
 font_data_tiny: string;

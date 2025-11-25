@@ -12,7 +12,7 @@ draw_frame :: () {
     
     // maybe_set_hot(.none, make_rect(0.0, 0.0, xx window_width, xx window_height));
     UI.hot = .none;
-    set_cursor_icon(.CUR_ARROW);
+    // set_cursor_icon(.CUR_ARROW);
 
     if editors[0].visible && editors[1].visible {
         left, right := cut_left(rect, floor(rect.w/2));
@@ -225,6 +225,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                     set_cursor_pos(editor.active_buffer, *editor.cursor, pos, horizontal=true, with_selection=!vk_shift_down);
                 }
             } else if mouse_dbl_clicked {
+                // @Incomplete: Do this with no double click but click+click and we don't wait the 2. mouse release
                 SelectSimilarCharacters();
             } else if mouse_scrolled_on_frame == .up {
                 if vk_ctrl_down {
@@ -457,9 +458,14 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         MeasureScope("Draw tabs");
         
         rect := tabs_rect;
+        padding := 8.0 * dpi_scale;
+
+        // rect.w -= scrollbar_area.w;
+        // rect = shrink_x(rect, scrollbar_area.w); // This will ends at where the scrollbar starts, so the left and right editor tabs will be separated nicely.
+        
         EDITOR_TABS_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_tabs else .editor_right_tabs;
         maybe_set_hot(EDITOR_TABS_UI_ID, rect);
-                
+                        
         Simp.set_shader_for_color(true);
         push_scissor(rect);
         defer pop_scissor();
@@ -467,7 +473,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + 1, map_color_to_vec4(.LAYOUT_SEPARATOR));
         
-        rect = shrink_x(rect, xx r_font.em_width);
+        rect = shrink_x(rect, padding); 
+        rect.w -= (scrollbar_area.w - padding); // This will ends at where the scrollbar starts, so the left and right editor tabs will be separated nicely.
         
         if editor.tabs_anim.active {
             using editor.tabs_anim;
@@ -486,7 +493,6 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         }
         
         font := r_font_sm;
-        padding := 8.0 * dpi_scale;
         left := rect.x - editor.tabs_left_offset;
         baseline := rect.y + default_text_baseline(font, rect.h);
         workdir := get_workdir();
@@ -502,18 +508,27 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             }
               
             fg_color_locked := false;
-            fg_color := map_color_to_vec4(.TEXT_DIMMED);
-            bg_color := v4(1, 1, 1, .02);
-            icon     := FILE_ICON;
+            fg_color   := map_color_to_vec4(.TEXT_DIMMED);
+            bg_color   := v4(1, 1, 1, .02);
+            icon_font  := r_font_icons;
+            icon_glyph := FILE_ICON;
             
-            if is_unsaved(b) {
-                icon = PEN_ICON;
+            if b.disk_state == .removed {
+                fg_color = v4(.9, .4, .4, 1.0); // @Todo: Other Color
+                fg_color_locked = true;
+            } else if is_unsaved(b) {
+                icon_font  = r_font_icons_solid;
+                icon_glyph = PEN_ICON;
+                
                 fg_color = map_color_to_vec4(.CURSOR); // @Todo: Other Color
                 fg_color_locked = true;
+            } else if b.kind == .editor_config {
+                icon_font  = r_font_icons_solid;
+                icon_glyph = GEARS_ICON;
             }
             
             width := Simp.prepare_text(font, path);
-            icon_width := Simp.prepare_text(r_font_icons, icon);
+            icon_width := Simp.prepare_text(icon_font, icon_glyph);
             icon_width += xx padding;
             width += icon_width;
             tab_rect := make_rect(left - padding, rect.y, width + padding*2, rect.h);
@@ -535,7 +550,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 bg_color = v4(1, 1, 1, .1);
             }
             
-            if editor.buffer_switched_this_frame && b == editor.active_buffer {
+            if editor.tabs_force_offset_check && b == editor.active_buffer {
                 // Move the viewport to the selected buffer's tab
                 
                 if !editor.tabs_anim.active {
@@ -560,7 +575,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             }
             
             Simp.set_shader_for_text();
-            Simp.draw_prepared_text(r_font_icons, xx (left), xx baseline, fg_color);
+            Simp.draw_prepared_text(icon_font, xx (left), xx baseline, fg_color);
             Simp.draw_prepared_text(font, xx (left + icon_width), xx baseline, fg_color);
             
             left += width + padding;
@@ -571,8 +586,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             draw_quad(tab_rect, bg_color);
             Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), map_color_to_vec4(.LAYOUT_SEPARATOR));
             
-            left += padding;
-            total_width += padding;
+            if it_index != buffers.count - 1 {
+                left += padding;
+                total_width += padding;
+            }
         }
         
         if UI.hot_last_frame == EDITOR_TABS_UI_ID {
@@ -624,6 +641,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             target.* = max(0.0, target.*);
         }
         
+        editor.tabs_force_offset_check = false;
     }
 
     {

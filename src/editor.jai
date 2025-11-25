@@ -848,6 +848,10 @@ open_file_or_create_empty_buffer :: (editor: *Editor, _filepath: string) -> *Buf
             insert_text_at(editor, buffer, 0, final_text, history=false);
             buffer.last_writetime = file_modtime_and_size(filepath);
         }
+        
+        if platform_path_equals(get_project_config_path(), filepath) || platform_path_equals(get_editor_config_path(), filepath) {
+            buffer.kind = .editor_config;
+        }
 
         commit_buffer_changes(buffer, force=true);
     }
@@ -1071,7 +1075,7 @@ change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
     editor.top_offset  = 0.0;
     scroll_to_cursor(editor, editor.cursor, animation_duration=0.0);
     
-    editor.buffer_switched_this_frame = true;
+    editor.tabs_force_offset_check = true;
 }
 
 scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float = 0.08) {
@@ -1572,7 +1576,6 @@ Editor :: struct {
     cursor: Cursor;
     
     visible: bool;
-    buffer_switched_this_frame: bool;
     
     panel_rect:    Rect;
     rect_for_draw: Rect;
@@ -1587,8 +1590,9 @@ Editor :: struct {
     scrollbar_opacity := 0.5;
     scrollbar_grabbed_y := 0.0;
     
-    tabs_left_offset := 0.0;
     tabs_anim: Anim;
+    tabs_left_offset := 0.0;
+    tabs_force_offset_check := false;
 }
 
 Buffer :: struct {
@@ -1610,6 +1614,8 @@ Buffer :: struct {
     was_dirty_on_frame := false;
     tokenization_requested := false;
     readonly := false;
+
+    kind: enum u8 { normal; editor_config; scratch; } = .normal;
 
     colors: [] Color;
     row_table: [..] Row_Info;
