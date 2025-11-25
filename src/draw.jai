@@ -387,7 +387,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         Simp.set_shader_for_color(true);
         
         put_line_marks_to_scrollbar :: (pos: s64, colorv4: Vector4) #expand {
-            MARK_HEIGHT :: 2;
+            MARK_HEIGHT := 2 * dpi_scale;
             
             row_index := find_row_index(editor.active_buffer, pos);
             top_pos := fnt_get_line_height() * row_index;

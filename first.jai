@@ -15,7 +15,7 @@ build :: () {
     modules_paths: [..] string;
     plugins_to_create: [..] Plugin_To_Create;
 
-    window_name := "Asterisk";
+    window_name := "Astex";
     release_build := false;
     do_profile: enum u8 {no; yes; full;} = .yes;
     do_check := true;
@@ -67,7 +67,7 @@ build :: () {
         set_optimization(*options, .VERY_DEBUG);
         options.output_executable_name = "devbuild";
 
-        window_name = "Asterisk (devbuild)";
+        window_name = "Astex (devbuild)";
     }
     
     {
