@@ -118,8 +118,7 @@ main :: () {
                 if should_reinit {
                     dpi_scale = get_dpi_scale(window);
                     init_fonts();
-                    
-                    for *e: editors  e.tabs_force_offset_check = true;
+                    force_editors_viewports_recalculations();
                 }
             }
         }

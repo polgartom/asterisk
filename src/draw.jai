@@ -231,6 +231,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 if vk_ctrl_down {
                     font_size += 1;
                     init_fonts();
+                    force_editors_viewports_recalculations();
                 } else if vk_shift_down {
                     scroll_left(editor);
                 } else {
@@ -240,6 +241,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 if vk_ctrl_down {
                     font_size -= 1;
                     init_fonts();
+                    force_editors_viewports_recalculations();
                 } else if vk_shift_down {
                     scroll_right(editor);
                 } else {
@@ -457,8 +459,9 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         
         MeasureScope("Draw tabs");
         
+        font := r_font_sm;
         rect := tabs_rect;
-        padding := 8.0 * dpi_scale;
+        padding := font.em_width * dpi_scale;
 
         // rect.w -= scrollbar_area.w;
         // rect = shrink_x(rect, scrollbar_area.w); // This will ends at where the scrollbar starts, so the left and right editor tabs will be separated nicely.
@@ -492,7 +495,6 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             redraw_requested = true;
         }
         
-        font := r_font_sm;
         left := rect.x - editor.tabs_left_offset;
         baseline := rect.y + default_text_baseline(font, rect.h);
         workdir := get_workdir();

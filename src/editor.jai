@@ -1028,6 +1028,13 @@ get_active_editor_and_buffer :: () -> (editor: *Editor, buffer: *Buffer) {
     return active_editor, active_editor.active_buffer;
 }
 
+force_editors_viewports_recalculations :: () {
+    for *e: editors {
+        e.cursor.moved = true;
+        e.tabs_force_offset_check = true;
+    }
+}
+
 create_buffer :: () -> *Buffer {
     id: u64;
     retry := true;
