@@ -73,30 +73,6 @@ draw_frame :: () {
     }
         
     if show_debug_info {
-        /*
-        mx, my, ok := get_mouse_pointer_position_right_handed();
-        if ok {
-            r := active_editor.rect_for_draw;
-            PrintDev("[rect_for_draw] x:% y:% w:% h:%\n", r.x,r.y,r.w,r.h);
-            if is_point_in_rect(r, Vector2.{xx mx, xx my}) {
-                draw_quad(r, map_color_to_vec4(.TEXT_UNDER_INACTIVE_CURSOR));
-            }
-        }
-        */
-    
-        // b := active_editor.active_buffer;
-        // for b.history {
-        //     PrintDev("% t: % ; range: % ; text: % ; old_text: %\n", ifx it_index == b.history_index then ">" else "", it.type, it.range, it.text, it.old_text);
-        // }
-
-/*
-        {
-            using r_font;
-            ls := r_font.default_line_spacing;
-            line_gap := r_font.default_line_spacing - abs(r_font.typical_descender) - abs(r_font.typical_ascender);
-            //log("> % ; %\n", ls, line_gap);
-        }
-*/
         draw_global_debug_info(get_not_active_editor().rect_for_draw);
         // draw_debug_mouse_character_selection(active_editor, active_editor.rect_for_draw);
     }
@@ -120,13 +96,7 @@ draw_frame :: () {
                 xx (height)
             );
             
-            __Iprof.draw(
-                rect.x,
-                rect.y,
-                rect.w,
-                rect.h,
-                *Iprof_Config
-            );
+            __Iprof.draw(rect.x, rect.y, rect.w, rect.h, *Iprof_Config);
             
             // @Todo:
             // __Iprof.draw_graph(
