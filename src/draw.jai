@@ -1,5 +1,3 @@
-LEFT_PADDING :: 5;
-
 draw_frame :: () {
     c := map_color_to_vec4(.BACKGROUND);
     Simp.clear_render_target(c.x, c.y, c.z, c.w);
@@ -174,7 +172,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
     maybe_set_hot(ui_id, r);
     
-    _, r= := cut_left(r, LEFT_PADDING);
+    left_padding := r_font.em_width;
+    _, r= := cut_left(r, xx left_padding);
     editor.rect_for_draw = r;
     
     if UI.hot_last_frame == ui_id && !mouse_grabbed_ui_id {
@@ -302,8 +301,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
         Simp.set_shader_for_color(true);
     
-        // SCROLLBAR_UI_ID :: cast(u64)#location(); // @Temporary
-        SCROLLBAR_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_scrollbar else Ui_Id.editor_right_scrollbar;
+        scrollbar_ui_id := ifx ui_id == .editor_left then Ui_Id.editor_left_scrollbar else Ui_Id.editor_right_scrollbar;
         
         // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
         y_threshold := fnt_get_line_height() * 6; 
@@ -329,20 +327,21 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         mx, my := get_mouse_pointer_position_safe(right_handed=true);
         mouse_point := Vector2.{cast(float)mx, cast(float)my};
         
-        opacity := 0.25;
+        // a := (mx - editor.panel_rect.x);
+        // b := (area.x - editor.panel_rect.x);
+        // if a > b then swap(*a, *b);
+        // opacity := lerp(0.25, 0.8, (a / b));
+        opacity := .25;
         
-        if UI.hot_last_frame == ui_id && (is_point_in_rect(area, mouse_point) || mouse_grabbed_ui_id == xx SCROLLBAR_UI_ID) {
+        if (UI.hot_last_frame == ui_id && mouse_point_within_rect(area) && mouse_grabbed_ui_id == 0) || mouse_grabbed_ui_id == xx scrollbar_ui_id {
             set_cursor_icon(.CUR_ARROW);
             opacity = .8;
             
-            //t := get_animation_value(*editor.scrollbar_anim);
-            //editor.scrollbar_opacity = move_toward(0.0, editor.scrollbar_anim.target, t);
-                            
             if mouse_down {
                 active_editor = editor;
                 
-                if mouse_grabbed_ui_id != xx SCROLLBAR_UI_ID {
-                    mouse_grabbed_ui_id = xx SCROLLBAR_UI_ID;
+                if mouse_grabbed_ui_id != xx scrollbar_ui_id {
+                    mouse_grabbed_ui_id = xx scrollbar_ui_id;
 
                     editor.scrollbar_grabbed_y = scrollbar.h / 2;
                     //if mouse_point.y > scrollbar.y && mouse_point.y < scrollbar.y + scrollbar.h {
@@ -374,7 +373,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         if scroll_zone_height > 0 {
             Simp.set_shader_for_rect();
             color := Vector4.{1, 1, 1, opacity*0.5};
-            radius := 4.0;
+            radius := 4.0 * dpi_scale;
             Simp.immediate_quad_with_radius(scrollbar.x, scrollbar.y, scrollbar.x + scrollbar.w, scrollbar.y + scrollbar.h, color, radius=radius);
             //Simp.immediate_quad(scrollbar.x, scrollbar.y, scrollbar.x+scrollbar.w, scrollbar.y + scrollbar.h, .{1,1,1,.5});
             //draw_quad(scrollbar, .{1, 1, 1, editor.scrollbar_opacity});
@@ -740,6 +739,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     if #complete shape == {
         case .BLOCK;
             Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + cw), p2, bg_color);
+            
             // Change character's color under the cursor
             if buffer.count {
                 character := get_character_as_string_at(buffer, c.pos);
@@ -1488,7 +1488,8 @@ draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
     color := map_color_to_vec4(.TEXT_DEFAULT);
 
     push_scissor(r);
-    context.draw_invisible_characters = draw_invisible_characters;
+    context.draw_invisible_characters = draw_invisible_characters; // So we can access this value in modules/Simp/font.jai
+    
     defer {
         pop_scissor();
         context.draw_invisible_characters = false;
@@ -1498,12 +1499,19 @@ draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
     
     for row_index: start_row..end_row {
         row := row_table[row_index];
-        if row.size == 0 continue;
+        // if row.size == 0 continue;
 
         baseline := (r.h + r.y) - (line_height*(row_index+1)) + top_offset;
         left := r.x;
-        line_text := slice(buffer, row.end - row.size, row.size);
-        generate_quads_for_code_run(buffer, xx (left-left_offset), xx baseline, line_text);
+        
+        size := row.size;
+        if context.draw_invisible_characters {
+            // Just for the invisible line end character
+            size += 1; // @Memory @XXX @Testit Maybe we won't overflow because the we allocate more memory than the buffer.count
+            assert(size < buffer.count);
+        }
+        line_text := slice(buffer, row.end - row.size, size);
+        generate_quads_for_code_run(buffer, xx (left - left_offset), xx baseline, line_text);
     }
     
     draw_code_run(buffer);
@@ -1512,7 +1520,8 @@ draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
 //text_glyphs_cache: Table(string, [..] *Simp.Glyph_Data);
 
 generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
-    assert(text.count > 0);
+    // assert(text.count > 0);
+    if !text.count return;
     
     // @Speed Maybe we can cache the text, so we don't have to generate the quads every time!
     /*
@@ -1540,7 +1549,7 @@ generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
     
     for quad: r_font.current_quads {
         color := map_color_to_vec4(buffer.colors[index]);
-        if draw_invisible_characters && buffer.data[index] == #char " " || buffer.data[index] == #char "\t" {
+        if draw_invisible_characters && buffer.data[index] == #char " " || buffer.data[index] == #char "\t" || buffer.data[index] == #char "\n" {
             color = invisible_char_color;
         }
         
@@ -1745,7 +1754,7 @@ draw_quad :: (r: Rect, color: Vector4) {
 
 draw_quad_with_radius :: (r: Rect, color: Vector4, radius := 0.0) {
     Simp.set_shader_for_rect();
-    Simp.immediate_quad_with_radius(r.x, r.y, r.x + r.w, r.y + r.h, color, radius=r_rect_radius);
+    Simp.immediate_quad_with_radius(r.x, r.y, r.x + r.w, r.y + r.h, color, radius=radius);
 }
 
 push_scissor :: (_rect: Rect) {

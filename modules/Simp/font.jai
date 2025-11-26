@@ -870,6 +870,9 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32
         if utf32 == #char "\t" {
             utf32 = #char "→";
         }
+        if utf32 == #char "\n" {
+            utf32 = #char "¬";
+        }
     } else {
         if utf32 == #char "\t" {
             utf32 = #char " ";

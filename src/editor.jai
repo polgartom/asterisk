@@ -1569,11 +1569,11 @@ editor_commands :: Editor_Command.[
     .{"[Video] Standard vsync",             () { video_set_vsync(.STANDARD); }},
     .{"[Video] No Vsync",                   () { video_set_vsync(.DISABLED); }},
     .{"[Video] Half vsync",                 () { video_set_vsync(.HALF    ); }},
-    .{"[Video] Adaptive vsync (NVIDIA)",    () { video_set_vsync(.ADAPTIVE); }},
+    .{"[Video] Adaptive vsync",             () { video_set_vsync(.ADAPTIVE); }},
     
     .{"[DEV] Debug infos",                  () { show_debug_info = !show_debug_info; }},
-    .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
     .{"[DEV] Show Profiler",                () { show_profiler = !show_profiler; }},
+    .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
 ];
 
 BUFFER_PAGE_SIZE :: 4096;
