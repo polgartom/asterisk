@@ -702,7 +702,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
     line_text  = slice(line_text, 0, c.pos - row.start);
 
     cx := r.x + measure_text_width(r_font, line_text) - editor.left_offset;
-    cw := em(1.0, r_font);
+    cw := r_font_max_em_width; //em(1.0, r_font);
     ch := r_font.character_height;
 
     right_to_left_handed := (r.h + r.y); // so we calculate things from "the top"
@@ -730,10 +730,10 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
             color := map_color_to_vec4(.CURSOR_LINE_BACKGROUND);
             Simp.immediate_quad(r.x, p1, r.x + r.w, p2, color);
         case .BORDERED;
-            THICKNESS :: 2; // @Todo: Add to config
+            thickness := 2 * dpi_scale; // @Todo: Add to config
             border_color := #run hex_to_vec4(0xcccccc_1a); // map_color_to_vec4(.CURSOR_LINE_BACKGROUND); // @Todo: Add to config
-            Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + THICKNESS, border_color); // top
-            Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + THICKNESS, border_color); // bottom
+            Simp.immediate_quad(r.x, p1, r.x + r.w, p1 + thickness, border_color); // top
+            Simp.immediate_quad(r.x, p2, r.x + r.w, p2 + thickness, border_color); // bottom
     }
 
     if #complete shape == {
@@ -742,9 +742,14 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
             
             // Change character's color under the cursor
             if buffer.count {
-                character := get_character_as_string_at(buffer, c.pos);
-                Simp.prepare_text(r_font, character);
+                context.draw_invisible_characters = draw_invisible_characters;
+                defer context.draw_invisible_characters = false;
+                
+                ch := get_character_as_string_at(buffer, c.pos, include_line_end_character=draw_invisible_characters);
+                
+                Simp.prepare_text(r_font, ch);
                 Simp.draw_prepared_text(r_font, xx cx, cast(s64, baseline), fg_color);
+                
             }
         case .LINE;
             Simp.immediate_quad(cast(float32)cx, p1, cast(float32)(cx + max(cw*.5, 3.0)), p2, bg_color);
@@ -1549,7 +1554,7 @@ generate_quads_for_code_run :: (buffer: *Buffer, x: s64, y: s64, text: string) {
     
     for quad: r_font.current_quads {
         color := map_color_to_vec4(buffer.colors[index]);
-        if draw_invisible_characters && buffer.data[index] == #char " " || buffer.data[index] == #char "\t" || buffer.data[index] == #char "\n" {
+        if draw_invisible_characters && is_invisible_but_drawable(buffer.data[index]) {
             color = invisible_char_color;
         }
         

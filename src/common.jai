@@ -161,6 +161,10 @@ is_upper :: inline (char: u8) -> bool {
     return char >= #char "A" && char <= #char "Z";
 }
 
+is_invisible_but_drawable :: inline (ch: u8) -> bool {
+    return ch == #char " " || ch == #char "\t" || ch == #char "\n";
+}
+
 Character_Type :: enum u8 { ctrl; alphanum; symbol; space; };
 get_character_type :: (c: u8) -> Character_Type {
     if trailingBytesForUTF8[1] != 0 return .alphanum; // @Temporary @Todo The multi-byte character can be a symbol but it's good for now!

@@ -60,19 +60,20 @@ init_fonts :: () {
         }
     }
 
-    #if 0 {
-        // Measure the fonts widths for X-axis scroll
+    {
         min_size: s64 = 99999;
         max_size: s64 = -1;
-        sizes_sum: s64 = 0;
+        // sizes_sum: s64 = 0;
         for 0x21..0x7E { // from Exclamation mark to Equivalency sign - tilde 
             w := measure_text_width(r_font, string.{count=1, data=*cast(u8)it});
             if (w < min_size) min_size = w;
             if (w > max_size) max_size = w;
-            sizes_sum += w;
-            log("> c: % ; w: %\n", string.{1, xx *it}, w);
+            // sizes_sum += w;
+            // log("> c: % ; w: %\n", string.{1, xx *it}, w);
         }
-        log("> font: % | emwidth: % ; min: % ; max: % ; avg: %\n", font_family, r_font.em_width, min_size, max_size, (sizes_sum/(0x7E-0x21)));
+        
+        r_font_max_em_width = max_size;
+        // log("> font: % | emwidth: % ; min: % ; max: % ; avg: %\n", font_family, r_font.em_width, min_size, max_size, (sizes_sum/(0x7E-0x21)));
     }
 
     file_icon_md_width        = measure_text_width(r_font_icons, FILE_ICON);
@@ -245,6 +246,7 @@ folder_icon_md_width := 0;
 folder_open_icon_md_width := 0;
 
 r_font_largest_digit_width := 0;
+r_font_max_em_width := 0;
 
 DEFAULT_FONT_SIZE :: 15;
 DEFAULT_SMALL_FONT_SIZE :: 14;
