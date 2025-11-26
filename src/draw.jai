@@ -163,10 +163,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     
     line_numbers_rect := r;
     if show_line_numbers && buffers.count {
-        t := tprint("%", formatInt(editor.active_buffer.row_table.count, digits_per_comma=0));
-        w := measure_text_width(r_font_sm, t) * 1.25;
+        rows_count := max(100, editor.active_buffer.row_table.count);
+        t := tprint("%", formatInt(rows_count, digits_per_comma=0));
+        w := measure_text_width(r_font_sm, t) * 1.5;
         line_numbers_rect, r = cut_left(r, w);
-        
         // _, tabs_rect = cut_left(tabs_rect, line_numbers_rect.w); // We align the tabs to the scrollbar
     }
     
@@ -264,7 +264,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
         Simp.immediate_quad(rect.x + rect.w, rect.y, rect.x + rect.w + 1.0, rect.y + rect.h, map_color_to_vec4(.LAYOUT_SEPARATOR)); // right border
         
-        //Simp.set_shader_for_text();
+        // rect = shrink_x(rect, r_font_sm.em_width*1.0);
+        // rect.w -= r_font_sm.em_width*1.0;
         
         line_height := fnt_get_line_height();
         start_row := first_visible_row_index(editor, editor.active_buffer);
@@ -279,6 +280,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             baseline := (rect.h + rect.y) - (line_height*(ri+1)) + top_offset;
             width := Simp.prepare_text(r_font_sm, t);
             left := rect.x + (rect.w/2 - width/2);
+            // left := rect.x + max(0.0, rect.w - width);
             
             Simp.generate_quads_for_prepared_text(r_font_sm, xx left, xx baseline, 0);
             for quad: r_font_sm.current_quads {
