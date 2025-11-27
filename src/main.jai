@@ -362,12 +362,13 @@ set_cursor_icon :: (kind: OS_Cursor_Kind, loc := #caller_location) {
 #if OS == .WINDOWS {
     init_cursors :: () {
         using OS_Cursor_Kind;
-        cursor_pointers[CUR_ARROW] = LoadCursorW(null, IDC_ARROW);
-        cursor_pointers[CUR_BEAM] = LoadCursorW(null, IDC_IBEAM);
-        cursor_pointers[CUR_WAIT] = LoadCursorW(null, IDC_WAIT);
+        cursor_pointers[CUR_ARROW]  = LoadCursorW(null, IDC_ARROW);
+        cursor_pointers[CUR_BEAM]   = LoadCursorW(null, IDC_IBEAM);
+        cursor_pointers[CUR_WAIT]   = LoadCursorW(null, IDC_WAIT);
+        cursor_pointers[CUR_SIZEWE] = LoadCursorW(null, IDC_SIZEWE);
     }
         
-    cursor_pointers: [3] HCURSOR;
+    cursor_pointers: [#run enum_highest_value(OS_Cursor_Kind)+1] HCURSOR;
 }
 
 #if OS == .LINUX {
@@ -615,9 +616,10 @@ os_current_cursor_kind := OS_Cursor_Kind.CUR_ARROW;
 cursor_icon_was_set_this_frame := false;
 
 OS_Cursor_Kind :: enum u8 {
-    CUR_ARROW :: 0;
-    CUR_BEAM  :: 1;
-    CUR_WAIT  :: 2;
+    CUR_ARROW  :: 0;
+    CUR_BEAM   :: 1;
+    CUR_WAIT   :: 2;
+    CUR_SIZEWE :: 3;
 }
 
 Ui_Id :: enum s64 {
@@ -630,6 +632,8 @@ Ui_Id :: enum s64 {
     editor_right :: -89;
     editor_right_scrollbar :: -88;
     editor_right_tabs :: -87;
+    
+    editors_layout_separator :: -80;
 }
 
 UI: struct {

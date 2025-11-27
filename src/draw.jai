@@ -12,9 +12,15 @@ draw_frame :: () {
     UI.hot = .none;
     // set_cursor_icon(.CUR_ARROW);
 
-    if editors[0].visible && editors[1].visible {
-        left, right := cut_left(rect, floor(rect.w/2));
+    if editor_panels_width == 0 || editor_panels_auto_size {
+        editor_panels_width = rect.w / 2;
+    }
+    
+    min_max_threshold := 100.0 * dpi_scale;
+    editor_panels_width = max(min_max_threshold, editor_panels_width);
+    editor_panels_width = min(width - min_max_threshold, editor_panels_width);
 
+    if editors[0].visible && editors[1].visible {
         v := 1.0;
         if editors[1].width_anim.active {
             using editors[1].width_anim;
@@ -27,15 +33,42 @@ draw_frame :: () {
             
             redraw_requested = true;
         }
-        right = cut_right(right, floor(right.w*v));
+        
+        left, right := cut_left(rect, min(cast(float)width, editor_panels_width/v));
+        right = cut_right(right, floor(right.w));
         sepa_rect := right;
 
         draw_editor(*editors[0], left, .editor_left);
         draw_editor(*editors[1], right, .editor_right);
 
         Simp.set_shader_for_color(true);
-        c := map_color_to_vec4(.LAYOUT_SEPARATOR);
-        Simp.immediate_quad(sepa_rect.x - 1.0, sepa_rect.y, sepa_rect.x + 1.0, sepa_rect.h + sepa_rect.y, c);
+        sepa_rect.x -= 1;
+        sepa_rect.w  = 2;
+        sepa_color := map_color_to_vec4(.LAYOUT_SEPARATOR);
+                
+        maybe_set_hot(.editors_layout_separator, sepa_rect);
+        
+        if (UI.hot_last_frame == .editors_layout_separator && !mouse_grabbed_ui_id) || mouse_grabbed_ui_id == xx Ui_Id.editors_layout_separator {
+            set_cursor_icon(.CUR_SIZEWE);
+            sepa_color.w = .5; // alpha @Incomplete specify separate color for this!
+            
+            if mouse_dbl_clicked {
+                editor_panels_width = 0;
+                editor_panels_auto_size = true;
+                
+            } else if mouse_down {
+                mx := get_mouse_pointer_position_right_handed();
+                if !mouse_grabbed_ui_id {
+                    mouse_grabbed_ui_id = xx Ui_Id.editors_layout_separator;
+                    editor_panels_grabbed_x = xx mx;
+                }
+                editor_panels_width += xx ((mx - editor_panels_grabbed_x));
+                editor_panels_grabbed_x = xx mx;
+                editor_panels_auto_size = false;
+            }
+        }
+        
+        draw_quad(sepa_rect, sepa_color);
         
     } else {
         v := 0.0;
@@ -45,13 +78,14 @@ draw_frame :: () {
             t := (frame_time64 - started_at) / duration;
             t = clamp(t, 0.0, 1.0);
             distance := (target - start);
-            v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            // v = start + cast(float)(distance * t * t * (3.0 - 2.0 * t)); // smoothstep
+            v = start + cast(float)(distance * t * t); // smoothstep
             if t == 1.0 then active = false;
             
             redraw_requested = true;
         }
         
-        right, left := cut_right(rect, rect.w/2*v);
+        right, left := cut_right(rect, editor_panels_width*v);
         
         draw_editor(*editors[0], left, .editor_left);
         if right.w != 0 {
@@ -347,7 +381,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
                     editor.scrollbar_grabbed_y = scrollbar.h / 2;
                     //if mouse_point.y > scrollbar.y && mouse_point.y < scrollbar.y + scrollbar.h {
-                    if is_point_in_rect(scrollbar, mouse_point) {
+                    if mouse_point_within_rect(scrollbar) {
                         editor.scrollbar_grabbed_y = scrollbar.h - (my - scrollbar.y);
                     }
                 }

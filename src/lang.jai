@@ -259,10 +259,12 @@ is_multibyte_char :: inline (c: *u8) -> bool {
 language_from_file_extension :: (ext: string) -> Language {
     if ext == {
         case "jai"; return .JAI;
-        case "c"; #through; case "h"; #through;
+        case "c"; #through;   case "h"; #through;
         case "cpp"; #through; case "hpp"; #through;
         case "cxx"; 
             return .C_STYLE;
+        case "php"; #through; case "phtml";
+            return .PHP; 
         case "py";
             return .PYTHON;
     };
@@ -271,20 +273,24 @@ language_from_file_extension :: (ext: string) -> Language {
 }
 
 language_kind_to_string :: (lang: Language) -> string {
-    if lang == {
-        case .C_STYLE; return "C";
+    if #complete lang == {
         case .JAI;     return "Jai";
+        case .C_STYLE; return "C";
+        case .PHP;     return "PHP";
         case .PYTHON;  return "Python";
+        case .PLAIN_TEXT; return "Text";
     };
     
     return "Text";
 }
 
 language_inline_comment_token :: (lang: Language) -> string {
-    if lang == {
+    if #complete lang == {
         case .C_STYLE; return "//";
         case .JAI;     return "//";
+        case .PHP;     return "//";
         case .PYTHON;  return "#";
+        case .PLAIN_TEXT; return "";
     };
     return "";
 }
@@ -306,6 +312,7 @@ Language :: enum_flags u64 {
     PLAIN_TEXT;
     C_STYLE;
     JAI;
+    PHP;
     PYTHON;
 }
 

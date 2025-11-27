@@ -1558,6 +1558,10 @@ active_editor: *Editor = null;
 editors: [2] Editor;
 buffers: [..] *Buffer;
 
+editor_panels_auto_size := true;
+editor_panels_width     := 0.0;
+editor_panels_grabbed_x := 0.0;
+
 editor_commands :: Editor_Command.[
     .{"Open Editor Config",                 OpenEditorConfigFile},
     .{"Open Project Config",                OpenProjectConfigFile},
