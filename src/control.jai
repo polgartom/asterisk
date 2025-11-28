@@ -1412,6 +1412,19 @@ ToggleInlineComment :: () {
     e.cursor.col = byte_pos_to_row_col_index(b, e.cursor.pos);
 }
 
+RunCustomCommand :: () {
+    editor := get_not_active_editor();
+    
+    buffer := create_or_find_empty_buffer(editor);
+    buffer.kind = .stdout;
+    modify_string(*buffer.name, "stdout");
+    buffer.readonly = true;
+    buffer.stdout_in_progress = true;
+    change_active_buffer(editor, buffer);
+    
+    execute_custom_command(buffer);
+}
+
 //////////////////////////////////////////////////
 
 register_keymap_procedures :: () {
@@ -1430,6 +1443,9 @@ register_keymap_procedures :: () {
     Add(widget_keymap, CloseCurrentWidget);
     
     // Editor
+    
+    Add(editor_keymap, RunCustomCommand);
+    
     Add(editor_keymap, open_command_browser);
     Add(editor_keymap, open_buffer_browser);
     Add(editor_keymap, open_file_browser);

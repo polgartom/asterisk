@@ -22,7 +22,9 @@ advance :: (arr: [] $T, steps := 1) -> [] T {
 // String
 
 free_string :: (target: *string) {
-    if target.count && target.data free(target.*);
+    if target.data && target.count {
+        free(target.*);
+    }
     target.data = null;
     target.count = 0;
 }

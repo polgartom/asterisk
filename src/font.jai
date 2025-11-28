@@ -262,6 +262,7 @@ XMARK_ICON          :: #run fontawesome_utf32_to_utf8(0xf057);
 FILE_ICON           :: #run fontawesome_utf32_to_utf8(0xf15b);
 FOLDER_ICON         :: #run fontawesome_utf32_to_utf8(0xf07b);
 FOLDER_OPEN_ICON    :: #run fontawesome_utf32_to_utf8(0xf07c);
+TERMINAL_ICON       :: #run fontawesome_utf32_to_utf8(0xf120);
 
 BAKED_FONT_DEFAULT      :: #run load_font("firacode-retina/FiraCode-Retina.ttf");
 BAKED_FONT_ICONS        :: #run load_font("font-awesome/Font Awesome 6 Free-Regular-400.otf");

@@ -44,8 +44,8 @@ draw_frame :: () {
         draw_editor(*editors[1], right, .editor_right);
 
         Simp.set_shader_for_color(true);
-        sepa_rect.x -= 1;
-        sepa_rect.w  = 2;
+        sepa_rect.x -= 1 * dpi_scale;
+        sepa_rect.w  = 2 * dpi_scale;
         sepa_color := map_color_to_vec4(.LAYOUT_SEPARATOR);
                 
         maybe_set_hot(.editors_layout_separator, sepa_rect);
@@ -185,6 +185,8 @@ swap_buffers :: () {
 }
 
 draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
+    
+
     if !is_active(editor) context.color_intensity *= 0.95;
     defer reset_color_intensity();
         
@@ -507,15 +509,16 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         workdir := get_workdir();
         total_width := 0.0;
         for b: editor.tabs {
-            path := "Untitled";
+            tab_label := ifx b.name then b.name else "Untitled";
             if b.filepath {
-                path = b.filepath;
-                if begins_with(path, workdir) {
-                    advance(*path, workdir.count + 1); // +1 for the path separator
-                    assert(path.count > 0);
+                tab_label = b.filepath;
+                if begins_with(tab_label, workdir) {
+                    advance(*tab_label, workdir.count + 1); // +1 for the path separator
+                    assert(tab_label.count > 0);
                 }
             }
               
+            bg_color_locked := false;
             fg_color_locked := false;
             fg_color   := map_color_to_vec4(.TEXT_DIMMED);
             bg_color   := v4(1, 1, 1, .02);
@@ -534,9 +537,17 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             } else if b.kind == .editor_config {
                 icon_font  = r_font_icons_solid;
                 icon_glyph = GEARS_ICON;
+            } else if b.kind == .stdout {
+                icon_font  = r_font_icons_solid;
+                icon_glyph = TERMINAL_ICON;
+                
+                if b.stdout_in_progress {
+                    bg_color = #run hex_to_vec4(0x618833_40); // @Todo: Specify a color
+                    bg_color_locked = true;
+                }
             }
             
-            width := Simp.prepare_text(font, path);
+            width := Simp.prepare_text(font, tab_label);
             icon_width := Simp.prepare_text(icon_font, icon_glyph);
             icon_width += xx padding;
             width += icon_width;
@@ -545,7 +556,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             if UI.hot_last_frame == EDITOR_TABS_UI_ID && b != editor.active_buffer {
                 if mouse_point_within_rect(rect) && mouse_point_within_rect(tab_rect) {
                     if !fg_color_locked then fg_color = map_color_to_vec4(.TEXT_DEFAULT);
-                    bg_color = v4(1, 1, 1, .08);
+                    if !bg_color_locked then bg_color = v4(1, 1, 1, .08);
                     
                     if mouse_clicked {
                         active_editor = editor;
@@ -556,7 +567,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             
             if b == editor.active_buffer {
                 if !fg_color_locked then fg_color = map_color_to_vec4(.TEXT_DEFAULT);
-                bg_color = v4(1, 1, 1, .1);
+                if !bg_color_locked then bg_color = v4(1, 1, 1, .1);
             }
             
             if editor.tabs_force_offset_check && b == editor.active_buffer {
@@ -583,6 +594,9 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 }
             }
             
+            Simp.set_shader_for_color(true);
+            draw_quad(tab_rect, bg_color);
+            
             Simp.set_shader_for_text();
             Simp.draw_prepared_text(icon_font, xx (left), xx baseline, fg_color);
             Simp.draw_prepared_text(font, xx (left + icon_width), xx baseline, fg_color);
@@ -592,7 +606,6 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             
             // Background & Right border
             Simp.set_shader_for_color(true);
-            draw_quad(tab_rect, bg_color);
             Simp.immediate_quad(left, xx rect.y, xx (left + 1), xx (rect.y + rect.h), map_color_to_vec4(.LAYOUT_SEPARATOR));
             
             if it_index != buffers.count - 1 {
@@ -756,6 +769,10 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
 
     if buffer.readonly {
         shape = .LINE;
+        line_indicator = .NONE;
+    }
+    if buffer.kind == .stdout {
+        shape = .UNDERSCORE;
         line_indicator = .NONE;
     }
 

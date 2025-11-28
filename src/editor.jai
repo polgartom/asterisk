@@ -1,3 +1,19 @@
+insert_text_at_raw :: (buffer: *Buffer, at: s64, text: string) {
+    if !text.count return;
+    
+    maybe_grow(buffer, text.count);
+
+    insert_at      := buffer.data  + at;
+    new_right      := insert_at    + text.count;
+    right_rem_size := buffer.count - (insert_at - buffer.data);
+    right_rem_size  = max(0, right_rem_size);
+
+    if right_rem_size then c_memmove(new_right, insert_at, cast(u64)right_rem_size);
+    memmove(insert_at, text.data, text.count);
+
+    buffer.count += text.count;
+}
+
 insert_text_at :: (editor: *Editor, buffer: *Buffer, at: s64, text: string, $history := true) {
 
     #if history {
@@ -108,6 +124,8 @@ shift_left :: (editor: *Editor, using buffer: *Buffer, to: s64, from: s64) { // 
 }
 
 insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
+    if buffer.readonly return;
+
     t := Clipboard.os_clipboard_get_text();
     defer free(t);
 
@@ -125,6 +143,8 @@ insert_os_clipboard_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor:
 }
 
 replace_text_at :: (editor: *Editor, buffer: *Buffer, range: Range, new_text: string, $history := true) {
+    if buffer.readonly return;
+
     #if history {
         add_history(editor, buffer, .REPLACE, new_text, range);
     }
@@ -134,6 +154,8 @@ replace_text_at :: (editor: *Editor, buffer: *Buffer, range: Range, new_text: st
 }
 
 replace_selection :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    if buffer.readonly return;
+
     start, end := selected_range(cursor);
     replace_text_at(editor, buffer, Range.{start, end}, text, history);
     
@@ -141,6 +163,8 @@ replace_selection :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, text: s
 }
 
 insert_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, text: string, $history := true) {
+    if buffer.readonly return;
+
     if has_selection(cursor) {
         replace_selection(editor, buffer, cursor, text, history);
         return;
@@ -152,20 +176,28 @@ insert_text_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, tex
 }
 
 remove_text_from_right_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    if buffer.readonly return;
+
     remove_text_from_right(editor, buffer, cursor.pos, bytes_to_del, history);
     
     set_cursor_pos(buffer, cursor, cursor.pos - bytes_to_del, horizontal=true);
 }
 
 remove_text_from_right :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    if buffer.readonly return;
+
     remove_text_from_left(editor, buffer, at - bytes_to_del, bytes_to_del, history);
 }
 
 remove_text_from_left_at_cursor :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, bytes_to_del: s64, $history := true) {
+    if buffer.readonly return;
+
     remove_text_from_left(editor, buffer, cursor.pos, bytes_to_del, history);
 }
 
 remove_text_from_left :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_del: s64, $history := true) {
+    if buffer.readonly return;
+
     pos1 := clamp(at, 0, buffer.count-1);
     pos2 := clamp(at + bytes_to_del, 0, buffer.count);
     if pos1 == pos2 return; // @Cleanup: We do the same check in the shift_left() procedure.
@@ -179,6 +211,8 @@ remove_text_from_left :: (editor: *Editor, buffer: *Buffer, at: s64, bytes_to_de
 }
 
 delete_selected_range_if_has_any :: inline (editor: *Editor, buffer: *Buffer, cursor: *Cursor) -> (text_deleted: bool) {
+    if buffer.readonly return false;
+
     if has_selection(editor.cursor) {
         delete_selected_range(editor, buffer, *editor.cursor);
         return true;
@@ -187,6 +221,7 @@ delete_selected_range_if_has_any :: inline (editor: *Editor, buffer: *Buffer, cu
 }
 
 delete_selected_range :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor, $history := true) {
+    if buffer.readonly return;
     if !has_selection(cursor) return;
 
     start, end := selected_range(cursor);
@@ -200,6 +235,7 @@ copy_selection_to_os_clipboard :: (buffer: *Buffer, cursor: *Cursor) {
 }
 
 cut_selection_and_copy_to_os_clipboard :: (editor: *Editor, buffer: *Buffer, cursor: *Cursor) {
+    if buffer.readonly return;
     if !has_selection(cursor) return;
 
     text := get_selection_as_string(buffer, cursor);
@@ -267,11 +303,10 @@ find_buffer_index :: (buffer: *Buffer) -> (found: bool, index: s64) {
     return false, -1;
 }
 
-find_buffer_by_filepath :: (filepath: string, $os_native_sepa := false) -> *Buffer {
+find_buffer_by_filepath :: (filepath: string) -> *Buffer {
     for buffers {
         if it.exists_on_disk {
-            #if os_native_sepa   if it.filepath_os_sepa == filepath return it;
-            #if !os_native_sepa  if it.filepath         == filepath return it;
+            if it.filepath == filepath return it;
         }
     }
 
@@ -288,7 +323,7 @@ find_initialized_buffer_index :: (using editor: *Editor) -> (found: bool, index:
 }
 
 // @Cleanup Use -1 if failed
-find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, index: s64) {
+find_uninitialized_buffer_index :: () -> (found: bool, index: s64) {
     for buffers {
         if !it.initialized return true, it_index;
     }
@@ -299,7 +334,7 @@ find_uninitialized_buffer_index :: (using editor: *Editor) -> (found: bool, inde
 create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     buffer: *Buffer;
 
-    found, index := find_uninitialized_buffer_index(editor);
+    found, index := find_uninitialized_buffer_index();
     if found {
         assert(index > -1);
         buffer = buffers[index];
@@ -440,20 +475,27 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
     }
 }
 
-buffer_reset_keeping_memory :: (using buffer: *Buffer) {
-    free(row_table.data,, row_table.allocator);
+buffer_destroy_and_remove_from_list :: (using buffer: *Buffer) {
+    ll("Buffer freed completely. [%] (%)", buffer, ifx buffer.filepath then buffer.filepath else buffer.name);
 
-    if data != null  then c_free(data);
-    if filepath      then free(filepath);
-
-    // We don't have to free these string, because we free those and replace with the
-    // new values when we add a new history. @Cleanup
-    for history {
-        if it.text     free(it.text);
-        if it.old_text free(it.old_text);
+    for h: history {
+        free_string(*h.text);
+        free_string(*h.old_text);
+        #if DEBUG {
+            free_string(*h.snapshot);
+        }
     }
     
-    reset_history(buffer);
+    #insert __BUFFER_DESTROY_CODE;
+    
+    for b: buffers {
+        if b == buffer {
+            remove b;
+            break;
+        }
+    }
+        
+    free(buffer);
 }
 
 batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
@@ -911,7 +953,6 @@ save_buffer :: (using buffer: *Buffer) -> bool {
         if !ok return false;
         modify_string(*filepath, path);
         path_unify_sepa(filepath);
-        modify_string(*filepath_os_sepa, path);
         
         ext := path_extension(path);
         language = language_from_file_extension(ext);
@@ -936,6 +977,8 @@ save_buffer :: (using buffer: *Buffer) -> bool {
 }
 
 close_tab :: (editor: *Editor, buffer: *Buffer) {
+    if !buffer.destroyable return;
+
     found, index := find_buffer_within_editor_tabs(editor, buffer);
     if !found return;
         
@@ -953,15 +996,7 @@ close_tab :: (editor: *Editor, buffer: *Buffer) {
     }
     
     if !some_editor_still_using_it {
-        for b: buffers {
-            if b == buffer {
-                ll("Buffer freed completely. [%] (%)", buffer, buffer.filepath);
-                remove b;
-                buffer_reset_keeping_memory(buffer);
-                free(buffer);
-                break;
-            }
-        }
+        buffer_destroy_and_remove_from_list(buffer);
     }
     
 }
@@ -1652,42 +1687,43 @@ Editor :: struct {
 Buffer :: struct {
     id: u64;
 
-    data:      *u8;
+    data:      *u8; @NeedsFree(c_free)
     count:     s64;
     allocated: s64;
     
     hash:      u64;
     disk_hash: u64;
 
-    should_reload_from_disk := false; // @Cleanup Remove
-    exists_on_disk := false;          // @Cleanup Remove
+    should_reload_from_disk: bool; // @Cleanup Remove
+    exists_on_disk:          bool; // @Cleanup Remove
     disk_state: enum u8 {not_exists; exists; modified; removed;} = .not_exists;
 
-    initialized := false;
-    dirty := false;
-    was_dirty_on_frame := false;
-    tokenization_requested := false;
-    readonly := false;
+    initialized: bool;
+    dirty: bool;
+    was_dirty_on_frame: bool;
+    tokenization_requested: bool;
+    readonly: bool;
 
-    kind: enum u8 { normal; editor_config; scratch; } = .normal;
+    kind: enum u8 { normal; editor_config; scratch; stdout; } = .normal;
+    stdout_in_progress: bool; // @Temporary
+    destroyable := true;      // @Temporary
 
-    colors: [] Color;
-    row_table: [..] Row_Info;
+    colors: [] Color; @NeedsFree(c_free)
+    row_table: [..] Row_Info; @NeedsFree(array_free)
     cursor_backup: [editors.count] Cursor;
     language: Language = .PLAIN_TEXT; // @Todo: It's mainly for the system buffers like logs or console output etc..
     
-    history: [..] Buffer_History;
+    history: [..] Buffer_History; @NeedsFree(array_free)
     history_index: s64 = -1;
-    history_edit_group_id_stack: [..] u64;
+    history_edit_group_id_stack: [..] u64; @NeedsFree(array_free)
     history_current_edit_group_id: u64 = 0;
     
-    name: string;
-    filepath: string;
-    filepath_os_sepa: string; // keep this for comparisons
+    name: string; @NeedsFree(free_string)
+    filepath: string; @NeedsFree(free_string)
     modtime: float64;
     last_writetime: Apollo_Time;
 
-    quads_for_code_run: [..] Code_Font_Quad;
+    quads_for_code_run: [..] Code_Font_Quad; @NeedsFree(array_free)
 
     Code_Font_Quad :: struct {
         quad: Simp.Font_Quad;
@@ -1734,4 +1770,81 @@ Editor_Command_Proc :: #type ();
 Editor_Command :: struct {
     name: string;
     proc: Editor_Command_Proc;
+}
+
+#scope_file
+
+///////////////////////////////////////////
+// Code Generation
+
+__BUFFER_DESTROY_CODE :: #run -> string {
+    Buffer_Member_Free :: struct {
+        member: Type_Info_Struct_Member;
+        handled: bool;
+        proc_name: string;
+        // code: Code;
+    }
+    
+    buffer_members_to_free: [..] Buffer_Member_Free;
+
+    info_struct := type_info(Buffer);
+    for member: info_struct.members {
+        if member.flags & .CONSTANT  continue;
+        
+        // @Todo: Check if array element type is struct or the type is a struct that has to be freed recursively.
+        // if member.name == "history" {
+            // info_array := cast(*Type_Info_Array) member.type;
+            // log(">> %\n", info_array.element_type.*);
+        // }
+        
+        for note: member.notes {
+            if begins_with(note, "NeedsFree") {
+                // @Todo: Check if the proc_name is exists.
+                proc_name := advance(note, "NeedsFree".count);
+                proc_name = trim(proc_name, "()");
+                assert(!!proc_name, "You should specify the procedure for the '%' member of Buffer.\n", member.name);
+                
+                array_add(*buffer_members_to_free, .{member=member, proc_name=proc_name});
+            }
+        }
+    }
+    
+    builder: String_Builder;
+    
+    for * buffer_members_to_free {
+        type := it.member.type.type;
+        if it.proc_name == {
+            case "c_free";
+                it.handled = true;
+                if type == {
+                    case .POINTER;
+                        print(*builder, "if buffer.%1 != null then c_free(buffer.%1);\n", it.member.name);
+                    case .ARRAY;
+                        print(*builder, "if buffer.%1.data != null && buffer.%1.count then c_free(buffer.%1.data);\n", it.member.name);
+                    case;
+                        assert(false, "Unhandled member: '%'\n", it.member.name);
+                };
+                
+            case "free_string";
+                it.handled = true;
+                assert(type == .STRING, "Invalid buffer member given for %(). Member: '%'\n", it.proc_name, it.member.name);
+                print(*builder, "free_string(*%);\n", it.member.name);
+                
+            case "array_free";
+                it.handled = true;
+                assert(type == .ARRAY, "Invalid buffer member type given for %(). Member: '%'.\n", it.proc_name, it.member.name);
+                print(*builder, "array_free(%1);\n", it.member.name);
+                
+            case;
+                assert(false, "Unhandled free procedure '%' for this member: '%'!\n", it.proc_name, it.member.name);
+        }
+    }
+    
+    for * buffer_members_to_free {
+        assert(it.handled, "Unhandled member: '%'! You should define a procedure for freeing it!\n", it.member.name);
+    }
+    
+    code := builder_to_string(*builder);
+    // log("\n-------------\nCODE:\n\n%\n----------\n\n", code);
+    return code;
 }

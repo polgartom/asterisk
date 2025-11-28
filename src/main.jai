@@ -61,6 +61,7 @@ main :: () {
     init_fonts();
     init_cursors();
     init_file_watcher();
+    init_command_runner();
 
     if executable_args.novsync {
         video_set_vsync(.DISABLED);
@@ -243,6 +244,8 @@ main :: () {
                 word_complete_end();
             }
         }
+
+        command_runner_update();
 
         for b: buffers {
             commit_buffer_changes(b);
@@ -469,6 +472,13 @@ wait_for_event :: () {
         while !X11.XPeekEvent(X11.x_global_display, *xevent) {}
     }
 } @NoProfile
+
+wake_up_main_thread :: () {
+    #if OS == .WINDOWS {
+        WM_USER :: 0x0400;
+        PostMessageW(window, WM_USER, 0, 0);
+    }
+}
 
 #if CPU == .X64 {
     meow_hash :: (bytes: [] u8) -> u64 {
@@ -701,6 +711,7 @@ MeasureScope :: (name: string) #expand {
 #load "view.jai";
 #load "font.jai";
 #load "file_watcher.jai";
+#load "command_runner.jai";
 
 #import "System";
 #import "Basic";
@@ -716,8 +727,8 @@ MeasureScope :: (name: string) #expand {
 #import "File_Watcher";
 #import "Hash_Table";
 #import "Process";
+#import "Thread";
 
-Thread    :: #import "Thread";
 File      :: #import "File";
 Simp      :: #import "Simp";
 Clipboard :: #import "Clipboard";
@@ -730,7 +741,9 @@ Hash      :: #import "Hash";
 
     crt :: #system_library "msvcrt";  // For malloc, free on Windows
     user32 :: #system_library "user32";
+    
     WaitMessage :: () -> s32 #foreign user32;
+    PostMessageW :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) -> BOOL #foreign user32;
     GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
     SetCursorPos :: (x: s32, y: s32) -> s32 #foreign user32;
 }
