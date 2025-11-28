@@ -96,7 +96,7 @@ CreateBuffer :: () {
 }
 
 CloseCurrentBuffer :: () {
-    _, buffer := get_active_editor_and_buffer();
+    editor, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
     if is_unsaved(buffer) {
@@ -108,38 +108,20 @@ CloseCurrentBuffer :: () {
         }
     }
 
-    close_buffer(buffer);
-
+    close_tab(editor, buffer);
 }
 
 PrevBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
+    
+    found, index := find_buffer_within_editor_tabs(editor, buffer);
+    assert(found, "The buffer must exists in the editor tab!\n");
 
-    count := count_buffers(editor, initialized=true);
-    if count < 2 return;
+    prev_index := index - 1;
+    if prev_index < 0 then prev_index = editor.tabs.count - 1;
 
-    found, index := find_buffer_index(buffer);
-    assert(found, "-> %\n", buffer.*);
-
-    prev_buffer: *Buffer;
-    for < buffers {
-        if it_index < index && it.initialized {
-            prev_buffer = it;
-            break;
-        }
-    }
-
-    if !prev_buffer {
-        for < buffers {
-            if it.initialized {
-                prev_buffer = it;
-                break;
-            }
-        }
-    }
-
-    assert(prev_buffer != null);
+    prev_buffer := editor.tabs[prev_index];
     change_active_buffer(editor, prev_buffer);
 }
 
@@ -147,31 +129,70 @@ NextBuffer :: () {
     editor, buffer := get_active_editor_and_buffer();
     using editor;
 
-    count := count_buffers(editor, initialized=true);
-    if count < 2 return;
-
-    found, index := find_buffer_index(buffer);
-    assert(found, "-> %\n", buffer.*);
-
-    next_buffer: *Buffer;
-    for buffers {
-        if it_index > index && it.initialized {
-            next_buffer = it;
-            break;
-        }
-    }
-
-    if !next_buffer {
-        for buffers {
-            if it.initialized {
-                next_buffer = it;
-                break;
-            }
-        }
-    }
-
-    assert(next_buffer != null);
+    found, index := find_buffer_within_editor_tabs(editor, buffer);
+    assert(found, "The buffer must exists in the editor tab!\n");
+    
+    next_index  := (index + 1) % editor.tabs.count;
+    next_buffer := editor.tabs[next_index];
     change_active_buffer(editor, next_buffer);
+}
+
+MoveCurrentTabToLeftEditor :: () {
+    current_editor, buffer := get_active_editor_and_buffer();
+    left_editor := get_left_editor();
+    if current_editor == left_editor return;
+    
+    found := find_buffer_within_editor_tabs(current_editor, buffer);
+    assert(found);
+    
+    // maybe_add_buffer_to_editor_tabs(left_editor, buffer);
+    change_active_buffer(left_editor, buffer); // this procedure adds the buffer to the tabs if needed
+    active_editor = left_editor;
+    
+    remove_buffer_from_editor_tabs(current_editor, buffer);
+}
+
+MoveCurrentTabToRightEditor :: () {
+    current_editor, buffer := get_active_editor_and_buffer();
+    right_editor := get_right_editor();
+    if current_editor == right_editor return;
+    
+    found := find_buffer_within_editor_tabs(current_editor, buffer);
+    assert(found);
+    
+    // maybe_add_buffer_to_editor_tabs(right_editor, buffer);
+    change_active_buffer(right_editor, buffer); // this procedure adds the buffer to the tabs if needed
+    active_editor = right_editor;
+    
+    remove_buffer_from_editor_tabs(current_editor, buffer);
+}
+
+MoveTabToLeft :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    
+    found, index := find_buffer_within_editor_tabs(editor, buffer);
+    assert(found);
+    
+    if index == 0 return;
+    prev_index := index - 1;
+    tab_on_the_left := editor.tabs[prev_index];
+    
+    editor.tabs[prev_index] = buffer;
+    editor.tabs[index] = tab_on_the_left;
+}
+
+MoveTabToRight :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    
+    found, index := find_buffer_within_editor_tabs(editor, buffer);
+    assert(found);
+    
+    if index == editor.tabs.count - 1 return;
+    next_index := index + 1;
+    tab_on_the_right := editor.tabs[next_index];
+    
+    editor.tabs[next_index] = buffer;
+    editor.tabs[index] = tab_on_the_right;
 }
 
 SaveAs :: () {
@@ -344,30 +365,6 @@ MoveLeftWord :: () {
         }
     }
     
-    
-    
-    /*
-    while pos != 0 {
-        _pos := prev_character_pos(buffer, pos);
-        type = get_character_type(buffer.data[_pos]);
-        if type != start_type || _pos == pos {
-            break; ; 
-        }
-        pos = _pos;
-    }
-    
-    if type != start_type {
-        while pos != 0 {
-            _pos := prev_character_pos(buffer, pos);
-            if get_character_type(buffer.data[_pos]) != type || _pos == pos {
-                break;
-            }
-            pos = _pos;
-        }
-    }
-    
-    set_cursor_pos(buffer, cursor, pos, horizontal=true);
-    */
 }
 
 MoveLeftWordSlow :: inline () {
@@ -457,25 +454,6 @@ MoveRightWord :: inline () {
             }
         }
     }
-
-    // while pos < buffer.count {
-    //     type = get_character_type(buffer.data[pos]);
-    //     if type != start_type {
-    //         break;
-    //     }
-    //     pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
-    // }
-    
-    // prev_pos := pos;
-    // if type != start_type {
-    //     while pos < buffer.count {
-    //         if get_character_type(buffer.data[pos]) != type {
-    //             break;
-    //         }
-    //         pos += 1 + trailingBytesForUTF8[buffer.data[pos]];
-    //     }
-    // }
-
 }
 
 MoveRightWordSlow :: inline () {
@@ -1393,8 +1371,9 @@ ToggleInlineComment :: () {
             insert_text_at(e, b, at, insert, history=true); // @Speed!!! This does a commit_buffer_changes after text insertion
             
             if multiline_mode {
+                // Corrent the selected range
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
-                if i == 0 then min.* += insert.count;
+                if i == 0 then min.* += insert.count; // Apply correction to the first selected row, after that we shouldn't correct it again.
                 max.* += insert.count;
                 
             } else if e.cursor.pos >= at {
@@ -1417,8 +1396,9 @@ ToggleInlineComment :: () {
             commit_buffer_changes(b); // @Speed!!!
             
             if multiline_mode {
+                // Corrent the selected range
                 min, max := get_cursor_min_max_indecies_as_pointers(*e.cursor);
-                if i == 0 then min.* -= bytes_to_del;
+                if i == 0 then min.* -= bytes_to_del; // Apply correction to the first selected row, after that we shouldn't correct it again.
                 max.* -= bytes_to_del;
                 
             } else if e.cursor.pos >= at {
@@ -1458,13 +1438,18 @@ register_keymap_procedures :: () {
     Add(editor_keymap, open_goto_line_dialog);
     
     Add(editor_keymap, ReloadEditor);
+    
     Add(editor_keymap, SwitchOrSplitEditorPanel);
     Add(editor_keymap, HideSecondEditorPanel);
+    
     Add(editor_keymap, CreateBuffer);
     Add(editor_keymap, CloseCurrentBuffer);
-
     Add(editor_keymap, PrevBuffer);
     Add(editor_keymap, NextBuffer);
+    Add(editor_keymap, MoveCurrentTabToLeftEditor);
+    Add(editor_keymap, MoveCurrentTabToRightEditor);
+    Add(editor_keymap, MoveTabToLeft);
+    Add(editor_keymap, MoveTabToRight);
 
     Add(editor_keymap, Save);
 

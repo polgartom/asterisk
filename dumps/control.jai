@@ -94,7 +94,7 @@ CreateBuffer :: () {
 }
 
 CloseCurrentBuffer :: () {
-    _, buffer := get_active_editor_and_buffer();
+    editor, buffer := get_active_editor_and_buffer();
     assert(buffer != null);
 
     if buffer.unsaved {
@@ -106,8 +106,7 @@ CloseCurrentBuffer :: () {
         }
     }
 
-    close_buffer(buffer);
-
+    close_tab(editor, buffer);
 }
 
 PrevBuffer :: () {

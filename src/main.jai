@@ -292,7 +292,10 @@ main :: () {
                             
                             if answer == {
                                 case .YES; b.disk_state = .not_exists;
-                                case .NO;  close_buffer(b);
+                                case .NO;
+                                    for *e: editors {
+                                        close_tab(e, b);
+                                    }
                             }
                         }
                     }

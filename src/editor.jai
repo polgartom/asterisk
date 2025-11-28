@@ -452,14 +452,8 @@ buffer_reset_keeping_memory :: (using buffer: *Buffer) {
         if it.text     free(it.text);
         if it.old_text free(it.old_text);
     }
+    
     reset_history(buffer);
-
-    for buffers {
-        if it == buffer {
-            remove it;
-            break;
-        }
-    }
 }
 
 batch_up_undos :: (history: [] Buffer_History, history_index: s64) -> [] Buffer_History {
@@ -941,39 +935,35 @@ save_buffer :: (using buffer: *Buffer) -> bool {
     return ok;
 }
 
-close_buffer :: (buffer: *Buffer) {
-    found, index := find_buffer_index(buffer);
-    assert(found && index != -1);
-
-    FindNewBuffer :: (e: *Editor) -> *Buffer {
+close_tab :: (editor: *Editor, buffer: *Buffer) {
+    found, index := find_buffer_within_editor_tabs(editor, buffer);
+    if !found return;
+        
+    removed := remove_buffer_from_editor_tabs(editor, buffer);
+    assert(removed, "[%] %\n", buffer, buffer.*);
+    
+    some_editor_still_using_it := false;
+    for *e: editors {
+        found := find_buffer_within_editor_tabs(e, buffer);
+        if found {
+            ll("Some editor still using the buffer so we won't free it. [%] (%)\n", buffer, buffer.filepath);
+            some_editor_still_using_it = true;
+            break;
+        }
+    }
+    
+    if !some_editor_still_using_it {
         for b: buffers {
-            if b == e.active_buffer continue;
-            if b.initialized {
-                if b.exists_on_disk {
-                    return b;
-                }
-                editor_uses_the_buffer := false;
-                for editors {
-                    if it.active_buffer == b {
-                        editor_uses_the_buffer = true;
-                    }
-                }
-                if !editor_uses_the_buffer return b;
+            if b == buffer {
+                ll("Buffer freed completely. [%] (%)", buffer, buffer.filepath);
+                remove b;
+                buffer_reset_keeping_memory(buffer);
+                free(buffer);
+                break;
             }
         }
-
-        return create_or_find_empty_buffer(e);
     }
-
-    for *e: editors {
-        if e.active_buffer == buffer {
-            b := FindNewBuffer(e);
-            commit_buffer_changes(b, force=true);
-            change_active_buffer(e, b);
-        }
-    }
-
-    buffer_reset_keeping_memory(buffer);
+    
 }
 
 is_unsaved :: inline (using buffer: *Buffer) -> bool {
@@ -987,6 +977,9 @@ is_active :: inline (using e: *Editor) -> bool {
 is_active :: inline (using e: *Editor, using b: *Buffer) -> bool {
     return e.active_buffer == b;
 }
+
+get_left_editor  :: inline () -> *Editor { return *editors[0]; } // @Temporary!
+get_right_editor :: inline () -> *Editor { return *editors[1]; } // @Temporary!
 
 get_not_active_editor :: () -> *Editor {
     for *e: editors {
@@ -1074,6 +1067,9 @@ change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
         current_buffer.cursor_backup[editor_index] = editor.cursor; // Backing up the current cursor
     }
 
+    maybe_add_buffer_to_editor_tabs(editor, next_buffer);
+    editor.tabs_force_offset_check = true;
+
     editor.active_buffer = next_buffer;
     editor.cursor = next_buffer.cursor_backup[editor_index];
     clamp_cursor(*editor.cursor, next_buffer.count);
@@ -1081,8 +1077,6 @@ change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
     editor.left_offset = 0.0;
     editor.top_offset  = 0.0;
     scroll_to_cursor(editor, editor.cursor, animation_duration=0.0);
-    
-    editor.tabs_force_offset_check = true;
 }
 
 scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float = 0.08) {
@@ -1445,6 +1439,54 @@ init_editor_buffers :: (files_from_cmdline: [] string) {
     }
 }
 
+maybe_add_buffer_to_editor_tabs :: (editor: *Editor, buffer: *Buffer) {
+    found := find_buffer_within_editor_tabs(editor, buffer);
+    if found return;
+    
+    found=, index := find_buffer_within_editor_tabs(editor, editor.active_buffer);
+    if found {
+        array_insert_at(*editor.tabs, buffer, index + 1); // Add the tab next to the currently active tab (buffer)
+    } else {
+        // Maybe it's the first buffer of the editor so at this point no buffer is exists in the editor.tabs array,
+        // mainly because we call this procedure in the change_active_buffer() before we assign the buffer to the editor.active_buffer.
+        // so the editor.active_buffer is must be null! I guess this is the only place where we allow this behaviour.
+        
+        assert(editor.active_buffer == null);
+        array_add(*editor.tabs, buffer);
+    }
+}
+
+remove_buffer_from_editor_tabs :: (editor: *Editor, buffer: *Buffer) -> (found_and_removed: bool) {
+    for tab, index: editor.tabs {
+        if tab == buffer {
+            if editor.active_buffer == tab {
+                if index + 1 < editor.tabs.count {
+                    change_active_buffer(editor, editor.tabs[index + 1]);
+                } else if index - 1 >= 0 {
+                    change_active_buffer(editor, editor.tabs[index - 1]);
+                } else {
+                    new_buffer := create_or_find_empty_buffer(editor); // this gives a new buffer or a buffer that was uninitialized
+                    change_active_buffer(editor, new_buffer);
+                }
+            }
+        
+            array_ordered_remove_by_index(*editor.tabs, index);
+            
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+find_buffer_within_editor_tabs :: (editor: *Editor, buffer: *Buffer) -> (found: bool, index: s64) {
+    for tab, index: editor.tabs {
+        if tab == buffer then return true, index;
+    }
+    
+    return false, -1;
+}
+
 #if DEBUG {
     dump_buffer_histories :: (using buffer: *Buffer) {
         #if !DEBUG { return; }
@@ -1504,7 +1546,7 @@ init_editor_buffers :: (files_from_cmdline: [] string) {
         }
 
         for *e: editors {
-            close_buffer(e.active_buffer);
+            close_tab(e, e.active_buffer);
         }
         
         fpath := tprint("dumps/%", fname);
@@ -1601,6 +1643,7 @@ Editor :: struct {
     scrollbar_opacity := 0.5;
     scrollbar_grabbed_y := 0.0;
     
+    tabs: [..] *Buffer;
     tabs_anim: Anim;
     tabs_left_offset := 0.0;
     tabs_force_offset_check := false;

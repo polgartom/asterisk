@@ -34,7 +34,9 @@ draw_frame :: () {
             redraw_requested = true;
         }
         
-        left, right := cut_left(rect, min(cast(float)width, editor_panels_width/v));
+        // We divide it with v rather than multiply because we want to animate right to left.
+        // Maybe will be simpler if you just test it yourself. Try to multiply rather than divide and see the result.
+        left, right := cut_left(rect, min(cast(float)width, editor_panels_width / v));
         right = cut_right(right, floor(right.w));
         sepa_rect := right;
 
@@ -504,7 +506,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         baseline := rect.y + default_text_baseline(font, rect.h);
         workdir := get_workdir();
         total_width := 0.0;
-        for b: buffers {
+        for b: editor.tabs {
             path := "Untitled";
             if b.filepath {
                 path = b.filepath;
@@ -1547,10 +1549,11 @@ draw_buffer_code :: (using editor: *Editor, using buffer: *Buffer) {
         
         size := row.size;
         if context.draw_invisible_characters {
-            // Just for the invisible line end character
-            size += 1; // @Memory @XXX @Testit Maybe we won't overflow because the we allocate more memory than the buffer.count
-            assert(size < buffer.count);
+            size += 1; // Just for the invisible line end character
         }
+        Clamp(*size, 0, buffer.count); // @Memory Maybe we won't overflow because the we allocate more memory than the buffer.count
+        assert(size <= buffer.count && buffer.count < buffer.allocated);
+        
         line_text := slice(buffer, row.end - row.size, size);
         generate_quads_for_code_run(buffer, xx (left - left_offset), xx baseline, line_text);
     }
