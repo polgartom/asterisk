@@ -11,7 +11,7 @@ deinit_command_runner :: () {
     shutdown(*thread_group);
 }
 
-execute_custom_command :: (buffer: *Buffer) {
+execute_custom_command :: (buffer: *Buffer, command: string) {
     assert(buffer.kind == .stdout && buffer.readonly);
     
     buffer.stdout_in_progress = true;
@@ -19,6 +19,7 @@ execute_custom_command :: (buffer: *Buffer) {
     
     work := New(Custom_Command_Work); // @leak free it!
     work.buffer = buffer;
+    modify_string(*work.command, command);
     modify_string(*work.workdir, get_workdir());
         
     add_work(*thread_group, work);
@@ -53,6 +54,7 @@ command_runner_update :: () {
     if works {
         for works {
             work := cast(*Custom_Command_Work) it;
+            free_string(*work.command);
             defer free(work);
             log("work: %\n", work.*);
         }
@@ -65,6 +67,7 @@ Custom_Command_Work :: struct {
     buffer: *Buffer;
     workdir: string;
     done: bool;
+    command: string;
 }
 
 stdout: String_Builder;
@@ -79,21 +82,26 @@ command_threadproc :: (group: *Thread_Group, thread: *Thread, _work: *void) -> T
     defer reset_temporary_storage();
     
     work := cast(*Custom_Command_Work)_work;
+    assert(!!work.command);
+    
     lock(*output_lock);
     current_work = work;
     work.buffer.destroyable = false;
     work.buffer.stdout_stalled = false;
     unlock(*output_lock);
-                
+     
     command: [..] string;
     command.allocator = temporary_allocator;
     
-    // @Temporary
-    #if DEBUG {
-        array_add(*command, "../dwrite_jai/main.exe");
-    } else {
-        array_add(*command, "jai first.jai - autorun");
-    }
+    array_add(*command, work.command);
+
+//     
+    // // @Temporary
+    // #if DEBUG {
+        // array_add(*command, "../dwrite_jai/main.exe");
+    // } else {
+        // array_add(*command, "jai first.jai - autorun");
+    // }
     
     KILL_PROCESS_IF_THE_MAIN_PROCESS_DIES :: true;
     process := New(Process);

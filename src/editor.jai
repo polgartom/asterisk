@@ -1655,6 +1655,26 @@ editor_commands :: Editor_Command.[
     .{"[DEV] Debug infos",                  () { show_debug_info = !show_debug_info; }},
     .{"[DEV] Show Profiler",                () { show_profiler = !show_profiler; }},
     .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
+    
+    .{"[RUN] Run Dwrite (DEMO)", () {
+        editor := get_not_active_editor();
+        buffer := create_or_find_empty_buffer(editor);
+        buffer.kind = .stdout;
+        modify_string(*buffer.name, "Run Dwrite");
+        buffer.readonly = true;
+        change_active_buffer(editor, buffer);
+        execute_custom_command(buffer, "../dwrite_jai/main.exe");
+    }},
+    
+    .{"[RUN] Compile & Run (DEMO)", () {
+        editor := get_not_active_editor();
+        buffer := create_or_find_empty_buffer(editor);
+        buffer.kind = .stdout;
+        modify_string(*buffer.name, "Compile & Run");
+        buffer.readonly = true;
+        change_active_buffer(editor, buffer);
+        execute_custom_command(buffer, "jai first.jai - autorun");
+    }},
 ];
 
 BUFFER_PAGE_SIZE :: 4096;
