@@ -1706,6 +1706,7 @@ Buffer :: struct {
 
     kind: enum u8 { normal; editor_config; scratch; stdout; } = .normal;
     stdout_in_progress: bool; // @Temporary
+    stdout_stalled: bool;     // @Temporary
     destroyable := true;      // @Temporary
 
     colors: [] Color; @NeedsFree(c_free)

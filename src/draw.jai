@@ -541,7 +541,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
                 icon_font  = r_font_icons_solid;
                 icon_glyph = TERMINAL_ICON;
                 
-                if b.stdout_in_progress {
+                if b.stdout_stalled {
+                    bg_color = #run hex_to_vec4(0xffc107_50); // @Todo: Specify a color
+                    bg_color_locked = true;
+                } else if b.stdout_in_progress {
                     bg_color = #run hex_to_vec4(0x618833_40); // @Todo: Specify a color
                     bg_color_locked = true;
                 }

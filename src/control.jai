@@ -1419,7 +1419,6 @@ RunCustomCommand :: () {
     buffer.kind = .stdout;
     modify_string(*buffer.name, "stdout");
     buffer.readonly = true;
-    buffer.stdout_in_progress = true;
     change_active_buffer(editor, buffer);
     
     execute_custom_command(buffer);

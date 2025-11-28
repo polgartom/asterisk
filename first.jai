@@ -19,6 +19,7 @@ build :: () {
     release_build := false;
     do_profile: enum u8 {no; yes; full;} = .yes;
     do_check := true;
+    autorun := false;
 
     intercept_flags: Intercept_Flags;
 
@@ -47,6 +48,7 @@ build :: () {
     if has_argument("profile")      then do_profile = .yes;
     if has_argument("full_profile") then do_profile = .full;
     if has_argument("no_check")     then do_check = true;
+    if has_argument("autorun")      then autorun = true;
     
     if release_build {
         options.backend = .LLVM;
@@ -82,7 +84,6 @@ build :: () {
         p.name = "Iprof";
         if do_profile == .full then array_add(*p.options, "-modules");
     }
-    
     if do_check {
         p := array_add(*plugins_to_create);
         p.name = "Check";
@@ -133,6 +134,9 @@ build :: () {
                 }
 
             case .COMPLETE;
+                if autorun {
+                    Autorun.run_build_result(w);
+                }
                 break; // Exit from the compiler's message loop
         }
 
@@ -167,10 +171,15 @@ verbose := false;
 
 ICON_FILEPATH :: "data/icon/icon.ico";
 
+////////////////////////////////
+// Imports
+
 #load "src/common.jai";
 
-String :: #import "String";
 #import "Compiler";
 #import "Basic";
 #import "Metaprogram_Plugins";
 #import "Command_Line";
+
+String :: #import "String";
+Autorun :: #import "Autorun";

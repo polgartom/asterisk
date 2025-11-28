@@ -14,6 +14,9 @@ deinit_command_runner :: () {
 execute_custom_command :: (buffer: *Buffer) {
     assert(buffer.kind == .stdout && buffer.readonly);
     
+    buffer.stdout_in_progress = true;
+    buffer.stdout_stalled = true;
+    
     work := New(Custom_Command_Work); // @leak free it!
     work.buffer = buffer;
     modify_string(*work.workdir, get_workdir());
@@ -79,11 +82,18 @@ command_threadproc :: (group: *Thread_Group, thread: *Thread, _work: *void) -> T
     lock(*output_lock);
     current_work = work;
     work.buffer.destroyable = false;
+    work.buffer.stdout_stalled = false;
     unlock(*output_lock);
                 
     command: [..] string;
     command.allocator = temporary_allocator;
-    array_add(*command, "../dwrite_jai/main.exe");
+    
+    // @Temporary
+    #if DEBUG {
+        array_add(*command, "../dwrite_jai/main.exe");
+    } else {
+        array_add(*command, "jai first.jai - autorun");
+    }
     
     KILL_PROCESS_IF_THE_MAIN_PROCESS_DIES :: true;
     process := New(Process);
@@ -128,9 +138,6 @@ command_threadproc :: (group: *Thread_Group, thread: *Thread, _work: *void) -> T
     work.buffer.destroyable = true;
     work.done = true;
     unlock(*output_lock);
-    
-    // free();
-    // free_string();
     
     return .CONTINUE;
 }
