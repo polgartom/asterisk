@@ -1,4 +1,4 @@
-// #run {
+a// #run {
 //     #if OS == .WINDOWS {
 //         WR :: #import "Windows_Resources";
 //         WR.disable_runtime_console();
@@ -373,7 +373,6 @@ set_cursor_icon :: (kind: OS_Cursor_Kind, loc := #caller_location) {
         cursor_pointers[CUR_BEAM]   = LoadCursorW(null, IDC_IBEAM);
         cursor_pointers[CUR_WAIT]   = LoadCursorW(null, IDC_WAIT);
         cursor_pointers[CUR_SIZEWE] = LoadCursorW(null, IDC_SIZEWE);
-        cursor_pointers[CUR_SIZENS] = LoadCursorW(null, IDC_SIZENS);
     }
         
     cursor_pointers: [#run enum_highest_value(OS_Cursor_Kind)+1] HCURSOR;
@@ -635,14 +634,12 @@ OS_Cursor_Kind :: enum u8 {
     CUR_BEAM   :: 1;
     CUR_WAIT   :: 2;
     CUR_SIZEWE :: 3;
-    CUR_SIZENS :: 4;
 }
 
 Ui_Id :: enum s64 {
     none :: -100;
     
     editors_layout_separator;
-    bottom_editor_layout_separator;
 
     editor_left;
     editor_left_scrollbar;

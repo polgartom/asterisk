@@ -130,6 +130,7 @@ command_threadproc :: (group: *Thread_Group, thread: *Thread, _work: *void) -> T
         // ll("success: % ; out: % ; err: % ; eof: %\n", success, output_bytes, error_bytes, eof);
         
         unlock(*output_lock);
+        wake_up_main_thread();
         sleep_milliseconds(10);
     }
     

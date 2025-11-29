@@ -20,6 +20,20 @@ draw_frame :: () {
     editor_panels_width = max(min_max_threshold, editor_panels_width);
     editor_panels_width = min(width - min_max_threshold, editor_panels_width);
 
+    bottom_editor_rect: Rect;
+    bottom_editor_height := 0.0;
+    {
+        editors[2].visible = false;
+        for tab: editors[2].tabs {
+            if tab.kind == .stdout {
+                editors[2].visible = true;
+                bottom_editor_height = 300.0;
+                bottom_editor_rect, rect = cut_bottom(rect, bottom_editor_height);
+                break;
+            }
+        }
+    }
+
     if editors[0].visible && editors[1].visible {
         v := 1.0;
         if editors[1].width_anim.active {
@@ -40,8 +54,8 @@ draw_frame :: () {
         right = cut_right(right, floor(right.w));
         sepa_rect := right;
 
-        draw_editor(*editors[0], left, .editor_left);
-        draw_editor(*editors[1], right, .editor_right);
+        draw_editor(*editors[0], left);
+        draw_editor(*editors[1], right);
 
         Simp.set_shader_for_color(true);
         sepa_rect.x -= 1 * dpi_scale;
@@ -89,10 +103,31 @@ draw_frame :: () {
         
         right, left := cut_right(rect, editor_panels_width*v);
         
-        draw_editor(*editors[0], left, .editor_left);
+        draw_editor(*editors[0], left);
         if right.w != 0 {
-            draw_editor(*editors[1], right, .editor_right);
+            draw_editor(*editors[1], right);
         }
+    }
+    
+    if editors[2].visible {
+        draw_editor(*editors[2], bottom_editor_rect);
+        
+        sepa_rect := bottom_editor_rect;
+        sepa_rect.y += bottom_editor_rect.h;
+        sepa_rect.y -= 3 * dpi_scale;
+        sepa_rect.h  = 3 * dpi_scale;
+        sepa_color := map_color_to_vec4(.LAYOUT_SEPARATOR);
+        sepa_color.w = 0.5;
+        
+        // @Todo
+        // maybe_set_hot(.bottom_editor_layout_separator, sepa_rect);
+        // if (UI.hot_last_frame == .bottom_editor_layout_separator && !mouse_grabbed_ui_id) || mouse_grabbed_ui_id == xx Ui_Id.bottom_editor_layout_separator {
+            // set_cursor_icon(.CUR_SIZENS);
+            // sepa_color.w = .75; // alpha @Incomplete specify separate color for this!
+        // }
+        
+        Simp.set_shader_for_color(true);
+        draw_quad(sepa_rect, sepa_color);
     }
     
     // Widgets
@@ -184,17 +219,19 @@ swap_buffers :: () {
     }
 }
 
-draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
-    
+get_editor_tabs_rect_height :: inline () -> float32 {
+    return r_font.default_line_spacing * 1.5;
+}
 
+draw_editor :: (using editor: *Editor, rect: Rect) {
     if !is_active(editor) context.color_intensity *= 0.95;
     defer reset_color_intensity();
         
     editor.panel_rect = rect;
     
-    r, footer_r := cut_top(rect, window_height - get_footer_height());
+    tabs_rect, r := cut_top(rect, get_editor_tabs_rect_height());
     
-    tabs_rect, r= := cut_top(r, xx (r_font.default_line_spacing*1.5));
+    r=, footer_r := cut_top(r, r.h - get_footer_height());
     
     scrollbar_width := r_font.em_width * 1.5;
     scrollbar_area := cut_right(r, scrollbar_width);
@@ -297,6 +334,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
     // Draw line numbers
     if show_line_numbers && buffers.count {
         rect := line_numbers_rect;
+        push_scissor(rect);
+        defer pop_scissor();
         
         Simp.set_shader_for_color(true);
         Simp.immediate_quad(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, map_color_to_vec4(.BACKGROUND2));
@@ -337,12 +376,10 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
     {
         // Draw scrollbar
-        //MeasureScope("Draw scrollbar");
+        MeasureScope("Draw scrollbar");
     
         Simp.set_shader_for_color(true);
     
-        scrollbar_ui_id := ifx ui_id == .editor_left then Ui_Id.editor_left_scrollbar else Ui_Id.editor_right_scrollbar;
-        
         // @Todo :WhiteSpacesAfterLastRow Make a procedure for this because we need to know what is the maximum empty space in rows that we show after the last row.
         y_threshold := fnt_get_line_height() * 6; 
         total_height := fnt_get_line_height() * editor.active_buffer.row_table.count + y_threshold;
@@ -475,8 +512,8 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         // rect.w -= scrollbar_area.w;
         // rect = shrink_x(rect, scrollbar_area.w); // This will ends at where the scrollbar starts, so the left and right editor tabs will be separated nicely.
         
-        EDITOR_TABS_UI_ID := ifx ui_id == .editor_left then Ui_Id.editor_left_tabs else .editor_right_tabs;
-        maybe_set_hot(EDITOR_TABS_UI_ID, rect);
+        tabs_ui_id := ifx ui_id == .editor_left then Ui_Id.editor_left_tabs else .editor_right_tabs;
+        maybe_set_hot(tabs_ui_id, rect);
                         
         Simp.set_shader_for_color(true);
         push_scissor(rect);
@@ -556,7 +593,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             width += icon_width;
             tab_rect := make_rect(left - padding, rect.y, width + padding*2, rect.h);
             
-            if UI.hot_last_frame == EDITOR_TABS_UI_ID && b != editor.active_buffer {
+            if UI.hot_last_frame == tabs_ui_id && b != editor.active_buffer {
                 if mouse_point_within_rect(rect) && mouse_point_within_rect(tab_rect) {
                     if !fg_color_locked then fg_color = map_color_to_vec4(.TEXT_DEFAULT);
                     if !bg_color_locked then bg_color = v4(1, 1, 1, .08);
@@ -617,7 +654,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
             }
         }
         
-        if UI.hot_last_frame == EDITOR_TABS_UI_ID {
+        if UI.hot_last_frame == tabs_ui_id {
             avg_width := total_width / buffers.count / 2;
             if mouse_scrolled_on_frame == .up {
                 target := editor.tabs_left_offset - avg_width;
@@ -669,12 +706,12 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
         editor.tabs_force_offset_check = false;
     }
 
-    {
+    if !hide_footer {
         // Draw footer
         //MeasureScope("Draw footer");
 
-        push_scissor(footer_r);
-        defer pop_scissor();
+        // push_scissor(footer_r);
+        // defer pop_scissor();
 
         footer := footer_r;
         Simp.set_shader_for_color(true);
@@ -690,7 +727,7 @@ draw_editor :: (using editor: *Editor, rect: Rect, ui_id: Ui_Id) {
 
         width := 0;
         left := footer.x + 10;
-        baseline := default_text_baseline(r_font_sm, footer.h, .bottom);
+        baseline := footer.y + default_text_baseline(r_font_sm, footer.h, .bottom);
 
         if show_font_debug_info {
             Simp.immediate_quad(footer.x, footer.y+baseline, footer.x+footer.w, footer.y+baseline+1, .{1,0,0,.7});
@@ -775,7 +812,7 @@ draw_cursor :: (editor: *Editor, buffer: *Buffer, r: Rect, shape := Cursor_Shape
         line_indicator = .NONE;
     }
     if buffer.kind == .stdout {
-        shape = .UNDERSCORE;
+        shape = .LINE;
         line_indicator = .NONE;
     }
 

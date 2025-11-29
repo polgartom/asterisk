@@ -42,6 +42,15 @@ clamp_cursor :: (c: *Cursor, max: s64) {
     Clamp(*c.sel, 0, max);
 }
 
+reset_cursor :: (using c: *Cursor) {
+    pos = 0;
+    sel = 0;
+    col = 0;
+    moved = false;
+    x_cache = -1;
+    backup = Cursor.Backup_Point.{};
+}
+
 get_cursor_min_max_indecies_as_pointers :: (cursor: *Cursor) -> (cursor_min_position: *s64, cursor_max_position: *s64) {
     c1 := *cursor.pos;
     c2 := *cursor.sel;

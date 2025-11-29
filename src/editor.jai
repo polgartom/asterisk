@@ -341,15 +341,24 @@ create_or_find_empty_buffer :: (editor: *Editor) -> *Buffer {
     } else {
         buffer = create_buffer();
     }
-
-    maybe_grow(buffer, BUFFER_PAGE_SIZE);
-
-    buffer.initialized = true;
-    buffer.disk_hash = hash_from_buffer(buffer);
-
-    commit_buffer_changes(buffer, true);
+    
+    initialize_buffer(buffer);
 
     return buffer;
+}
+
+initialize_buffer :: (buffer: *Buffer) {
+    if buffer.initialized return;
+    
+    maybe_grow(buffer, BUFFER_PAGE_SIZE);
+    
+    buffer.initialized = true;
+
+    rescan_line_ends(buffer);
+    for *c: buffer.cursor_backup    reset_cursor(c);
+    
+    buffer.hash = hash_from_buffer(buffer);
+    buffer.disk_hash = buffer.hash;
 }
 
 commit_buffer_changes :: (buffer: *Buffer, force := false) {
@@ -473,6 +482,23 @@ maybe_grow :: (buffer: *Buffer, size: s64) {
         }
 
     }
+}
+
+buffer_reset :: (using buffer: *Buffer) {
+    for h: history {
+        free_string(*h.text);
+        free_string(*h.old_text);
+        #if DEBUG {
+            free_string(*h.snapshot);
+        }
+    }
+    
+    #insert __BUFFER_DESTROY_CODE;
+    
+    new_buffer: Buffer;
+    buffer.* = new_buffer;
+    
+    initialize_buffer(buffer);
 }
 
 buffer_destroy_and_remove_from_list :: (using buffer: *Buffer) {
@@ -1015,10 +1041,12 @@ is_active :: inline (using e: *Editor, using b: *Buffer) -> bool {
 
 get_left_editor  :: inline () -> *Editor { return *editors[0]; } // @Temporary!
 get_right_editor :: inline () -> *Editor { return *editors[1]; } // @Temporary!
+get_bottom_editor :: inline () -> *Editor { return *editors[2]; } // @Temporary!
 
 get_not_active_editor :: () -> *Editor {
+    bottom_editor := get_bottom_editor();
     for *e: editors {
-        if !e.visible {
+        if !e.visible && e != bottom_editor {
             return active_editor; // Fallback
         }
     }
@@ -1079,20 +1107,20 @@ create_buffer :: () -> *Buffer {
     return buffer;
 }
 
-create_readonly_buffer :: (name: string) -> *Buffer {
-    assert(!!name, "You should provide a name!\n");
-
-    b := create_buffer();
-    b.readonly = true;
-    b.initialized = true;
-
-    fmt_name := sprint("* % *", name);
-    defer free(fmt_name);
-    modify_string(*b.name, fmt_name);
-    commit_buffer_changes(b, true);
-
-    return b;
-}
+// create_readonly_buffer :: (name: string) -> *Buffer {
+    // assert(!!name, "You should provide a name!\n");
+// 
+    // b := create_buffer();
+    // b.readonly = true;
+    // b.initialized = true;
+// 
+    // fmt_name := sprint("* % *", name);
+    // defer free(fmt_name);
+    // modify_string(*b.name, fmt_name);
+    // commit_buffer_changes(b, true);
+// 
+    // return b;
+// }
 
 change_active_buffer :: (editor: *Editor, next_buffer: *Buffer) {
     current_buffer := editor.active_buffer;
@@ -1440,6 +1468,25 @@ prev_char_byte_offset :: (using buffer: *Buffer, start: s64) -> s64 {
     return ptr - buffer.data;
 }
 
+init_editors :: () {
+    e: *Editor;
+    
+    e = get_left_editor();
+    e.ui_id           = .editor_left;
+    e.scrollbar_ui_id = .editor_left_scrollbar;
+    e.tabs_ui_id      = .editor_left_tabs;
+    
+    e = get_right_editor();
+    e.ui_id           = .editor_right;
+    e.scrollbar_ui_id = .editor_right_scrollbar;
+    e.tabs_ui_id      = .editor_right_tabs;
+    
+    e = get_bottom_editor();
+    e.ui_id           = .editor_bottom;
+    e.scrollbar_ui_id = .editor_bottom_scrollbar;
+    e.tabs_ui_id      = .editor_bottom_tabs;
+}
+
 init_editor_buffers :: (files_from_cmdline: [] string) {
     // log_buffer    = create_readonly_buffer("logs");
     // logerr_buffer = create_readonly_buffer("errors");
@@ -1632,7 +1679,7 @@ find_buffer_within_editor_tabs :: (editor: *Editor, buffer: *Buffer) -> (found: 
 }
 
 active_editor: *Editor = null;
-editors: [2] Editor;
+editors: [3] Editor;
 buffers: [..] *Buffer;
 
 editor_panels_auto_size := true;
@@ -1657,21 +1704,39 @@ editor_commands :: Editor_Command.[
     .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
     
     .{"[RUN] Run Dwrite (DEMO)", () {
-        editor := get_not_active_editor();
-        buffer := create_or_find_empty_buffer(editor);
+        editor := get_bottom_editor();
+        buffer: *Buffer;
+        for tab: editor.tabs {
+            if tab.kind == .normal || !tab.stdout_in_progress {
+                buffer_reset(tab);
+                buffer = tab;
+                break;
+            }
+        }
+        if !buffer then buffer = create_or_find_empty_buffer(editor);
+        
         buffer.kind = .stdout;
-        modify_string(*buffer.name, "Run Dwrite");
         buffer.readonly = true;
+        modify_string(*buffer.name, "Run Dwrite");
         change_active_buffer(editor, buffer);
         execute_custom_command(buffer, "../dwrite_jai/main.exe");
     }},
     
     .{"[RUN] Compile & Run (DEMO)", () {
-        editor := get_not_active_editor();
-        buffer := create_or_find_empty_buffer(editor);
+        editor := get_bottom_editor();
+        buffer: *Buffer;
+        for tab: editor.tabs {
+            if tab.kind == .normal || !tab.stdout_in_progress {
+                buffer_reset(tab);
+                buffer = tab;
+                break;
+            }
+        }
+        if !buffer then buffer = create_or_find_empty_buffer(editor);
+        
         buffer.kind = .stdout;
-        modify_string(*buffer.name, "Compile & Run");
         buffer.readonly = true;
+        modify_string(*buffer.name, "Compile & Run");
         change_active_buffer(editor, buffer);
         execute_custom_command(buffer, "jai first.jai - autorun");
     }},
@@ -1684,6 +1749,7 @@ Editor :: struct {
     cursor: Cursor;
     
     visible: bool;
+    hide_footer: bool;
     
     panel_rect:    Rect;
     rect_for_draw: Rect;
@@ -1693,6 +1759,10 @@ Editor :: struct {
     width_anim:    Anim;
     y_scroll_anim: Anim;
     x_scroll_anim: Anim;
+    
+    ui_id: Ui_Id;
+    tabs_ui_id: Ui_Id;
+    scrollbar_ui_id: Ui_Id;
     
     scrollbar_anim: Anim; // @Todo
     scrollbar_opacity := 0.5;
@@ -1724,19 +1794,20 @@ Buffer :: struct {
     tokenization_requested: bool;
     readonly: bool;
 
-    kind: enum u8 { normal; editor_config; scratch; stdout; } = .normal;
+    kind: enum u8 { normal; editor_config; stdout; } = .normal;
     stdout_in_progress: bool; // @Temporary
     stdout_stalled: bool;     // @Temporary
     destroyable := true;      // @Temporary
 
     colors: [] Color; @NeedsFree(c_free)
-    row_table: [..] Row_Info; @NeedsFree(array_free)
+    row_table: [..] Row_Info; @NeedsFree(array_reset)
     cursor_backup: [editors.count] Cursor;
+    
     language: Language = .PLAIN_TEXT; // @Todo: It's mainly for the system buffers like logs or console output etc..
     
-    history: [..] Buffer_History; @NeedsFree(array_free)
+    history: [..] Buffer_History; @NeedsFree(array_reset)
     history_index: s64 = -1;
-    history_edit_group_id_stack: [..] u64; @NeedsFree(array_free)
+    history_edit_group_id_stack: [..] u64; @NeedsFree(array_reset)
     history_current_edit_group_id: u64 = 0;
     
     name: string; @NeedsFree(free_string)
@@ -1744,7 +1815,7 @@ Buffer :: struct {
     modtime: float64;
     last_writetime: Apollo_Time;
 
-    quads_for_code_run: [..] Code_Font_Quad; @NeedsFree(array_free)
+    quads_for_code_run: [..] Code_Font_Quad; @NeedsFree(array_reset)
 
     Code_Font_Quad :: struct {
         quad: Simp.Font_Quad;
@@ -1851,10 +1922,10 @@ __BUFFER_DESTROY_CODE :: #run -> string {
                 assert(type == .STRING, "Invalid buffer member given for %(). Member: '%'\n", it.proc_name, it.member.name);
                 print(*builder, "free_string(*%);\n", it.member.name);
                 
-            case "array_free";
+            case "array_reset";
                 it.handled = true;
                 assert(type == .ARRAY, "Invalid buffer member type given for %(). Member: '%'.\n", it.proc_name, it.member.name);
-                print(*builder, "array_free(%1);\n", it.member.name);
+                print(*builder, "array_reset(*%1);\n", it.member.name);
                 
             case;
                 assert(false, "Unhandled free procedure '%' for this member: '%'!\n", it.proc_name, it.member.name);
