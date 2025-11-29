@@ -1184,8 +1184,8 @@ scroll_to_cursor :: (editor: *Editor, cursor: Cursor, animation_duration: float 
     target = editor.top_offset;
     if my - y_threshold < 0 {
         target += abs(my - y_threshold);
-    } else if my + y_threshold > r.h + r.y {
-        target -= (my + y_threshold) - (r.h + r.y);
+    } else if my + y_threshold > r.h {
+        target -= (my + y_threshold) - (r.h);
         if target < 0 then target = 0;
     }
 
@@ -1485,6 +1485,7 @@ init_editors :: () {
     e.ui_id           = .editor_bottom;
     e.scrollbar_ui_id = .editor_bottom_scrollbar;
     e.tabs_ui_id      = .editor_bottom_tabs;
+    e.hide_line_numbers  = true;
 }
 
 init_editor_buffers :: (files_from_cmdline: [] string) {
@@ -1703,7 +1704,7 @@ editor_commands :: Editor_Command.[
     .{"[DEV] Show Profiler",                () { show_profiler = !show_profiler; }},
     .{"[DEV] Draw font metrics lines",      () { show_font_debug_info = !show_font_debug_info; }},
     
-    .{"[RUN] Run Dwrite (DEMO)", () {
+    .{"[RUN] Run Dwrite", () {
         editor := get_bottom_editor();
         buffer: *Buffer;
         for tab: editor.tabs {
@@ -1719,10 +1720,31 @@ editor_commands :: Editor_Command.[
         buffer.readonly = true;
         modify_string(*buffer.name, "Run Dwrite");
         change_active_buffer(editor, buffer);
+        reset_cursor(*editor.cursor);
         execute_custom_command(buffer, "../dwrite_jai/main.exe");
     }},
     
-    .{"[RUN] Compile & Run (DEMO)", () {
+    .{"[RUN] Compile", () {
+        editor := get_bottom_editor();
+        buffer: *Buffer;
+        for tab: editor.tabs {
+            if tab.kind == .normal || !tab.stdout_in_progress {
+                buffer_reset(tab);
+                buffer = tab;
+                break;
+            }
+        }
+        if !buffer then buffer = create_or_find_empty_buffer(editor);
+        
+        buffer.kind = .stdout;
+        buffer.readonly = true;
+        modify_string(*buffer.name, "Compile");
+        change_active_buffer(editor, buffer);
+        reset_cursor(*editor.cursor);
+        execute_custom_command(buffer, "jai first.jai");
+    }},
+    
+    .{"[RUN] Compile & Run", () {
         editor := get_bottom_editor();
         buffer: *Buffer;
         for tab: editor.tabs {
@@ -1738,6 +1760,7 @@ editor_commands :: Editor_Command.[
         buffer.readonly = true;
         modify_string(*buffer.name, "Compile & Run");
         change_active_buffer(editor, buffer);
+        reset_cursor(*editor.cursor);
         execute_custom_command(buffer, "jai first.jai - autorun");
     }},
 ];
@@ -1750,6 +1773,7 @@ Editor :: struct {
     
     visible: bool;
     hide_footer: bool;
+    hide_line_numbers: bool;
     
     panel_rect:    Rect;
     rect_for_draw: Rect;

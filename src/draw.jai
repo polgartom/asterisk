@@ -114,10 +114,10 @@ draw_frame :: () {
         
         sepa_rect := bottom_editor_rect;
         sepa_rect.y += bottom_editor_rect.h;
-        sepa_rect.y -= 3 * dpi_scale;
-        sepa_rect.h  = 3 * dpi_scale;
+        sepa_rect.y -= 2 * dpi_scale;
+        sepa_rect.h  = 2 * dpi_scale;
         sepa_color := map_color_to_vec4(.LAYOUT_SEPARATOR);
-        sepa_color.w = 0.5;
+        sepa_color.w = 0.35;
         
         // @Todo
         // maybe_set_hot(.bottom_editor_layout_separator, sepa_rect);
@@ -237,7 +237,7 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
     scrollbar_area := cut_right(r, scrollbar_width);
     
     line_numbers_rect := r;
-    if show_line_numbers && buffers.count {
+    if show_line_numbers && !editor.hide_line_numbers && buffers.count {
         rows_count := max(100, editor.active_buffer.row_table.count);
         t := tprint("%", formatInt(rows_count, digits_per_comma=0));
         w := measure_text_width(r_font_sm, t) * 1.5;
@@ -326,13 +326,16 @@ draw_editor :: (using editor: *Editor, rect: Rect) {
         redraw_requested = true;
     }
 
-    if editor.cursor.moved {
-        editor.cursor.moved = false;
+    if editor.cursor.moved  {
+        // @Hacky The right editor panel still resizing, so we scrolling to cursor while the animation is active
+        if !editors[1].width_anim.active {
+            editor.cursor.moved = false;
+        }
         scroll_to_cursor(editor, editor.cursor, animation_duration=0.08);
     }
     
     // Draw line numbers
-    if show_line_numbers && buffers.count {
+    if show_line_numbers && !editor.hide_line_numbers && buffers.count {
         rect := line_numbers_rect;
         push_scissor(rect);
         defer pop_scissor();
