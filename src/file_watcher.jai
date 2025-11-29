@@ -25,7 +25,7 @@ file_watcher_change_callback :: (watcher: *File_Watcher(string), change: *File_C
     for b: buffers {
         if !b.exists_on_disk continue;
         if change.full_path == b.filepath { // @Speed
-            if change.events & .MODIFIED {
+            if change.events == .MODIFIED {
                 ok, hash := meow_hash_from_file(change.full_path);
                 if !ok {
                     log_error("Failed to make meow hash from '%'\n", change.full_path);
@@ -36,9 +36,11 @@ file_watcher_change_callback :: (watcher: *File_Watcher(string), change: *File_C
                     b.disk_hash = hash;
                 }
             } else if change.events & (.REMOVED | .MOVED) {
-                b.disk_state = .removed;
-                b.disk_hash = 0;
-                b.exists_on_disk = false;
+                if !file_exists(b.filepath) {
+                    b.disk_state = .removed;
+                    b.disk_hash = 0;
+                    b.exists_on_disk = false;
+                }
             }
             
         }
